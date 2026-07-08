@@ -40,6 +40,10 @@ export const translations = {
     loginTitle: "Welcome Back",
     loginSubtitle: "Sign in to your Teqemach account",
     adminLoginSubtitle: "Administrator Access Portal",
+    continueWithGoogle: "Continue with Google",
+    or: "or",
+    emailNotVerified: "Please check your email to verify your account before signing in.",
+    accountNotFound: "Account not found. Please contact an administrator to register.",
 
     // Navigation
     overview: "Overview Dashboard",
@@ -161,6 +165,10 @@ export const translations = {
     loginTitle: "እንኳን ደህና መጡ",
     loginSubtitle: "ወደ ተቀማጭ አካውንትዎ ይግቡ",
     adminLoginSubtitle: "የአስተዳዳሪ መዳረሻ ፖርታል",
+    continueWithGoogle: "በGoogle ይቀጥሉ",
+    or: "ወይም",
+    emailNotVerified: "እባክዎ ከመግባትዎ በፊት አካውንትዎን ለማረጋገጥ ኢሜይልዎን ይፈትሹ።",
+    accountNotFound: "አካውንት አልተገኘም። እባክዎ ለመመዝገብ አስተዳዳሪን ያነጋግሩ።",
 
     // Navigation
     overview: "አጠቃላይ ዳሽቦርድ",

@@ -11,8 +11,8 @@ import {
   createContributionCycles,
   updateContributor,
   deleteContributor,
+  inviteContributor,
 } from "@/lib/actions/collector";
-import { registerUser } from "@/lib/actions/admin";
 import {
   getCurrentEthiopianDate,
   parseEthiopianDate,
@@ -195,13 +195,12 @@ export default function ManageContributorsPage() {
         startDateISO = toGregorian(parsed).toISOString();
       }
 
-      // Step 1: Register the new user
-      const regRes = await registerUser({
+      // Step 1: Register or Invite the new user
+      const regRes = await inviteContributor({
         fullName: addForm.fullName.trim(),
         phoneNumber: addForm.phoneNumber.trim(),
         email: addForm.email.trim(),
         password: addForm.password.trim(),
-        role: "contributor",
         collectorId: userId,
       });
       if (regRes.error) {

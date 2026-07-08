@@ -9,16 +9,19 @@ import bcrypt from "bcryptjs";
 export async function signIn(formData: { email: string; password: string }) {
   const supabase = await createClient();
 
-  // ── Step 1: Try Supabase Auth (admin path) ──────────────────────────────
+  // ── Step 1: Try Supabase Auth (admin, or newly registered users) ─────────
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email: formData.email,
     password: formData.password,
   });
 
+  if (authError && authError.message.includes("Email not confirmed")) {
+    return { error: "Please verify your email address before logging in." };
+  }
+
   if (!authError && authData.user) {
-    // Supabase Auth succeeded — this is the admin.
-    // Ensure a profile row exists (in case it was created in Supabase dashboard
-    // after the auto-trigger was removed).
+    // Supabase Auth succeeded.
+    // Ensure a profile row exists (for admins auto-created in dashboard)
     const adminClient = await createAdminClient();
     const { data: existingProfile } = await adminClient
       .from("profiles")
@@ -27,7 +30,9 @@ export async function signIn(formData: { email: string; password: string }) {
       .single();
 
     if (!existingProfile) {
-      // Auto-create admin profile row with the Supabase Auth user's UUID
+      // Look if there's a legacy profile with this email that we should link?
+      // Since this is email/password, they wouldn't have a Supabase Auth user unless they were registered there.
+      // We only auto-create for 'admin' to preserve legacy behavior.
       const { error: insertError } = await adminClient.from("profiles").insert({
         id: authData.user.id,
         full_name:
@@ -45,7 +50,6 @@ export async function signIn(formData: { email: string; password: string }) {
       });
 
       if (insertError) {
-        // Sign out the Supabase session so we don't leave a dangling session
         await supabase.auth.signOut();
         return { error: `Profile creation failed: ${insertError.message}` };
       }
@@ -54,7 +58,7 @@ export async function signIn(formData: { email: string; password: string }) {
     return { success: true };
   }
 
-  // ── Step 2: Custom profile-based auth (collector / contributor) ──────────
+  // ── Step 2: Custom profile-based auth (legacy collector / contributor) ───
   const adminClient = await createAdminClient();
   const { data: profile, error: profileError } = await adminClient
     .from("profiles")
@@ -64,7 +68,6 @@ export async function signIn(formData: { email: string; password: string }) {
     .single();
 
   if (profileError || !profile) {
-    // Neither auth path worked
     return { error: "Invalid email or password" };
   }
 
@@ -87,6 +90,24 @@ export async function signIn(formData: { email: string; password: string }) {
   return { success: true, role: profile.role };
 }
 
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { url: data.url };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -104,27 +125,41 @@ export async function getSession() {
 
 /**
  * Returns the current user's profile regardless of auth method.
- *  - Admin   → resolved via Supabase Auth session
- *  - Collector/Contributor → resolved via custom JWT cookie
+ *  - Supabase Auth users (admin, new users, Google OAuth)
+ *  - Custom JWT cookie users (legacy collector/contributor)
  */
 export async function getCurrentProfile() {
   const supabase = await createClient();
 
-  // Check Supabase Auth first (admin)
+  // Check Supabase Auth first
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (user) {
-    const { data } = await supabase
+    // Try matching by ID first
+    const { data: idData } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
-    return data;
+      
+    if (idData) return idData;
+
+    // For Google OAuth users whose email exists in legacy profiles, link by email
+    if (user.email) {
+      const adminClient = await createAdminClient();
+      const { data: emailData } = await adminClient
+        .from("profiles")
+        .select("*")
+        .eq("email", user.email)
+        .single();
+      
+      if (emailData) return emailData;
+    }
   }
 
-  // Check custom session (collector / contributor)
+  // Check custom session (legacy collector / contributor)
   const customSession = await getCustomSession();
   if (customSession) {
     const adminClient = await createAdminClient();
@@ -203,6 +238,43 @@ export async function updateProfile(data: {
     .eq("id", profile.id);
 
   if (error) return { error: error.message };
+  return { success: true };
+}
+
+/**
+ * Specifically for newly invited users to set their initial password.
+ * They are already authenticated via the invite link.
+ */
+export async function activateAccount(newPassword: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated. Invalid or expired invitation link." };
+  }
+
+  // 1. Update password in Supabase Auth
+  const { error: authError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (authError) {
+    return { error: authError.message };
+  }
+
+  // 2. Sync to legacy profiles table
+  const adminClient = await createAdminClient();
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  
+  const { error: profileError } = await adminClient
+    .from("profiles")
+    .update({ password: hashedPassword })
+    .eq("id", user.id);
+
+  if (profileError) {
+    return { error: profileError.message };
+  }
+
   return { success: true };
 }
 

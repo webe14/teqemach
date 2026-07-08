@@ -2,6 +2,76 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+
+export async function inviteContributor(formData: {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  password?: string; // Kept for legacy UI compatibility
+  collectorId: string;
+}) {
+  const adminSupabase = await createAdminClient();
+
+  // Validate email format basic
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    return { error: "Invalid email format" };
+  }
+
+  // 1. Check if email already exists in legacy profiles
+  const { data: existingProfile } = await adminSupabase
+    .from("profiles")
+    .select("id")
+    .eq("email", formData.email)
+    .single();
+
+  if (existingProfile) {
+    // We already have a profile with this email. Do NOT create duplicate.
+    return { success: true, id: existingProfile.id };
+  }
+
+  // 2. User does not exist, so invite via Supabase Auth
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const { data: authData, error: authError } = await adminSupabase.auth.admin.inviteUserByEmail(formData.email, {
+    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+    data: {
+      full_name: formData.fullName,
+      phone_number: formData.phoneNumber,
+    }
+  });
+
+  if (authError) {
+    if (authError.message.includes("already registered") || authError.status === 422) {
+      return { error: "A user with this email already exists." };
+    }
+    return { error: authError.message };
+  }
+
+  // 3. Insert new legacy profile with bcrypt password (from UI, to preserve DB structure exactly)
+  const hashedPassword = await bcrypt.hash(formData.password || "defaultPassword123!", 12);
+
+  const { data, error: profileError } = await adminSupabase
+    .from("profiles")
+    .insert({
+      id: authData.user.id,
+      full_name: formData.fullName,
+      phone_number: formData.phoneNumber,
+      email: formData.email,
+      password: hashedPassword,
+      role: "contributor",
+      collector_id: formData.collectorId,
+    })
+    .select("id")
+    .single();
+
+  if (profileError) {
+    await adminSupabase.auth.admin.deleteUser(authData.user.id);
+    return { error: profileError.message };
+  }
+
+  return { success: true, id: data.id };
+}
 
 export async function getCollectorContributors(collectorId: string) {
   const supabase = await createAdminClient();

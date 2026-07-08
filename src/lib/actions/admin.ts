@@ -20,13 +20,32 @@ export async function registerUser(formData: {
 }) {
   const adminSupabase = await createAdminClient();
 
-  // Hash password before storing
+  // Create user in Supabase Auth first
+  const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+    email: formData.email,
+    password: formData.password,
+    email_confirm: false, // Require email verification
+    user_metadata: {
+      full_name: formData.fullName,
+      phone_number: formData.phoneNumber,
+    }
+  });
+
+  if (authError) {
+    if (authError.message.includes("already registered") || authError.status === 422) {
+      return { error: "A user with this email already exists." };
+    }
+    return { error: authError.message };
+  }
+
+  // Hash password before storing (preserves current DB structure and backward compatibility)
   const hashedPassword = await bcrypt.hash(formData.password, 12);
 
-  // Insert directly into profiles (no Supabase Auth entry)
+  // Insert directly into profiles linking to the new Supabase Auth user ID
   const { data, error: profileError } = await adminSupabase
     .from("profiles")
     .insert({
+      id: authData.user.id,
       full_name: formData.fullName,
       phone_number: formData.phoneNumber,
       email: formData.email,
@@ -38,10 +57,9 @@ export async function registerUser(formData: {
     .single();
 
   if (profileError) {
-    // Surface a friendlier message for duplicate email
-    if (profileError.code === "23505") {
-      return { error: "A user with this email already exists." };
-    }
+    // If profile insert fails, we should ideally delete the auth user to rollback, 
+    // but at minimum surface the error.
+    await adminSupabase.auth.admin.deleteUser(authData.user.id);
     return { error: profileError.message };
   }
 

@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes (no auth needed)
-  const publicPaths = ["/login", "/admin-secure"];
+  const publicPaths = ["/login", "/admin-secure", "/auth/callback"];
   if (publicPaths.some((p) => pathname.startsWith(p))) {
     return supabaseResponse;
   }
@@ -56,19 +56,36 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/dashboard")) {
-    // ── Check Supabase Auth session (admin) ──────────────────────────────
+    // ── Check Supabase Auth session (admin, or newly registered users, or OAuth) ────────────────
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: profile } = await supabase
+      if (!user.email_confirmed_at) {
+        return NextResponse.redirect(new URL("/login?error=email_not_verified", request.url));
+      }
+
+      let { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
-      const role = profile?.role;
+      if (!profile && user.email) {
+        const { data: emailProfile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("email", user.email)
+          .single();
+        profile = emailProfile;
+      }
+
+      if (!profile) {
+        return NextResponse.redirect(new URL("/login?error=account_not_found", request.url));
+      }
+
+      const role = profile.role;
 
       if (role === "admin" && !pathname.startsWith("/dashboard/admin")) {
         return NextResponse.redirect(new URL("/dashboard/admin", request.url));
