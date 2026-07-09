@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Teqemach — Ethiopian Equb Management",
+  title: "Teqemach",
   description:
     "A modern, enterprise-grade platform for managing Ethiopian traditional Equb (Teqemach) savings groups. Track contributions, manage collectors, and disburse funds securely.",
   keywords: ["Equb", "Teqemach", "Ethiopian savings", "Iqub", "finance"],

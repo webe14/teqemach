@@ -90,14 +90,15 @@ export async function signIn(formData: { email: string; password: string }) {
   return { success: true, role: profile.role };
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(role?: string) {
   const supabase = await createClient();
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const redirectUrl = role ? `${origin}/auth/callback?role=${role}` : `${origin}/auth/callback`;
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: redirectUrl,
     },
   });
 
@@ -106,6 +107,75 @@ export async function signInWithGoogle() {
   }
 
   return { url: data.url };
+}
+
+export async function getCollectors() {
+  const adminClient = await createAdminClient();
+  const { data, error } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "collector");
+
+  if (error) {
+    return { error: error.message };
+  }
+  return { data };
+}
+
+export async function signUp(formData: {
+  fullName: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: "collector" | "contributor";
+  collectorId?: string | null;
+}) {
+  const adminClient = await createAdminClient();
+
+  // Check if email already exists
+  const { data: existingUser } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("email", formData.email)
+    .maybeSingle();
+
+  if (existingUser) {
+    return { error: "An account with this email already exists." };
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: formData.email,
+    password: formData.password,
+  });
+
+  if (authError) {
+    return { error: authError.message };
+  }
+
+  // Hash the password for custom credential logins fallback (if still used)
+  const hashedPassword = await bcrypt.hash(formData.password, 10);
+
+  // Insert profile, matching the Supabase Auth user ID
+  const { data: newProfile, error: insertError } = await adminClient
+    .from("profiles")
+    .insert({
+      id: authData.user?.id,
+      full_name: formData.fullName,
+      email: formData.email,
+      password: hashedPassword,
+      phone_number: formData.phone,
+      role: formData.role,
+      collector_id: formData.collectorId || null,
+    })
+    .select("id, role, email")
+    .single();
+
+  if (insertError) {
+    return { error: `Registration failed: ${insertError.message}` };
+  }
+
+  return { success: true, user: newProfile };
 }
 
 export async function signOut() {

@@ -84,23 +84,23 @@ export function MobileHeader({ role, pageName, userName }: MobileHeaderProps) {
 
           {/* Nav links */}
           <div className="flex-1 overflow-y-auto py-4">
-            <NavLinks role={role} onNavigate={() => setOpen(false)} />
+            <NavLinks role={role} onNavigate={() => setOpen(false)} isMobile />
           </div>
 
           {/* Footer */}
           <div className="border-t border-border p-4 space-y-2">
             {userName && (
-              <div className="px-3 py-2 rounded-xl bg-muted/50">
-                <p className="text-xs text-muted-foreground">Signed in as</p>
-                <p className="text-sm font-medium text-foreground truncate">{userName}</p>
+              <div className="px-3 py-2 rounded-xl bg-white/10">
+                <p className="text-xs text-white/70">Signed in as</p>
+                <p className="text-sm font-medium text-white truncate">{userName}</p>
               </div>
             )}
-            <EditProfileModal userName={userName ?? ""} role={role} />
+            <EditProfileModal userName={userName ?? ""} role={role} isMobile />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => signOut()}
-              className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              className="w-full justify-start text-white hover:text-white hover:bg-destructive/40"
             >
               <LogOut className="h-4 w-4 mr-2" />
               {t("logout")}

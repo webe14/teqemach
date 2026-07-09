@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { signIn, signInWithGoogle } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/client";
@@ -141,6 +142,13 @@ function LoginForm() {
         <Button type="submit" className="w-full" size="lg" disabled={loading || googleLoading} id="sign-in-btn">
           {loading ? t("loading") : t("signIn")}
         </Button>
+
+        <div className="text-center text-sm mt-2">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-primary hover:underline font-medium">
+            Create account
+          </Link>
+        </div>
 
         
         <div className="relative">

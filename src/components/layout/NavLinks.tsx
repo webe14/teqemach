@@ -46,9 +46,10 @@ interface NavLinksProps {
   role: "admin" | "collector" | "contributor";
   collapsed?: boolean;
   onNavigate?: () => void;
+  isMobile?: boolean;
 }
 
-export function NavLinks({ role, collapsed = false, onNavigate }: NavLinksProps) {
+export function NavLinks({ role, collapsed = false, onNavigate, isMobile = false }: NavLinksProps) {
   const pathname = usePathname();
   const { t } = useLocale();
 
@@ -88,14 +89,16 @@ export function NavLinks({ role, collapsed = false, onNavigate }: NavLinksProps)
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 group relative",
               isActive
                 ? roleGradients[role]
-                : cn("text-muted-foreground", roleTextHover[role])
+                : isMobile 
+                  ? "text-white hover:bg-white/10" 
+                  : cn("text-muted-foreground", roleTextHover[role])
             )}
             title={collapsed ? t(item.labelKey) : undefined}
           >
             <item.icon
               className={cn(
                 "h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
-                isActive ? "text-white" : "text-muted-foreground"
+                isActive ? "text-white" : isMobile ? "text-white" : "text-muted-foreground"
               )}
             />
             {!collapsed && (

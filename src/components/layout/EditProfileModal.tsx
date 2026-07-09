@@ -11,9 +11,10 @@ interface EditProfileModalProps {
   userName: string;
   role: "admin" | "collector" | "contributor";
   collapsed?: boolean;
+  isMobile?: boolean;
 }
 
-export function EditProfileModal({ userName, role, collapsed }: EditProfileModalProps) {
+export function EditProfileModal({ userName, role, collapsed, isMobile }: EditProfileModalProps) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState(userName);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -77,7 +78,7 @@ export function EditProfileModal({ userName, role, collapsed }: EditProfileModal
         variant="ghost"
         size="sm"
         onClick={() => { reset(); setOpen(true); }}
-        className={`text-muted-foreground hover:text-foreground hover:bg-muted ${collapsed ? "w-full justify-center px-2" : "flex-1"}`}
+        className={`${isMobile ? "text-white hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"} ${collapsed ? "w-full justify-center px-2" : "flex-1"}`}
         title="Edit Profile"
       >
         <UserPen className="h-4 w-4" />

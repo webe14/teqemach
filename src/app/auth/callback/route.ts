@@ -1,64 +1,40 @@
-import { NextResponse } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { NextResponse } from 'next/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/login'
+  const role = searchParams.get('role')
 
   if (code) {
-    const supabase = await createClient();
+    const supabase = await createClient()
+    const { data: authData, error } = await supabase.auth.exchangeCodeForSession(code)
     
-    // Exchange the code for a Supabase session
-    const { error, data } = await supabase.auth.exchangeCodeForSession(code);
-    
-    if (!error && data.user) {
-      // Check if the user exists in our profiles table (by ID or by Email)
-      const adminSupabase = await createAdminClient();
-      
-      let { data: profile } = await adminSupabase
+    if (!error && authData.user) {
+      // Check if user already has a profile
+      const adminClient = await createAdminClient();
+      const { data: existingProfile } = await adminClient
         .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
-        
-      if (!profile && data.user.email) {
-        // Fallback to searching by email (linking Google account)
-        const { data: emailProfile } = await adminSupabase
-          .from("profiles")
-          .select("role")
-          .eq("email", data.user.email)
-          .single();
-          
-        profile = emailProfile;
-      }
-      
-      if (!profile) {
-        // User does not exist in profiles table.
-        // Sign them out of Supabase Auth and redirect back to login with an error.
-        await supabase.auth.signOut();
-        return NextResponse.redirect(`${origin}/login?error=account_not_found`);
-      }
-      
-      // If an explicit 'next' parameter is provided (e.g., for password update), prioritize it
-      if (searchParams.has("next") && next.startsWith("/auth/")) {
-        return NextResponse.redirect(`${origin}${next}`);
+        .select("id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // Automatically create a profile for new Google sign-ups or Email confirmed users
+        await adminClient.from("profiles").insert({
+          id: authData.user.id,
+          full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.fullName || authData.user.email?.split('@')[0] || "User",
+          email: authData.user.email,
+          role: (role === "collector" || role === "contributor") ? role : "admin",
+          phone_number: "",
+          password: "supabase_auth"
+        });
       }
 
-      // Redirect based on role
-      if (profile.role === "admin") {
-        return NextResponse.redirect(`${origin}/dashboard/admin`);
-      } else if (profile.role === "collector") {
-        return NextResponse.redirect(`${origin}/dashboard/collector`);
-      } else if (profile.role === "contributor") {
-        return NextResponse.redirect(`${origin}/dashboard/contributor`);
-      }
-      
-      // Fallback redirect
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${origin}${next}`)
     }
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  return NextResponse.redirect(`${origin}/login?error=auth_failed`)
 }
