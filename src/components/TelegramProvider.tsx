@@ -16,11 +16,14 @@ export function TelegramProvider() {
       tg.expand();
 
       // 3. Enable closing confirmation (user is prompted before closing)
-      tg.enableClosingConfirmation();
+      // Only supported in Web App SDK 6.2+
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) {
+        tg.enableClosingConfirmation();
+      }
 
       // 4. Disable vertical swipes to completely prevent accidental swipe-to-close
-      // This is the modern approach introduced in Web App SDK 7.7
-      if (tg.disableVerticalSwipes) {
+      // Only supported in Web App SDK 7.7+
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast("7.7") && tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
       }
     }
