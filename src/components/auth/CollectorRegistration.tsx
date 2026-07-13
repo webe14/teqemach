@@ -30,7 +30,7 @@ export function CollectorRegistration({ hideHeader }: { hideHeader?: boolean }) 
     setGoogleLoading(true);
     setError(null);
     try {
-      const result = await signInWithGoogle("collector");
+      const result = await signInWithGoogle({ role: "collector" });
       if (result?.error) {
         setError(result.error);
         setGoogleLoading(false);
