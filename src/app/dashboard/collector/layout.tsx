@@ -9,7 +9,7 @@ export default async function CollectorLayout({ children }: { children: React.Re
   if (!profile || profile.role !== "collector") redirect("/login");
 
   return (
-    <AppShell role="collector" userName={profile.full_name ?? profile.email ?? "Collector"}>
+    <AppShell role="collector" userName={profile.full_name ?? profile.email ?? "Collector"} userId={profile.id}>
       {children}
     </AppShell>
   );

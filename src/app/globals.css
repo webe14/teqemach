@@ -79,6 +79,7 @@ body {
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
   font-family: var(--font-inter, system-ui, sans-serif);
+  overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
 }
 
 /* Smooth scrolling */

@@ -14,9 +14,22 @@ CREATE TABLE public.profiles (
     full_name TEXT NOT NULL,
     phone_number TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'collector', 'contributor')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'rejected')),
     email TEXT UNIQUE,
     password TEXT,
     collector_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 2. Notifications Table
+CREATE TABLE public.notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('contributor_request', 'approved', 'rejected')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    data JSONB DEFAULT '{}',
+    is_read BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

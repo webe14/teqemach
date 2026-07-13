@@ -62,20 +62,16 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (user) {
-      if (!user.email_confirmed_at) {
-        return NextResponse.redirect(new URL("/login?error=email_not_verified", request.url));
-      }
-
       let { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", user.id)
         .single();
 
       if (!profile && user.email) {
         const { data: emailProfile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, status")
           .eq("email", user.email)
           .single();
         profile = emailProfile;
@@ -83,6 +79,14 @@ export async function middleware(request: NextRequest) {
 
       if (!profile) {
         return NextResponse.redirect(new URL("/login?error=account_not_found", request.url));
+      }
+
+      // Block pending or rejected contributors
+      if (profile.role === "contributor" && profile.status === "pending") {
+        return NextResponse.redirect(new URL("/login?error=account_pending", request.url));
+      }
+      if (profile.role === "contributor" && profile.status === "rejected") {
+        return NextResponse.redirect(new URL("/login?error=account_rejected", request.url));
       }
 
       const role = profile.role;

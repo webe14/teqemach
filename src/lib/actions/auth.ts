@@ -15,10 +15,6 @@ export async function signIn(formData: { email: string; password: string }) {
     password: formData.password,
   });
 
-  if (authError && authError.message.includes("Email not confirmed")) {
-    return { error: "Please verify your email address before logging in." };
-  }
-
   if (!authError && authData.user) {
     // Supabase Auth succeeded.
     // Ensure a profile row exists (for admins auto-created in dashboard)
@@ -62,7 +58,7 @@ export async function signIn(formData: { email: string; password: string }) {
   const adminClient = await createAdminClient();
   const { data: profile, error: profileError } = await adminClient
     .from("profiles")
-    .select("id, role, password, email")
+    .select("id, role, password, email, status")
     .eq("email", formData.email)
     .in("role", ["collector", "contributor"])
     .single();
@@ -80,6 +76,14 @@ export async function signIn(formData: { email: string; password: string }) {
     return { error: "Invalid email or password" };
   }
 
+  // Block pending/rejected contributors
+  if (profile.role === "contributor" && profile.status === "pending") {
+    return { error: "Your account is pending approval from the collector. Please wait." };
+  }
+  if (profile.role === "contributor" && profile.status === "rejected") {
+    return { error: "Your registration was rejected by the collector." };
+  }
+
   // Issue custom JWT cookie
   await createCustomSession({
     userId: profile.id,
@@ -90,10 +94,16 @@ export async function signIn(formData: { email: string; password: string }) {
   return { success: true, role: profile.role };
 }
 
-export async function signInWithGoogle(role?: string) {
+export async function signInWithGoogle(options?: { role?: string; collectorId?: string; groupId?: string }) {
   const supabase = await createClient();
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const redirectUrl = role ? `${origin}/auth/callback?role=${role}` : `${origin}/auth/callback`;
+  
+  const params = new URLSearchParams();
+  if (options?.role) params.set("role", options.role);
+  if (options?.collectorId) params.set("collectorId", options.collectorId);
+  if (options?.groupId) params.set("groupId", options.groupId);
+  
+  const redirectUrl = params.toString() ? `${origin}/auth/callback?${params.toString()}` : `${origin}/auth/callback`;
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -129,6 +139,7 @@ export async function signUp(formData: {
   phone: string;
   role: "collector" | "contributor";
   collectorId?: string | null;
+  groupId?: string | null;
 }) {
   const adminClient = await createAdminClient();
 
@@ -143,20 +154,23 @@ export async function signUp(formData: {
     return { error: "An account with this email already exists." };
   }
 
-  const supabase = await createClient();
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
+    email_confirm: true,
   });
 
   if (authError) {
     return { error: authError.message };
   }
 
-  // Hash the password for custom credential logins fallback (if still used)
+  // Hash the password for custom credential logins fallback
   const hashedPassword = await bcrypt.hash(formData.password, 10);
 
-  // Insert profile, matching the Supabase Auth user ID
+  // Contributors who self-register are set to 'pending' until approved by the collector
+  const status = formData.role === "contributor" ? "pending" : "active";
+
+  // Insert profile
   const { data: newProfile, error: insertError } = await adminClient
     .from("profiles")
     .insert({
@@ -166,6 +180,7 @@ export async function signUp(formData: {
       password: hashedPassword,
       phone_number: formData.phone,
       role: formData.role,
+      status,
       collector_id: formData.collectorId || null,
     })
     .select("id, role, email")
@@ -175,7 +190,69 @@ export async function signUp(formData: {
     return { error: `Registration failed: ${insertError.message}` };
   }
 
+  // For contributors: create group membership and notify the collector
+  if (formData.role === "contributor" && formData.collectorId && formData.groupId && newProfile) {
+    // Create group membership
+    await adminClient.from("group_memberships").insert({
+      contributor_id: newProfile.id,
+      group_id: formData.groupId,
+      collector_id: formData.collectorId,
+    });
+
+    // Fetch group name for the notification
+    const { data: group } = await adminClient
+      .from("equb_groups")
+      .select("name")
+      .eq("id", formData.groupId)
+      .single();
+
+    // Create notification for the collector
+    await adminClient.from("notifications").insert({
+      user_id: formData.collectorId,
+      type: "contributor_request",
+      title: "New Contributor Request",
+      message: `${formData.fullName} wants to join ${group?.name ?? "your group"}.`,
+      data: {
+        contributor_id: newProfile.id,
+        contributor_name: formData.fullName,
+        contributor_email: formData.email,
+        group_id: formData.groupId,
+        group_name: group?.name ?? null,
+      },
+    });
+  }
+
   return { success: true, user: newProfile };
+}
+
+export async function getCollectorsWithGroups() {
+  const adminClient = await createAdminClient();
+
+  // Fetch all collectors
+  const { data: collectors, error: collectorError } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "collector");
+
+  if (collectorError) return { error: collectorError.message, data: [] };
+
+  // Fetch all equb groups
+  const { data: groups, error: groupError } = await adminClient
+    .from("equb_groups")
+    .select("id, name, contribution_amount, total_days, frequency, collector_id");
+
+  if (groupError) return { error: groupError.message, data: [] };
+
+  // Attach groups to each collector
+  const collectorsWithGroups = (collectors ?? []).map((collector) => ({
+    ...collector,
+    groups: (groups ?? []).filter((g) => g.collector_id === collector.id),
+  }));
+
+  console.log("DEBUG: groups", groups);
+  console.log("DEBUG: collectorsWithGroups", JSON.stringify(collectorsWithGroups, null, 2));
+
+  return { data: collectorsWithGroups, error: null };
 }
 
 export async function signOut() {

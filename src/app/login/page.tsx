@@ -22,14 +22,24 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const [success, setSuccess] = useState<string | null>(null);
+
   useEffect(() => {
     const errorParam = searchParams.get("error");
+    const successParam = searchParams.get("success");
     if (errorParam === "email_not_verified") {
       setError(t("emailNotVerified"));
     } else if (errorParam === "account_not_found") {
       setError(t("accountNotFound"));
     } else if (errorParam === "auth_failed") {
       setError("Authentication failed. Please try again.");
+    } else if (errorParam === "account_pending") {
+      setError("Your account is pending approval from the collector. Please wait.");
+    } else if (errorParam === "account_rejected") {
+      setError("Your registration was rejected by the collector.");
+    }
+    if (successParam === "contributor_created") {
+      setSuccess("Registration submitted! Waiting for collector approval.");
     }
   }, [searchParams, t]);
 
@@ -102,6 +112,13 @@ function LoginForm() {
           <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600">
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>{success}</span>
           </div>
         )}
 

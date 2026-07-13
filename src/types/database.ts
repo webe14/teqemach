@@ -18,6 +18,7 @@ export interface Database {
           full_name: string | null;
           phone_number: string | null;
           role: UserRole | null;
+          status: "active" | "pending" | "rejected";
           email: string | null;
           password: string | null;
           collector_id: string | null;
@@ -28,6 +29,7 @@ export interface Database {
           full_name?: string | null;
           phone_number?: string | null;
           role?: UserRole | null;
+          status?: "active" | "pending" | "rejected";
           email?: string | null;
           password?: string | null;
           collector_id?: string | null;
@@ -38,9 +40,42 @@ export interface Database {
           full_name?: string | null;
           phone_number?: string | null;
           role?: UserRole | null;
+          status?: "active" | "pending" | "rejected";
           email?: string | null;
           password?: string | null;
           collector_id?: string | null;
+          created_at?: string;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: "contributor_request" | "approved" | "rejected";
+          title: string;
+          message: string;
+          data: Record<string, unknown>;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: "contributor_request" | "approved" | "rejected";
+          title: string;
+          message: string;
+          data?: Record<string, unknown>;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: "contributor_request" | "approved" | "rejected";
+          title?: string;
+          message?: string;
+          data?: Record<string, unknown>;
+          is_read?: boolean;
           created_at?: string;
         };
       };

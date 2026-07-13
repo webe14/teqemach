@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -11,9 +12,10 @@ interface AppShellProps {
   role: "admin" | "collector" | "contributor";
   pageName?: string;
   userName?: string;
+  userId?: string;
 }
 
-export function AppShell({ children, role, pageName, userName }: AppShellProps) {
+export function AppShell({ children, role, pageName, userName, userId }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -27,7 +29,7 @@ export function AppShell({ children, role, pageName, userName }: AppShellProps) 
       />
 
       {/* Mobile Header */}
-      <MobileHeader role={role} pageName={pageName} userName={userName} />
+      <MobileHeader role={role} pageName={pageName} userName={userName} userId={userId} />
 
       {/* Main content — offset for desktop sidebar */}
       <main
@@ -39,7 +41,12 @@ export function AppShell({ children, role, pageName, userName }: AppShellProps) 
         {/* Desktop top bar */}
         <div className="hidden lg:flex sticky top-0 z-20 h-16 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-6">
           <h1 className="text-base font-semibold text-foreground">{pageName}</h1>
-          <LanguageToggle />
+          <div className="flex items-center gap-2">
+            {role === "collector" && userId && (
+              <NotificationBell userId={userId} />
+            )}
+            <LanguageToggle />
+          </div>
         </div>
 
         {/* Page content */}

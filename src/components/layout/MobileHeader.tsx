@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { NavLinks } from "./NavLinks";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { signOut } from "@/lib/actions/auth";
 import { EditProfileModal } from "./EditProfileModal";
@@ -20,9 +21,10 @@ interface MobileHeaderProps {
   role: "admin" | "collector" | "contributor";
   pageName?: string;
   userName?: string;
+  userId?: string;
 }
 
-export function MobileHeader({ role, pageName, userName }: MobileHeaderProps) {
+export function MobileHeader({ role, pageName, userName, userId }: MobileHeaderProps) {
   const [open, setOpen] = useState(false);
   const { t } = useLocale();
 
@@ -60,7 +62,12 @@ export function MobileHeader({ role, pageName, userName }: MobileHeaderProps) {
           </div>
         </div>
 
-        <LanguageToggle />
+        <div className="flex items-center gap-1">
+          {role === "collector" && userId && (
+            <NotificationBell userId={userId} isMobile />
+          )}
+          <LanguageToggle />
+        </div>
       </header>
 
       {/* Slide-out Drawer */}
