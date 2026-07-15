@@ -82,8 +82,8 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Financial Reports</h1>
-        <p className="text-muted-foreground mt-1">System-wide payment tracking</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("financialReports")}</h1>
+        <p className="text-muted-foreground mt-1">{t("systemWidePaymentTracking")}</p>
         <div className="ethiopian-divider mt-3 w-24" />
       </div>
 
@@ -93,9 +93,9 @@ export default function AdminReportsPage() {
             <BarChart3 className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Total Recorded Payments</p>
+            <p className="text-sm text-muted-foreground">{t("totalRecordedPayments")}</p>
             <p className="text-2xl font-bold text-foreground">ETB {totalAmount.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} transactions</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} {t("transactions")}</p>
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export default function AdminReportsPage() {
             />
             {errorMsg && <p className="text-[10px] text-rose-500 font-medium">{errorMsg}</p>}
             <div className="flex gap-2 pt-1">
-              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">Apply</Button>
+              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("apply")}</Button>
               <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8">
                 <X className="h-3 w-3" />
               </Button>
@@ -130,8 +130,8 @@ export default function AdminReportsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Payment Transactions</CardTitle>
-          <CardDescription>All confirmed payments across the system</CardDescription>
+          <CardTitle>{t("paymentTransactions")}</CardTitle>
+          <CardDescription>{t("allConfirmedPayments")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -146,12 +146,12 @@ export default function AdminReportsPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-muted/30">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Contributor</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Collector</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Group</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Cycle</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Amount</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Date (EC)</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("contributor")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("collector")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("groupName")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("cycle")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("amount")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("dateEc")}</th>
                   </tr>
                 </thead>
                 <tbody>

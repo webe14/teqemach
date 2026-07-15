@@ -175,11 +175,11 @@ export default function ManageContributorsPage() {
       !addForm.password.trim() ||
       !addForm.groupId
     ) {
-      setAddError("Please fill in all fields");
+      setAddError(t("pleaseFillAllFields"));
       return;
     }
     if (addForm.password.length < 6) {
-      setAddError("Password must be at least 6 characters long");
+      setAddError(t("minSixChars"));
       return;
     }
     setAddError(null);
@@ -189,7 +189,7 @@ export default function ManageContributorsPage() {
       if (addForm.startDate) {
         const parsed = parseEthiopianDate(addForm.startDate);
         if (!parsed) {
-          setAddError("Invalid starting date. Use DD/MM/YYYY format.");
+          setAddError(t("invalidDateFormat"));
           return;
         }
         startDateISO = toGregorian(parsed).toISOString();
@@ -287,7 +287,7 @@ export default function ManageContributorsPage() {
       !editForm.phoneNumber.trim() ||
       !editForm.email.trim()
     ) {
-      setEditError("Please fill in all fields");
+      setEditError(t("pleaseFillAllFields"));
       return;
     }
     setEditError(null);
@@ -296,7 +296,7 @@ export default function ManageContributorsPage() {
       if (editForm.startDate) {
         const parsed = parseEthiopianDate(editForm.startDate);
         if (!parsed) {
-          setEditError("Invalid starting date. Use DD/MM/YYYY format.");
+          setEditError(t("invalidDateFormat"));
           return;
         }
         startDateISO = toGregorian(parsed).toISOString();
@@ -351,10 +351,10 @@ export default function ManageContributorsPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Manage Contributors
+              {t("manageContributors")}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              {contributors.length} members across your groups
+              {contributors.length} {t("membersAcrossGroups")}
             </p>
           </div>
           <Button
@@ -386,11 +386,11 @@ export default function ManageContributorsPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-muted-foreground font-medium">
-            {search ? "No results found" : "No contributors yet"}
+            {search ? t("noResultsFound") : t("noContributorsYet")}
           </p>
           {!search && (
             <p className="text-sm text-muted-foreground mt-1">
-              Click &quot;Add Contributor&quot; to get started
+              {t("clickAddContributor")}
             </p>
           )}
         </div>
@@ -402,19 +402,19 @@ export default function ManageContributorsPage() {
                 <thead className="border-b border-border bg-muted/30">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
-                      Contributor
+                      {t("contributor")}
                     </th>
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden sm:table-cell">
-                      Phone
+                      {t("phone")}
                     </th>
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">
-                      Group
+                      {t("groupName")}
                     </th>
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">
-                      Amount
+                      {t("amount")}
                     </th>
                     <th className="px-4 py-3 text-right font-semibold text-muted-foreground">
-                      Actions
+                      {t("actions")}
                     </th>
                   </tr>
                 </thead>
@@ -506,7 +506,7 @@ export default function ManageContributorsPage() {
               {t("addContributor")}
             </DialogTitle>
             <DialogDescription>
-              Register a new contributor and assign them to an Equb group
+              {t("registerNewContributor")}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-5">
@@ -519,7 +519,7 @@ export default function ManageContributorsPage() {
             {addSuccess && (
               <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>Contributor registered and added successfully!</span>
+                <span>{t("contributorAddedSuccess")}</span>
               </div>
             )}
 
@@ -527,7 +527,7 @@ export default function ManageContributorsPage() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5" />
-                Personal Information
+                {t("personalInfo")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -569,7 +569,7 @@ export default function ManageContributorsPage() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5" />
-                Account Credentials
+                {t("accountCredentials")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -600,7 +600,7 @@ export default function ManageContributorsPage() {
                       type="password"
                       value={addForm.password}
                       onChange={(e) => updateAdd("password", e.target.value)}
-                      placeholder="Min 6 characters"
+                      placeholder={t("minSixChars")}
                       className="pl-10 h-9"
                       required
                       minLength={6}
@@ -614,11 +614,11 @@ export default function ManageContributorsPage() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5" />
-                Group & Schedule
+                {t("groupAndSchedule")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Select Equb Group</Label>
+                  <Label className="text-xs">{t("selectEqubGroup")}</Label>
                   <Select
                     value={addForm.groupId}
                     onValueChange={(v) => updateAdd("groupId", v)}
@@ -629,12 +629,12 @@ export default function ManageContributorsPage() {
                     <SelectContent>
                       {groups.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-muted-foreground">
-                          No Equb groups registered yet
+                          {t("noEqubGroups")}
                         </div>
                       ) : (
                         groups.map((g) => (
                           <SelectItem key={g.id} value={g.id}>
-                            {g.name} ({g.total_days} days)
+                            {g.name} ({g.total_days} {t("days")})
                           </SelectItem>
                         ))
                       )}
@@ -681,7 +681,7 @@ export default function ManageContributorsPage() {
               {t("editContributor")}
             </DialogTitle>
             <DialogDescription>
-              Update contributor profile and starting date
+              {t("updateContributorProfile")}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
@@ -762,8 +762,8 @@ export default function ManageContributorsPage() {
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   ETB {editTarget.group.contribution_amount.toLocaleString()} ·{" "}
-                  {editTarget.group.total_days} days ·{" "}
-                  {editTarget.group.frequency}
+                  {editTarget.group.total_days} {t("days")} ·{" "}
+                  {t(editTarget.group.frequency as any) || editTarget.group.frequency}
                 </span>
               </div>
             )}

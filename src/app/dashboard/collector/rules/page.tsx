@@ -79,8 +79,8 @@ export default function AddRulePage() {
   return (
     <div className="space-y-8 stagger-children max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("addRuleTitle")}</h1>
-        <p className="text-muted-foreground mt-1">Post contribution rules and guidelines for your members</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("systemRules")}</h1>
+        <p className="text-muted-foreground mt-1">{t("postContributionRules")}</p>
         <div className="ethiopian-divider mt-3 w-24" />
       </div>
 
@@ -92,8 +92,8 @@ export default function AddRulePage() {
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <CardTitle>New Rule</CardTitle>
-              <CardDescription>Rules will be visible to all your contributors</CardDescription>
+              <CardTitle>{t("newRule")}</CardTitle>
+              <CardDescription>{t("rulesVisibleToAll")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -148,7 +148,9 @@ export default function AddRulePage() {
       {/* Existing rules */}
       {rules.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Posted Rules ({rules.length})</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            {t("postedRulesCount").replace("{count}", rules.length.toString())}
+          </h2>
           {rules.map((rule, i) => (
             <Card key={rule.id} className="group relative card-hover">
               <CardContent className="p-5">

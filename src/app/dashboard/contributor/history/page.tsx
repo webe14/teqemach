@@ -92,8 +92,8 @@ export default function ContributorPaymentHistoryPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("myPayments")}</h1>
-        <p className="text-muted-foreground mt-1">Review your personal Equb savings record</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("paymentHistory")}</h1>
+        <p className="text-muted-foreground mt-1">{t("paymentHistoryDesc")}</p>
         <div className="ethiopian-divider mt-3 w-24" />
       </div>
 
@@ -103,9 +103,9 @@ export default function ContributorPaymentHistoryPage() {
             <History className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Total Payments in Ledger</p>
+            <p className="text-sm text-muted-foreground">{t("totalPaymentsInLedger")}</p>
             <p className="text-2xl font-bold text-foreground">ETB {totalSaved.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} successful cycles</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} {t("payments")}</p>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function ContributorPaymentHistoryPage() {
             />
             {errorMsg && <p className="text-[10px] text-rose-500 font-medium">{errorMsg}</p>}
             <div className="flex gap-2 pt-1">
-              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">Apply</Button>
+              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("apply")}</Button>
               <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8">
                 <X className="h-3 w-3" />
               </Button>
@@ -140,8 +140,8 @@ export default function ContributorPaymentHistoryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Savings History Ledger</CardTitle>
-          <CardDescription>Verified contributions recorded on the platform</CardDescription>
+          <CardTitle>{t("savingsHistoryLedger")}</CardTitle>
+          <CardDescription>{t("verifiedContributionsRecorded")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -156,11 +156,11 @@ export default function ContributorPaymentHistoryPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-muted/30">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Equb Group</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Cycle #</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Amount Paid</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden sm:table-cell">Collector</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Date (Ethiopian Calendar)</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("equbGroupLabel")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("cycleNumber")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("amountPaid")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden sm:table-cell">{t("collectorName")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("dateEc")}</th>
                   </tr>
                 </thead>
                 <tbody>

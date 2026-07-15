@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { TelegramNotifier } from "@/lib/telegram/notifier";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -212,15 +213,58 @@ export async function markCyclePaid(
   groupId: string
 ) {
   const supabase = await createAdminClient();
-  const { error } = await supabase
+  const now = new Date().toISOString();
+  
+  // 1. Mark paid
+  const { error, data: updatedContribution } = await supabase
     .from("contributions")
     .update({
       is_marked_paid: true,
-      contribution_date: new Date().toISOString(),
+      contribution_date: now,
     })
-    .eq("id", contributionId);
+    .eq("id", contributionId)
+    .select("contributor_id, collector_id")
+    .single();
 
   if (error) return { error: error.message };
+  
+  // 2. Telegram Notification
+  if (updatedContribution) {
+    try {
+      // Fetch related data
+      const { data: details } = await supabase
+        .from("profiles")
+        .select(`
+          full_name,
+          telegram_chat_id,
+          telegram_notification_prefs!inner(contribution_confirmations)
+        `)
+        .eq("id", updatedContribution.contributor_id)
+        .single();
+        
+      const prefs = Array.isArray(details?.telegram_notification_prefs) 
+        ? details?.telegram_notification_prefs[0] 
+        : details?.telegram_notification_prefs;
+        
+      if (details?.telegram_chat_id && prefs?.contribution_confirmations) {
+        const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+        const { data: collector } = await supabase.from("profiles").select("full_name").eq("id", updatedContribution.collector_id).single();
+        
+        if (group && collector) {
+          await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+            contributorName: details.full_name || "Contributor",
+            amount: group.contribution_amount,
+            groupName: group.name,
+            date: new Date(now).toLocaleDateString(),
+            collectorName: collector.full_name || "Your Collector"
+          }).catch(console.error);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to send telegram notification:", e);
+    }
+  }
+
   revalidatePath(`/dashboard/collector/contributors`);
   return { success: true };
 }
@@ -228,12 +272,59 @@ export async function markCyclePaid(
 export async function markMultipleCyclesPaid(ids: string[]) {
   const supabase = await createAdminClient();
   const now = new Date().toISOString();
-  const { error } = await supabase
+  
+  const { error, data: updatedContributions } = await supabase
     .from("contributions")
     .update({ is_marked_paid: true, contribution_date: now })
-    .in("id", ids);
+    .in("id", ids)
+    .select("contributor_id, collector_id, group_id");
 
   if (error) return { error: error.message };
+  
+  // Group by contributor to avoid spamming multiple messages if they paid multiple cycles
+  if (updatedContributions && updatedContributions.length > 0) {
+    try {
+      const contributorIds = [...new Set(updatedContributions.map(c => c.contributor_id))];
+      
+      for (const contributorId of contributorIds) {
+        const { data: details } = await supabase
+          .from("profiles")
+          .select(`
+            full_name,
+            telegram_chat_id,
+            telegram_notification_prefs!inner(contribution_confirmations)
+          `)
+          .eq("id", contributorId)
+          .single();
+          
+        const prefs = Array.isArray(details?.telegram_notification_prefs) 
+          ? details?.telegram_notification_prefs[0] 
+          : details?.telegram_notification_prefs;
+          
+        if (details?.telegram_chat_id && prefs?.contribution_confirmations) {
+          const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
+          const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
+          
+          const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+          const { data: collector } = await supabase.from("profiles").select("full_name").eq("id", contributorContributions[0].collector_id).single();
+          
+          if (group && collector) {
+            const totalAmount = group.contribution_amount * contributorContributions.length;
+            await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+              contributorName: details.full_name || "Contributor",
+              amount: totalAmount,
+              groupName: group.name,
+              date: new Date(now).toLocaleDateString(),
+              collectorName: collector.full_name || "Your Collector"
+            }).catch(console.error);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to send telegram notifications for multiple cycles:", e);
+    }
+  }
+
   revalidatePath(`/dashboard/collector/contributors`);
   return { success: true };
 }
@@ -333,10 +424,16 @@ export async function getCollectorGroups(collectorId: string) {
   const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("equb_groups")
-    .select("*")
+    .select("*, group_memberships(id)")
     .eq("collector_id", collectorId);
   if (error) return { error: error.message, data: [] };
-  return { data: (data as any[]) ?? [], error: null };
+  
+  const mapped = data?.map((g: any) => ({
+    ...g,
+    member_count: g.group_memberships?.length || 0,
+  }));
+  
+  return { data: mapped ?? [], error: null };
 }
 
 export async function createEqubGroup(formData: {
@@ -360,4 +457,23 @@ export async function createEqubGroup(formData: {
     .single();
   if (error) return { error: error.message };
   return { success: true, group: data };
+}
+
+export async function getGroupContributors(groupId: string) {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("group_memberships")
+    .select(`
+      id,
+      contributor:profiles!contributor_id(
+        id,
+        full_name,
+        phone_number,
+        email,
+        status
+      )
+    `)
+    .eq("group_id", groupId);
+  if (error) return { error: error.message, data: [] };
+  return { data: (data as any[]) ?? [], error: null };
 }

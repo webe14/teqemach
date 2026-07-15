@@ -24,7 +24,7 @@ export async function registerUser(formData: {
   const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
-    email_confirm: false, // Require email verification
+    email_confirm: true, // Bypass email verification
     user_metadata: {
       full_name: formData.fullName,
       phone_number: formData.phoneNumber,

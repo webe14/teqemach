@@ -104,10 +104,12 @@ function SmsToast({
   message?: string;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
+
   useEffect(() => {
     if (show) {
-      const t = setTimeout(onClose, 5000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(onClose, 5000);
+      return () => clearTimeout(timer);
     }
   }, [show, onClose]);
 
@@ -119,7 +121,7 @@ function SmsToast({
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-600 text-white px-5 py-3.5 shadow-2xl shadow-emerald-600/30 border border-emerald-500">
           <MessageSquareCheck className="h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold text-sm">SMS Sent!</p>
+            <p className="font-semibold text-sm">{t("smsSent")}</p>
             <p className="text-xs text-emerald-100">{message || "Payment confirmation sent to contributor"}</p>
           </div>
           <button
@@ -133,7 +135,7 @@ function SmsToast({
         <div className="flex items-center gap-3 rounded-2xl bg-rose-600 text-white px-5 py-3.5 shadow-2xl shadow-rose-600/30 border border-rose-500">
           <AlertTriangle className="h-5 w-5 shrink-0 text-white" />
           <div>
-            <p className="font-semibold text-sm">SMS Failed to Send</p>
+            <p className="font-semibold text-sm">{t("smsFailed")}</p>
             <p className="text-xs text-rose-100">{message || "Could not deliver message to contributor"}</p>
           </div>
           <button
@@ -376,7 +378,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       <Card className="border-primary/20 gradient-card">
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Collection Progress</span>
+            <span className="text-sm font-medium text-muted-foreground">{t("collectionProgress")}</span>
             <span className="text-lg font-bold text-primary">{progress}%</span>
           </div>
           <Progress
@@ -455,7 +457,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
         </CardHeader>
         <CardContent className="space-y-6">
           {cycles.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">No cycles generated yet</div>
+            <div className="py-12 text-center text-muted-foreground">{t("noCyclesGenerated")}</div>
           ) : (
             <>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
@@ -581,7 +583,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
           <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0" />
           <div>
             <p className="font-semibold text-emerald-700">{t("disburseSuccess")}</p>
-            <p className="text-sm text-emerald-600/70">All funds have been disbursed for this contributor.</p>
+            <p className="text-sm text-emerald-600/70">{t("allFundsDisbursed")}</p>
           </div>
         </div>
       )}

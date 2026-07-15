@@ -13,22 +13,24 @@ import {
   PlusCircle,
   BookOpen,
   CreditCard,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 
-type NavItem = {
+export type NavItem = {
   labelKey: TranslationKey;
   href: string;
   icon: LucideIcon;
 };
 
-const adminNavItems: NavItem[] = [
+export const adminNavItems: NavItem[] = [
   { labelKey: "overview", href: "/dashboard/admin", icon: LayoutDashboard },
   { labelKey: "managementHub", href: "/dashboard/admin/management", icon: Users },
   { labelKey: "financialReports", href: "/dashboard/admin/reports", icon: BarChart3 },
+  { labelKey: "broadcast", href: "/dashboard/admin/broadcast", icon: Send },
 ];
 
-const collectorNavItems: NavItem[] = [
+export const collectorNavItems: NavItem[] = [
   { labelKey: "snapshotDashboard", href: "/dashboard/collector", icon: LayoutDashboard },
   { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
   { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
@@ -36,7 +38,7 @@ const collectorNavItems: NavItem[] = [
   { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
 ];
 
-const contributorNavItems: NavItem[] = [
+export const contributorNavItems: NavItem[] = [
   { labelKey: "personalDashboard", href: "/dashboard/contributor", icon: LayoutDashboard },
   { labelKey: "systemRules", href: "/dashboard/contributor/rules", icon: BookOpen },
   { labelKey: "paymentHistory", href: "/dashboard/contributor/history", icon: CreditCard },

@@ -234,8 +234,8 @@ export default function CollectorReportsPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Global Reports</h1>
-        <p className="text-muted-foreground mt-1">All payment records across your contributors</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("globalReports")}</h1>
+        <p className="text-muted-foreground mt-1">{t("globalReportsDesc")}</p>
         <div className="ethiopian-divider mt-3 w-24" />
       </div>
 
@@ -246,9 +246,9 @@ export default function CollectorReportsPage() {
             <BarChart3 className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Total Collected</p>
+            <p className="text-sm text-muted-foreground">{t("totalCollected")}</p>
             <p className="text-2xl font-bold text-foreground">ETB {total.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} payments</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{rows.length} {t("payments")}</p>
           </div>
         </div>
 
@@ -272,7 +272,7 @@ export default function CollectorReportsPage() {
             />
             {errorMsg && <p className="text-[10px] text-rose-500 font-medium">{errorMsg}</p>}
             <div className="flex gap-2 pt-1">
-              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">Apply</Button>
+              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("apply")}</Button>
               <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8"><X className="h-3 w-3" /></Button>
             </div>
           </div>
@@ -282,8 +282,8 @@ export default function CollectorReportsPage() {
       {/* ─── Grouped Contributors Table ──────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Payment Records</CardTitle>
-          <CardDescription>Contributions grouped by contributor</CardDescription>
+          <CardTitle>{t("paymentRecords")}</CardTitle>
+          <CardDescription>{t("contributionsGrouped")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -298,11 +298,11 @@ export default function CollectorReportsPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-muted/30">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Contributor</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Contribution Dates</th>
-                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Total Days</th>
-                    <th className="px-4 py-3 text-right font-semibold text-muted-foreground">Total Amount</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden sm:table-cell">Group</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("contributor")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("contributionDates")}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">{t("totalDaysLabel")}</th>
+                    <th className="px-4 py-3 text-right font-semibold text-muted-foreground">{t("totalAmountLabel")}</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden sm:table-cell">{t("groupName")}</th>
                     
                   </tr>
                 </thead>
@@ -353,18 +353,18 @@ export default function CollectorReportsPage() {
             {pdfLoading ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Generating Preview...
+                {t("generatingPreview")}
               </>
             ) : (
               <>
                 <Download className="h-5 w-5" />
-                Download PDF 
+                {t("downloadPdf")}
               </>
             )}
           </Button>
           {pdfSuccess && (
             <p className="text-sm text-emerald-500 font-medium animate-in fade-in">
-              ✓ PDF downloaded successfully!
+              {t("pdfDownloadedSuccess")}
             </p>
           )}
         </div>
@@ -374,8 +374,8 @@ export default function CollectorReportsPage() {
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>PDF Report Preview</DialogTitle>
-            <DialogDescription>Review the generated report before downloading.</DialogDescription>
+            <DialogTitle>{t("pdfReportPreview")}</DialogTitle>
+            <DialogDescription>{t("pdfReportPreviewDesc")}</DialogDescription>
           </DialogHeader>
           
           <div className="flex-1 bg-muted/30 rounded-md border border-border overflow-hidden">
@@ -387,18 +387,18 @@ export default function CollectorReportsPage() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                No preview available
+                {t("noPreviewAvailable")}
               </div>
             )}
           </div>
           
           <DialogFooter className="sm:justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleDownloadPDF} className="gap-2">
               <Download className="h-4 w-4" />
-              Download PDF
+              {t("download")}
             </Button>
           </DialogFooter>
         </DialogContent>

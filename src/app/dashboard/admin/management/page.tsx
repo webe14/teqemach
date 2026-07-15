@@ -51,9 +51,9 @@ export default function ManagementHubPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.role) { setError("Please select a role"); return; }
+    if (!form.role) { setError(t("pleaseSelectRole")); return; }
     if (form.role === "contributor" && !form.collectorId) {
-      setError("Please select a collector for this contributor");
+      setError(t("pleaseSelectCollector"));
       return;
     }
     startTransition(async () => {
@@ -76,8 +76,8 @@ export default function ManagementHubPage() {
   return (
     <div className="space-y-8 stagger-children max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Management Hub</h1>
-        <p className="text-muted-foreground mt-1">Register and provision new users into the system</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("managementHub")}</h1>
+        <p className="text-muted-foreground mt-1">{t("registerAndProvision")}</p>
         <div className="ethiopian-divider mt-3 w-24" />
       </div>
 
@@ -89,7 +89,7 @@ export default function ManagementHubPage() {
             </div>
             <div>
               <CardTitle>{t("provisionUser")}</CardTitle>
-              <CardDescription>Fill in the details to create a new account</CardDescription>
+              <CardDescription>{t("fillDetails")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -165,7 +165,7 @@ export default function ManagementHubPage() {
                     type="password"
                     value={form.password}
                     onChange={(e) => update("password", e.target.value)}
-                    placeholder="Min 6 characters"
+                    placeholder={t("minSixChars")}
                     className="pl-10"
                     required
                     minLength={6}
@@ -206,18 +206,18 @@ export default function ManagementHubPage() {
             {/* Collector selector — only shown when role is contributor */}
             {form.role === "contributor" && (
               <div className="space-y-2">
-                <Label htmlFor="collectorSelect">Assign to Collector <span className="text-destructive">*</span></Label>
+                <Label htmlFor="collectorSelect">{t("assignToCollector")} <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.collectorId}
                   onValueChange={(v) => update("collectorId", v)}
                 >
                   <SelectTrigger id="collectorSelect">
-                    <SelectValue placeholder="Select a collector..." />
+                    <SelectValue placeholder={t("selectCollector")} />
                   </SelectTrigger>
                   <SelectContent>
                     {collectors.length === 0 ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No collectors registered yet
+                        {t("noCollectorsYet")}
                       </div>
                     ) : (
                       collectors.map((c) => (
@@ -232,7 +232,7 @@ export default function ManagementHubPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  The contributor will be associated with the selected collector&apos;s groups
+                  {t("contributorAssociated")}
                 </p>
               </div>
             )}
@@ -241,12 +241,12 @@ export default function ManagementHubPage() {
             {form.role && (
               <div className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3">
                 <Badge variant={form.role === "collector" ? "info" : "success"} className="capitalize">
-                  {form.role}
+                  {t(form.role as any)}
                 </Badge>
                 <p className="text-sm text-muted-foreground">
                   {form.role === "collector"
-                    ? "This user will manage Equb groups and track contributor payments"
-                    : "This user will participate in Equb cycles as a member"}
+                    ? t("collectorRoleDesc")
+                    : t("contributorRoleDesc")}
                 </p>
               </div>
             )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { getCurrentProfile } from "@/lib/actions/auth";
-import { getCollectorGroups, createEqubGroup } from "@/lib/actions/collector";
+import { getCollectorGroups, createEqubGroup, getGroupContributors } from "@/lib/actions/collector";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2, Users } from "lucide-react";
 
 type EqubGroup = {
   id: string;
@@ -20,6 +20,7 @@ type EqubGroup = {
   total_days: number;
   frequency: "daily" | "weekly" | "monthly";
   created_at: string;
+  member_count?: number;
 };
 
 export default function EqubGroupsPage() {
@@ -29,6 +30,11 @@ export default function EqubGroupsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const [contributorsDialogOpen, setContributorsDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
+  const [groupContributors, setGroupContributors] = useState<any[]>([]);
+  const [contributorsLoading, setContributorsLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -53,6 +59,15 @@ export default function EqubGroupsPage() {
     const result = await getCollectorGroups(cid);
     setGroups((result.data as EqubGroup[]) ?? []);
     setLoading(false);
+  }
+
+  async function handleGroupClick(group: EqubGroup) {
+    setSelectedGroup(group);
+    setContributorsDialogOpen(true);
+    setContributorsLoading(true);
+    const result = await getGroupContributors(group.id);
+    setGroupContributors(result.data || []);
+    setContributorsLoading(false);
   }
 
   function update(field: string, value: string) {
@@ -120,7 +135,7 @@ export default function EqubGroupsPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("equbGroups")}</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Manage and create savings groups</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{t("manageSavingsGroups")}</p>
           </div>
           <Button onClick={() => setDialogOpen(true)} id="add-group-btn" className="gap-2 shrink-0">
             <PlusCircle className="h-4 w-4" />
@@ -139,20 +154,24 @@ export default function EqubGroupsPage() {
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Layers className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-medium">No Equb groups created yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Click "Add Equb Group" to start a new savings circle</p>
+          <p className="text-muted-foreground font-medium">{t("noEqubGroups")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("clickAddEqub")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map((group) => (
-            <Card key={group.id} className="card-hover border-border/60 hover:border-primary/30 flex flex-col justify-between">
+            <Card key={group.id} onClick={() => handleGroupClick(group)} className="card-hover border-border/60 hover:border-primary/30 flex flex-col justify-between cursor-pointer transition-colors hover:bg-muted/10">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <CardTitle className="truncate text-lg">{group.name}</CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      Created on {new Date(group.created_at).toLocaleDateString()}
+                      {t("createdOn")} {new Date(group.created_at).toLocaleDateString()}
                     </CardDescription>
+                    <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-primary bg-primary/10 w-fit px-2 py-1 rounded-md">
+                      <Users className="h-3.5 w-3.5" />
+                      {group.member_count || 0} Contributors
+                    </div>
                   </div>
                   <Badge variant="info" className="capitalize shrink-0">
                     {group.frequency}
@@ -162,14 +181,14 @@ export default function EqubGroupsPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Amount</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t("amount")}</span>
                     <div className="flex items-center gap-1 text-sm font-semibold text-emerald-600">
                       <Coins className="h-4 w-4 shrink-0" />
                       <span>ETB {group.contribution_amount.toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Duration</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t("duration")}</span>
                     <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
                       <Timer className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span>{group.total_days} days</span>
@@ -180,7 +199,7 @@ export default function EqubGroupsPage() {
                 <div className="pt-2 border-t border-border/60">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <CalendarDays className="h-4 w-4 shrink-0" />
-                    <span>Contribution cycle repeats {group.frequency}</span>
+                    <span>{t("contributionCycleRepeats").replace("{freq}", t(group.frequency as any) || group.frequency)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -197,7 +216,7 @@ export default function EqubGroupsPage() {
               <PlusCircle className="h-5 w-5 text-primary" />
               {t("addGroup")}
             </DialogTitle>
-            <DialogDescription>Create a new Equb savings group for your contributors</DialogDescription>
+            <DialogDescription>{t("createNewEqubGroup")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             {formError && (
@@ -209,7 +228,7 @@ export default function EqubGroupsPage() {
             {formSuccess && (
               <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>Equb Group created successfully!</span>
+                <span>{t("equbGroupCreated")}</span>
               </div>
             )}
 
@@ -226,7 +245,7 @@ export default function EqubGroupsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contribution-amount">Amount (ETB)</Label>
+                <Label htmlFor="contribution-amount">{t("contributionAmount")} (ETB)</Label>
                 <Input
                   id="contribution-amount"
                   type="number"
@@ -238,7 +257,7 @@ export default function EqubGroupsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="total-days">Total Cycles/Days</Label>
+                <Label htmlFor="total-days">{t("totalCyclesDays")}</Label>
                 <Input
                   id="total-days"
                   type="number"
@@ -261,9 +280,9 @@ export default function EqubGroupsPage() {
                   <SelectValue placeholder="Select frequency..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="daily">{t("daily")}</SelectItem>
+                  <SelectItem value="weekly">{t("weekly")}</SelectItem>
+                  <SelectItem value="monthly">{t("monthly")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -275,6 +294,49 @@ export default function EqubGroupsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Contributors Dialog */}
+      <Dialog open={contributorsDialogOpen} onOpenChange={setContributorsDialogOpen}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              {selectedGroup?.name} {t("contributors")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("viewMembers")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {contributorsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : groupContributors.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                <p>{t("noContributorsFound")}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {groupContributors.map((membership: any) => (
+                  <div key={membership.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">{membership.contributor?.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{membership.contributor?.phone_number || membership.contributor?.email}</p>
+                    </div>
+                    <Badge variant={membership.contributor?.status === "active" ? "default" : "secondary"} className="capitalize">
+                      {membership.contributor?.status || "Unknown"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setContributorsDialogOpen(false)}>{t("close")}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

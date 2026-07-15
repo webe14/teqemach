@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { cn } from "@/lib/utils";
@@ -28,8 +29,11 @@ export function AppShell({ children, role, pageName, userName, userId }: AppShel
         onToggleCollapse={() => setCollapsed(!collapsed)} 
       />
 
-      {/* Mobile Header */}
+      {/* Mobile Header (simplified top bar) */}
       <MobileHeader role={role} pageName={pageName} userName={userName} userId={userId} />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav role={role} userName={userName} />
 
       {/* Main content — offset for desktop sidebar */}
       <main
