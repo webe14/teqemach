@@ -232,36 +232,42 @@ export async function markCyclePaid(
   if (updatedContribution) {
     try {
       // Fetch related data
-      const { data: details } = await supabase
+      const { data: details, error: detailsError } = await supabase
         .from("profiles")
         .select(`
           full_name,
           telegram_chat_id,
-          telegram_notification_prefs!inner(contribution_confirmations)
+          telegram_notification_prefs (contribution_confirmations)
         `)
         .eq("id", updatedContribution.contributor_id)
         .single();
+        
+      if (detailsError) {
+        console.error("[markCyclePaid] Error fetching details:", detailsError);
+      }
         
       const prefs = Array.isArray(details?.telegram_notification_prefs) 
         ? details?.telegram_notification_prefs[0] 
         : details?.telegram_notification_prefs;
         
-      if (details?.telegram_chat_id && prefs?.contribution_confirmations) {
+      if (details?.telegram_chat_id && (prefs?.contribution_confirmations ?? true)) {
         const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
         const { data: collector } = await supabase.from("profiles").select("full_name").eq("id", updatedContribution.collector_id).single();
         
         if (group && collector) {
-          await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+          console.log(`[markCyclePaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
+          const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
             contributorName: details.full_name || "Contributor",
             amount: group.contribution_amount,
             groupName: group.name,
             date: new Date(now).toLocaleDateString(),
             collectorName: collector.full_name || "Your Collector"
-          }).catch(console.error);
+          });
+          console.log("[markCyclePaid] Notification sent result:", tgResult);
         }
       }
     } catch (e) {
-      console.error("Failed to send telegram notification:", e);
+      console.error("[markCyclePaid] Failed to send telegram notification:", e);
     }
   }
 
@@ -287,21 +293,25 @@ export async function markMultipleCyclesPaid(ids: string[]) {
       const contributorIds = [...new Set(updatedContributions.map(c => c.contributor_id))];
       
       for (const contributorId of contributorIds) {
-        const { data: details } = await supabase
+        const { data: details, error: detailsError } = await supabase
           .from("profiles")
           .select(`
             full_name,
             telegram_chat_id,
-            telegram_notification_prefs!inner(contribution_confirmations)
+            telegram_notification_prefs (contribution_confirmations)
           `)
           .eq("id", contributorId)
           .single();
+          
+        if (detailsError) {
+          console.error("[markMultipleCyclesPaid] Error fetching details for", contributorId, detailsError);
+        }
           
         const prefs = Array.isArray(details?.telegram_notification_prefs) 
           ? details?.telegram_notification_prefs[0] 
           : details?.telegram_notification_prefs;
           
-        if (details?.telegram_chat_id && prefs?.contribution_confirmations) {
+        if (details?.telegram_chat_id && (prefs?.contribution_confirmations ?? true)) {
           const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
           const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
           
@@ -310,18 +320,20 @@ export async function markMultipleCyclesPaid(ids: string[]) {
           
           if (group && collector) {
             const totalAmount = group.contribution_amount * contributorContributions.length;
-            await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+            console.log(`[markMultipleCyclesPaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
+            const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
               contributorName: details.full_name || "Contributor",
               amount: totalAmount,
               groupName: group.name,
               date: new Date(now).toLocaleDateString(),
               collectorName: collector.full_name || "Your Collector"
-            }).catch(console.error);
+            });
+            console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
           }
         }
       }
     } catch (e) {
-      console.error("Failed to send telegram notifications for multiple cycles:", e);
+      console.error("[markMultipleCyclesPaid] Failed to send telegram notifications for multiple cycles:", e);
     }
   }
 

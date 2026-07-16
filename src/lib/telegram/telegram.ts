@@ -1,14 +1,15 @@
 export class TelegramBotAPI {
-  private readonly token: string;
-  private readonly baseUrl: string;
+  private getToken(): string {
+    return process.env.TELEGRAM_BOT_TOKEN || "";
+  }
 
-  constructor() {
-    this.token = process.env.TELEGRAM_BOT_TOKEN || "";
-    this.baseUrl = `https://api.telegram.org/bot${this.token}`;
+  private getBaseUrl(): string {
+    return `https://api.telegram.org/bot${this.getToken()}`;
   }
 
   private async request(method: string, data: any, retries = 3): Promise<any> {
-    if (!this.token) {
+    const token = this.getToken();
+    if (!token) {
       console.warn(`[TelegramBotAPI] Bot token not configured. Skipping ${method}.`);
       return null;
     }
@@ -16,7 +17,8 @@ export class TelegramBotAPI {
     let attempt = 0;
     while (attempt < retries) {
       try {
-        const response = await fetch(`${this.baseUrl}/${method}`, {
+        const url = `${this.getBaseUrl()}/${method}`;
+        const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
