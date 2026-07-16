@@ -49,7 +49,6 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    setConfirmPassword("");
     setError("");
     setSuccess(false);
   }

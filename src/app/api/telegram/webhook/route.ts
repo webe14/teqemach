@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 import { TelegramUpdate } from "@/lib/telegram/types";
-import { telegramBot, TelegramNotifier } from "@/lib/telegram";
+import { telegramBot } from "@/lib/telegram/telegram";
+import { TelegramNotifier } from "@/lib/telegram/notifier";
 import { createAdminClient } from "@/lib/supabase/server";
-import { linkTelegramAccount, updateTelegramLastSeen } from "@/lib/actions/telegram";
 
 export async function POST(req: Request) {
   try {
-    // Basic verification - in production, you should use the X-Telegram-Bot-Api-Secret-Token header
+    // Verify the webhook secret token
     const secretToken = req.headers.get("x-telegram-bot-api-secret-token");
     const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
     
     if (configuredSecret && secretToken !== configuredSecret) {
+      console.error("[Webhook] Unauthorized: secret mismatch", { received: secretToken, expected: configuredSecret });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const update: TelegramUpdate = await req.json();
+    console.log("[Webhook] Received update:", JSON.stringify(update).slice(0, 500));
     
     if (!update.message || !update.message.text) {
       return NextResponse.json({ ok: true }); // Ignore non-text updates
@@ -28,14 +30,20 @@ export async function POST(req: Request) {
 
     if (!telegramId) return NextResponse.json({ ok: true });
 
-    // Update last seen
-    await updateTelegramLastSeen(telegramId).catch(() => {});
+    // Update last seen (direct DB call, no server action)
+    const supabase = await createAdminClient();
+    await supabase
+      .from("profiles")
+      .update({ telegram_last_seen: new Date().toISOString() })
+      .eq("telegram_id", telegramId);
 
     // Command handling
     if (text.startsWith("/")) {
       const parts = text.split(" ");
-      const command = parts[0].toLowerCase();
+      const command = parts[0].toLowerCase().split("@")[0]; // Strip @botname suffix
       const payload = parts.slice(1).join(" ");
+
+      console.log("[Webhook] Command:", command, "Payload:", payload);
 
       switch (command) {
         case "/start":
@@ -63,7 +71,9 @@ export async function POST(req: Request) {
 }
 
 async function handleStartCommand(chatId: number, telegramId: number, username?: string, firstName?: string, token?: string) {
-  if (token) {
+  console.log("[handleStartCommand] chatId:", chatId, "telegramId:", telegramId, "token:", token ? token.slice(0, 8) + "..." : "none");
+  
+  if (token && token.trim().length > 0) {
     // Attempt to link account
     const supabase = await createAdminClient();
     
@@ -71,20 +81,68 @@ async function handleStartCommand(chatId: number, telegramId: number, username?:
     const { data, error } = await supabase
       .from("telegram_otps")
       .select("id, user_id, expires_at, used")
-      .eq("otp_code", token)
+      .eq("otp_code", token.trim())
       .eq("purpose", "telegram_link")
       .eq("used", false)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
-    if (error || !data || new Date(data.expires_at) < new Date()) {
+    console.log("[handleStartCommand] OTP lookup result:", { data, error: error?.message });
+
+    if (error || !data) {
       await telegramBot.sendMessage(chatId, "❌ <b>Invalid or expired link token.</b>\nPlease request a new link from the Teqemach app.");
       return;
     }
 
+    if (new Date(data.expires_at) < new Date()) {
+      await telegramBot.sendMessage(chatId, "❌ <b>This link has expired.</b>\nPlease request a new link from the Teqemach app.");
+      return;
+    }
+
     try {
-      await linkTelegramAccount(data.user_id, telegramId, chatId, username, firstName);
+      // Check if telegram account is already linked to another user
+      const { data: existingUser } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("telegram_id", telegramId)
+        .neq("id", data.user_id)
+        .single();
+
+      if (existingUser) {
+        await telegramBot.sendMessage(chatId, "❌ <b>Linking Failed</b>\n\nThis Telegram account is already linked to another user.");
+        return;
+      }
+
+      // Update profile directly (no server action)
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          telegram_id: telegramId,
+          telegram_chat_id: chatId,
+          telegram_username: username || firstName || null,
+          telegram_verified: true,
+          telegram_linked_at: new Date().toISOString(),
+          telegram_last_seen: new Date().toISOString(),
+        })
+        .eq("id", data.user_id);
+
+      if (updateError) {
+        console.error("[handleStartCommand] Profile update error:", updateError);
+        await telegramBot.sendMessage(chatId, "❌ <b>Linking Failed</b>\n\nFailed to link Telegram account. Please try again.");
+        return;
+      }
+
+      // Ensure notification prefs exist
+      const { data: prefs } = await supabase
+        .from("telegram_notification_prefs")
+        .select("id")
+        .eq("user_id", data.user_id)
+        .single();
+
+      if (!prefs) {
+        await supabase.from("telegram_notification_prefs").insert({ user_id: data.user_id });
+      }
       
       // Mark token as used
       await supabase
@@ -92,12 +150,14 @@ async function handleStartCommand(chatId: number, telegramId: number, username?:
         .update({ used: true })
         .eq("id", data.id);
 
-      await telegramBot.sendMessage(chatId, `✅ <b>Account Linked Successfully!</b>\n\nWelcome ${firstName || username || 'to Teqemach'}, your Telegram account is now connected.\nYou will receive notifications here.`);
+      const result = await telegramBot.sendMessage(chatId, `✅ <b>Account Linked Successfully!</b>\n\nWelcome ${firstName || username || 'to Teqemach'}, your Telegram account is now connected.\nYou will receive notifications here.`);
+      console.log("[handleStartCommand] Success message result:", result);
     } catch (err: any) {
+      console.error("[handleStartCommand] Error:", err);
       await telegramBot.sendMessage(chatId, `❌ <b>Linking Failed</b>\n\n${err.message}`);
     }
   } else {
-    // Standard start
+    // Standard start (no token)
     await telegramBot.sendMessage(chatId, `👋 <b>Welcome to Teqemach Bot!</b>\n\nTo link your account, please use the <b>Connect Telegram</b> button in the Teqemach app settings.`);
   }
 }
