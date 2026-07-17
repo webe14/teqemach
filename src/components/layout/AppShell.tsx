@@ -54,7 +54,7 @@ export function AppShell({ children, role, pageName, userName, userId }: AppShel
         </div>
 
         {/* Page content */}
-        <div className="p-4 md:p-6 lg:p-8">{children}</div>
+        <div className="p-4 md:p-6 lg:p-8 pb-28 lg:pb-8">{children}</div>
       </main>
     </div>
   );

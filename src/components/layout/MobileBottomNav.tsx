@@ -57,11 +57,8 @@ export function MobileBottomNav({ role, userName }: MobileBottomNavProps) {
 
   return (
     <>
-      {/* Spacer to prevent content from hiding behind the bottom nav */}
-      <div className="h-24 lg:hidden" />
-
       {/* Fixed Bottom Navigation Bar - Glassmorphism style */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/85 backdrop-blur-2xl border-t border-border/50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] pb-safe rounded-t-[2.5rem] transition-all duration-300">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/60 backdrop-blur-2xl border-t border-border/40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] pb-safe rounded-t-[2.5rem] transition-all duration-300">
         <div className="flex items-center justify-around h-[80px] px-2 relative">
           {bottomBarItems.map((item) => {
             const isActive =

@@ -30,9 +30,8 @@ export default function LoginPage() {
         setInitData(tg.initData);
         checkTelegramLogin(tg.initData);
       } else {
-        // Not in telegram or no initData available
-        setStep("error");
-        setErrorMsg("Please open this app inside Telegram.");
+        // Direct redirect to telegram bot if accessed outside
+        window.location.href = "https://t.me/TeqemachBot";
       }
     }, 100);
 

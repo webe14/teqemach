@@ -145,7 +145,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
           <div className="relative w-full max-w-md bg-card sm:rounded-3xl rounded-t-3xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-8 duration-300">
             
             {/* Header Background */}
-            <div className={cn("h-32 bg-gradient-to-br w-full absolute top-0 left-0", roleGradients[role])} />
+            <div className={cn("h-24 bg-gradient-to-br w-full absolute top-0 left-0", roleGradients[role])} />
             
             <button
               onClick={() => { setOpen(false); reset(); }}
@@ -155,13 +155,13 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
             </button>
 
             {/* Profile Avatar */}
-            <div className="relative z-10 pt-16 px-6 pb-2 flex flex-col items-center">
-              <div className="h-24 w-24 rounded-full border-4 border-card bg-muted flex items-center justify-center overflow-hidden shadow-lg mb-3">
-                <User className="h-12 w-12 text-muted-foreground/50" />
+            <div className="relative z-10 pt-10 px-6 pb-2 flex flex-col items-center">
+              <div className="h-20 w-20 rounded-full border-4 border-card bg-muted flex items-center justify-center overflow-hidden shadow-lg mb-2">
+                <User className="h-10 w-10 text-muted-foreground/50" />
               </div>
               <h2 className="text-xl font-bold text-foreground truncate w-full text-center">{userName}</h2>
               <span className={cn(
-                "mt-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                "mt-0.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
                 role === "admin" ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" :
                 role === "collector" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300" :
                 "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
@@ -170,7 +170,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               {success ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in-95 duration-300">
                   <div className="h-16 w-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 rounded-full flex items-center justify-center mb-4">
@@ -180,28 +180,28 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                   <p className="text-sm text-muted-foreground mt-1">Your changes have been saved successfully.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6 pb-6">
+                <form onSubmit={handleSubmit} className="space-y-4 pb-6">
                   
                   {/* Basic Info Card */}
-                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-4">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Personal Information</h3>
-                    <div className="space-y-2">
+                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-3">
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Personal Information</h3>
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-medium">Full Name</Label>
                       <Input
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Your full name"
-                        className="bg-background border-border/50 h-11"
+                        className="bg-background border-border/50 h-10"
                       />
                     </div>
                   </div>
 
                   {/* Password Card */}
-                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-4">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Security</h3>
+                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-3">
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Security</h3>
                     
                     {role !== "admin" && (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label className="text-sm font-medium">Current Password</Label>
                         <div className="relative">
                           <Input
@@ -209,7 +209,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             placeholder="Required to change password"
-                            className="bg-background border-border/50 h-11 pr-10"
+                            className="bg-background border-border/50 h-10 pr-10"
                           />
                           <button
                             type="button"
@@ -222,7 +222,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                       </div>
                     )}
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-medium">New Password</Label>
                       <div className="relative">
                         <Input
@@ -230,7 +230,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="Min 6 characters"
-                          className="bg-background border-border/50 h-11 pr-10"
+                          className="bg-background border-border/50 h-10 pr-10"
                         />
                         <button
                           type="button"
@@ -242,23 +242,23 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-medium">Confirm New Password</Label>
                       <Input
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Repeat new password"
-                        className="bg-background border-border/50 h-11"
+                        className="bg-background border-border/50 h-10"
                       />
                     </div>
                   </div>
 
                   {/* Notifications Card */}
-                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-4">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Telegram Notifications</h3>
+                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-3">
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Telegram Notifications</h3>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium cursor-pointer" htmlFor="pref-contribution">Contribution Confirmations</Label>
                         <input 
@@ -266,7 +266,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                           id="pref-contribution" 
                           checked={prefs.contribution_confirmations} 
                           onChange={(e) => handleTogglePref("contribution_confirmations", e.target.checked)} 
-                          className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
                         />
                       </div>
                       
@@ -278,7 +278,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                             id="pref-broadcast" 
                             checked={prefs.broadcast_announcements} 
                             onChange={(e) => handleTogglePref("broadcast_announcements", e.target.checked)} 
-                            className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
                           />
                         </div>
                       )}
@@ -291,7 +291,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                             id="pref-reminders" 
                             checked={prefs.payment_reminders} 
                             onChange={(e) => handleTogglePref("payment_reminders", e.target.checked)} 
-                            className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
                           />
                         </div>
                       )}
@@ -308,7 +308,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                   <div className="pt-2">
                     <Button
                       type="submit"
-                      className="w-full h-12 text-md rounded-xl"
+                      className="w-full h-11 text-md rounded-xl font-semibold"
                       disabled={loading}
                     >
                       {loading ? (
