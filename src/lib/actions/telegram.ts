@@ -57,30 +57,7 @@ export async function linkTelegramAccount(
   return { success: true };
 }
 
-export async function unlinkTelegramAccount() {
-  const profile = await getCurrentProfile();
-  if (!profile) throw new Error("Unauthorized");
 
-  const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      telegram_id: null,
-      telegram_chat_id: null,
-      telegram_username: null,
-      telegram_verified: false,
-      telegram_linked_at: null,
-      telegram_last_seen: null,
-    })
-    .eq("id", profile.id);
-
-  if (error) {
-    console.error("Error unlinking telegram account:", error);
-    throw new Error("Failed to unlink Telegram account.");
-  }
-
-  return { success: true };
-}
 
 export async function getTelegramStatus() {
   const profile = await getCurrentProfile();
@@ -92,15 +69,7 @@ export async function getTelegramStatus() {
   };
 }
 
-export async function generateTelegramLinkUrl() {
-  const profile = await getCurrentProfile();
-  if (!profile) throw new Error("Unauthorized");
 
-  const botUsername = process.env.TELEGRAM_BOT_USERNAME || "TeqemachBot";
-  const token = await createOTP(profile.id, "telegram_link", 10, true);
-  
-  return `https://t.me/${botUsername}?start=${token}`;
-}
 
 export async function getUserByTelegramId(telegramId: number) {
   const supabase = await createAdminClient();
