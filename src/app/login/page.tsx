@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Coins, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Coins, Mail, Lock, AlertCircle, Loader2, Loader2Icon } from "lucide-react";
+import { TelegramBotAPI } from "@/lib/telegram";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -123,8 +124,8 @@ export default function LoginPage() {
 
         {(step === "init" || step === "loading") && (
           <div className="flex flex-col items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground font-medium">Authenticating via Telegram...</p>
+            <Loader2Icon className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground font-medium"> Loading Telegram...</p>
           </div>
         )}
 

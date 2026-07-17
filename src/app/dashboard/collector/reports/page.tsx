@@ -272,7 +272,7 @@ export default function CollectorReportsPage() {
             />
             {errorMsg && <p className="text-[10px] text-rose-500 font-medium">{errorMsg}</p>}
             <div className="flex gap-2 pt-1">
-              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("apply")}</Button>
+              <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("Apply")}</Button>
               <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8"><X className="h-3 w-3" /></Button>
             </div>
           </div>
