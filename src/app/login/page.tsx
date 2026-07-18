@@ -389,7 +389,7 @@ export default function LoginPage() {
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-2">Select Your Role</h2>
             <p className="text-muted-foreground mb-6">
-              You have multiple accounts. Choose which to open.
+              Choose an account to log in to, or register a new role.
             </p>
 
             {errorMsg && (

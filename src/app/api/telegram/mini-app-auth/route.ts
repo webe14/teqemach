@@ -54,21 +54,8 @@ export async function POST(req: Request) {
         });
       }
 
-      if (nonAdminProfiles.length === 1) {
-        // Single role — auto login
-        const profile = nonAdminProfiles[0];
-        await createCustomSession({
-          userId: profile.id,
-          role: profile.role as "collector" | "contributor",
-          email: profile.email || "",
-        });
-        return NextResponse.json({
-          linked: true,
-          redirect: `/dashboard/${profile.role}`,
-        });
-      }
-
-      // Multiple roles — return role list for picker
+      // Always return role list for picker to prevent auto-login loops
+      // and allow users to register for additional roles.
       const roleList = nonAdminProfiles.map((p) => ({
         id: p.id,
         role: p.role,
