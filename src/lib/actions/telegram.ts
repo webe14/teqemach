@@ -83,6 +83,21 @@ export async function getUserByTelegramId(telegramId: number) {
   return data;
 }
 
+/**
+ * Returns ALL profiles linked to a given Telegram ID.
+ * Used for multi-role support (same user can be both collector and contributor).
+ */
+export async function getProfilesByTelegramId(telegramId: number) {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("telegram_id", telegramId);
+    
+  if (error || !data) return [];
+  return data;
+}
+
 export async function updateTelegramLastSeen(telegramId: number) {
   const supabase = await createAdminClient();
   await supabase
