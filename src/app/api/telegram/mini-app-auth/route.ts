@@ -3,6 +3,7 @@ import { verifyInitData, parseInitData } from "@/lib/telegram/verify";
 import { getUserByTelegramId, getProfilesByTelegramId } from "@/lib/actions/telegram";
 import { createCustomSession } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/server";
+import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 
 export async function POST(req: Request) {
   try {
@@ -99,6 +100,8 @@ export async function POST(req: Request) {
         email: profile.email || "",
       });
 
+      await syncTelegramUserActiveProfile(telegramId, profile.id, profile.role, initDataObj);
+
       return NextResponse.json({
         linked: true,
         redirect: `/dashboard/${profile.role}`,
@@ -158,6 +161,8 @@ export async function POST(req: Request) {
         role: "collector",
         email: newProfile.email || "",
       });
+
+      await syncTelegramUserActiveProfile(telegramId, newProfile.id, "collector", initDataObj);
 
       return NextResponse.json({
         linked: true,
@@ -256,6 +261,8 @@ export async function POST(req: Request) {
         role: "contributor",
         email: newProfile.email || "",
       });
+
+      await syncTelegramUserActiveProfile(telegramId, newProfile.id, "contributor", initDataObj);
 
       return NextResponse.json({
         linked: true,
@@ -372,6 +379,8 @@ export async function POST(req: Request) {
         role: existingProfile.role as "collector" | "contributor",
         email: existingProfile.email || "",
       });
+
+      await syncTelegramUserActiveProfile(telegramId, existingProfile.id, existingProfile.role, initDataObj);
 
       return NextResponse.json({
         linked: true,

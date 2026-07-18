@@ -127,6 +127,27 @@ export async function updateTelegramUser(telegramId: number, updates: Partial<Te
 }
 
 /**
+ * Upsert the user's active profile from the Mini App so the bot knows who they are currently logged in as.
+ */
+export async function syncTelegramUserActiveProfile(telegramId: number, profileId: string, role: string, tgData: any = {}) {
+  const supabase = await createAdminClient();
+  const { error } = await supabase.from("telegram_users").upsert({
+    telegram_id: telegramId,
+    username: tgData.username || null,
+    first_name: tgData.first_name || null,
+    last_name: tgData.last_name || null,
+    language_code: tgData.language_code || null,
+    user_id: profileId,
+    role: role,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "telegram_id" });
+
+  if (error) {
+    console.error("Error syncing telegram active profile:", error);
+  }
+}
+
+/**
  * Notification System: Send a notification to a specific Telegram User by DB telegram_id
  */
 export async function notifyTelegramUser(telegramId: number, message: string) {
