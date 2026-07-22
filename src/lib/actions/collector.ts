@@ -8,58 +8,74 @@ import { TelegramNotifier } from "@/lib/telegram/notifier";
 export async function inviteContributor(formData: {
   fullName: string;
   phoneNumber: string;
-  email: string;
-  password?: string; // Kept for legacy UI compatibility
+  email?: string;
+  password?: string;
+  telegramUsername: string;
   collectorId: string;
 }) {
   const adminSupabase = await createAdminClient();
 
-  // Validate email format basic
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) {
-    return { error: "Invalid email format" };
-  }
-
-  // 1. Check if email already exists in legacy profiles
-  const { data: existingProfile } = await adminSupabase
-    .from("profiles")
-    .select("id")
-    .eq("email", formData.email)
-    .single();
-
-  if (existingProfile) {
-    // We already have a profile with this email. Do NOT create duplicate.
-    return { success: true, id: existingProfile.id };
-  }
-
-  // 2. User does not exist, so invite via Supabase Auth
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const { data: authData, error: authError } = await adminSupabase.auth.admin.inviteUserByEmail(formData.email, {
-    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
-    data: {
-      full_name: formData.fullName,
-      phone_number: formData.phoneNumber,
+  if (formData.email) {
+    // Validate email format basic
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return { error: "Invalid email format" };
     }
-  });
 
-  if (authError) {
-    if (authError.message.includes("already registered") || authError.status === 422) {
-      return { error: "A user with this email already exists." };
+    // 1. Check if email already exists in legacy profiles
+    const { data: existingProfile } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("email", formData.email)
+      .single();
+
+    if (existingProfile) {
+      // We already have a profile with this email. Do NOT create duplicate.
+      return { success: true, id: existingProfile.id };
     }
-    return { error: authError.message };
   }
 
-  // 3. Insert new legacy profile with bcrypt password (from UI, to preserve DB structure exactly)
-  const hashedPassword = await bcrypt.hash(formData.password || "defaultPassword123!", 12);
+  let userId: string;
+  let hashedPassword = null;
 
+  if (formData.email) {
+    // 2. User does not exist, so invite via Supabase Auth
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const { data: authData, error: authError } = await adminSupabase.auth.admin.inviteUserByEmail(formData.email, {
+      redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+      data: {
+        full_name: formData.fullName,
+        phone_number: formData.phoneNumber,
+      }
+    });
+
+    if (authError) {
+      if (authError.message.includes("already registered") || authError.status === 422) {
+        return { error: "A user with this email already exists." };
+      }
+      return { error: authError.message };
+    }
+    
+    userId = authData.user.id;
+    hashedPassword = await bcrypt.hash(formData.password || "defaultPassword123!", 12);
+  } else {
+    // Generate UUID manually since we are skipping Supabase Auth
+    userId = crypto.randomUUID();
+    if (formData.password) {
+      hashedPassword = await bcrypt.hash(formData.password, 12);
+    }
+  }
+
+  // 3. Insert new legacy profile
   const { data, error: profileError } = await adminSupabase
     .from("profiles")
     .insert({
-      id: authData.user.id,
+      id: userId,
       full_name: formData.fullName,
       phone_number: formData.phoneNumber,
-      email: formData.email,
+      email: formData.email || null,
       password: hashedPassword,
+      telegram_username: formData.telegramUsername.replace("@", ""),
       role: "contributor",
       collector_id: formData.collectorId,
     })
@@ -67,7 +83,9 @@ export async function inviteContributor(formData: {
     .single();
 
   if (profileError) {
-    await adminSupabase.auth.admin.deleteUser(authData.user.id);
+    if (formData.email) {
+      await adminSupabase.auth.admin.deleteUser(userId);
+    }
     return { error: profileError.message };
   }
 

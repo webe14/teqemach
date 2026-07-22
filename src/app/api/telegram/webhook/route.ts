@@ -61,6 +61,52 @@ async function handleMessage(message: any) {
 
   switch (command) {
     case "/start": {
+      const args = text.split(" ").slice(1);
+      
+      // Handle deep link logic for linking accounts
+      if (args.length > 0 && args[0].startsWith("link_")) {
+        const profileIdToLink = args[0].replace("link_", "");
+        
+        // Lookup profile
+        const { data: profileToLink } = await supabase
+          .from("profiles")
+          .select("id, telegram_username")
+          .eq("id", profileIdToLink)
+          .single();
+          
+        if (!profileToLink) {
+          await sendTelegramMessage(chatId, "❌ Link invalid or expired. Profile not found.");
+          break;
+        }
+        
+        if (profileToLink.telegram_username?.toLowerCase() !== from.username?.toLowerCase()) {
+          await sendTelegramMessage(chatId, `❌ Username mismatch! The collector linked this account to @${profileToLink.telegram_username}, but your Telegram username is @${from.username}. Please update your username or ask the collector to fix it.`);
+          break;
+        }
+        
+        // Link successful
+        await supabase.from("profiles").update({
+          telegram_id: telegramId,
+          telegram_verified: true,
+          telegram_linked_at: new Date().toISOString()
+        }).eq("id", profileIdToLink);
+        
+        // Also update telegram_users
+        await supabase.from("telegram_users").update({
+          user_id: profileIdToLink
+        }).eq("telegram_id", telegramId);
+        
+        const successText = `✅ Account successfully linked!\n\nWelcome to Teqemach 👋\nManage your equb contributions easily. Click below to open the Mini App!`;
+        const replyMarkup = {
+          inline_keyboard: [
+            [openMiniAppButton("Open Teqemach", APP_URL)]
+          ]
+        };
+        await sendTelegramMessage(chatId, successText, { reply_markup: replyMarkup });
+        break;
+      }
+
+      // Default start text
       const welcomeText = `Welcome to Teqemach 👋\n\nManage your equb contributions easily. Click below to open the Mini App!`;
       const replyMarkup = {
         inline_keyboard: [

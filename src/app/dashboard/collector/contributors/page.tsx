@@ -99,11 +99,13 @@ export default function ManageContributorsPage() {
     phoneNumber: "",
     email: "",
     password: "",
+    telegramUsername: "",
     groupId: "",
     startDate: todayECStr,
   });
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState(false);
+  const [addGeneratedLink, setAddGeneratedLink] = useState<string | null>(null);
 
   // ── Edit dialog state ─────────────────────────────────────────────────────
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -163,6 +165,7 @@ export default function ManageContributorsPage() {
     setAddForm((f) => ({ ...f, [field]: value }));
     setAddError(null);
     setAddSuccess(false);
+    setAddGeneratedLink(null);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -171,14 +174,13 @@ export default function ManageContributorsPage() {
       !userId ||
       !addForm.fullName.trim() ||
       !addForm.phoneNumber.trim() ||
-      !addForm.email.trim() ||
-      !addForm.password.trim() ||
+      !addForm.telegramUsername.trim() ||
       !addForm.groupId
     ) {
-      setAddError(t("pleaseFillAllFields"));
+      setAddError(t("pleaseFillAllFields") || "Please fill all required fields");
       return;
     }
-    if (addForm.password.length < 6) {
+    if (addForm.password && addForm.password.length < 6) {
       setAddError(t("minSixChars"));
       return;
     }
@@ -199,8 +201,9 @@ export default function ManageContributorsPage() {
       const regRes = await inviteContributor({
         fullName: addForm.fullName.trim(),
         phoneNumber: addForm.phoneNumber.trim(),
-        email: addForm.email.trim(),
-        password: addForm.password.trim(),
+        telegramUsername: addForm.telegramUsername.trim(),
+        email: addForm.email.trim() || undefined,
+        password: addForm.password.trim() || undefined,
         collectorId: userId,
       });
       if (regRes.error) {
@@ -237,19 +240,9 @@ export default function ManageContributorsPage() {
       }
 
       setAddSuccess(true);
-      setAddForm({
-        fullName: "",
-        phoneNumber: "",
-        email: "",
-        password: "",
-        groupId: "",
-        startDate: todayECStr,
-      });
+      setAddGeneratedLink(`https://t.me/TeqemachBot?start=link_${contributorId}`);
       await refreshContributors();
-      setTimeout(() => {
-        setAddSuccess(false);
-        setAddDialogOpen(false);
-      }, 1500);
+      // Do not auto-close the dialog so the collector can copy the link
     });
   }
 
@@ -523,14 +516,36 @@ export default function ManageContributorsPage() {
               </div>
             )}
 
+            {/* ── Success Link Section ── */}
+            {addGeneratedLink && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <p className="text-sm text-foreground font-medium flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Contributor Added! Share this link with them to connect their Telegram:
+                </p>
+                <div className="flex gap-2">
+                  <Input readOnly value={addGeneratedLink} className="bg-background text-xs font-mono" />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(addGeneratedLink);
+                      setAddSuccess(true);
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* ── Personal Info Section ── */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5" />
                 {t("personalInfo")}
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 col-span-2">
                   <Label htmlFor="add-name" className="text-xs">
                     {t("fullName")}
                   </Label>
@@ -562,11 +577,27 @@ export default function ManageContributorsPage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="add-tg-user" className="text-xs">
+                    Telegram Username
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="add-tg-user"
+                      value={addForm.telegramUsername}
+                      onChange={(e) => updateAdd("telegramUsername", e.target.value)}
+                      placeholder="@username"
+                      className="pl-10 h-9"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* ── Account Section ── */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5" />
                 {t("accountCredentials")}
@@ -574,7 +605,7 @@ export default function ManageContributorsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="add-email" className="text-xs">
-                    {t("email")}
+                    {t("email")} (Optional)
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -585,13 +616,12 @@ export default function ManageContributorsPage() {
                       onChange={(e) => updateAdd("email", e.target.value)}
                       placeholder="user@example.com"
                       className="pl-10 h-9"
-                      required
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="add-password" className="text-xs">
-                    {t("password")}
+                    {t("password")} (Optional)
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -602,7 +632,6 @@ export default function ManageContributorsPage() {
                       onChange={(e) => updateAdd("password", e.target.value)}
                       placeholder={t("minSixChars")}
                       className="pl-10 h-9"
-                      required
                       minLength={6}
                     />
                   </div>
@@ -611,7 +640,7 @@ export default function ManageContributorsPage() {
             </div>
 
             {/* ── Group & Schedule Section ── */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5" />
                 {t("groupAndSchedule")}
@@ -656,17 +685,31 @@ export default function ManageContributorsPage() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setAddDialogOpen(false)}
+                onClick={() => {
+                  setAddDialogOpen(false);
+                  setAddGeneratedLink(null);
+                  setAddForm({
+                    fullName: "",
+                    phoneNumber: "",
+                    email: "",
+                    password: "",
+                    telegramUsername: "",
+                    groupId: "",
+                    startDate: todayECStr,
+                  });
+                }}
               >
-                {t("cancel")}
+                {addGeneratedLink ? "Close" : t("cancel")}
               </Button>
-              <Button
-                type="submit"
-                disabled={isPending}
-                id="confirm-add-contributor"
-              >
-                {isPending ? t("loading") : t("addContributor")}
-              </Button>
+              {!addGeneratedLink && (
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  id="confirm-add-contributor"
+                >
+                  {isPending ? "Adding..." : t("addContributor")}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
