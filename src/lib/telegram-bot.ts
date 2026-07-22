@@ -154,3 +154,34 @@ export async function notifyTelegramUser(telegramId: number, message: string) {
   // We assume the telegramId is the chat_id for private chats
   return sendTelegramMessage(telegramId, message);
 }
+
+/**
+ * Send a ReplyKeyboardMarkup with a "Share Phone Number" button that triggers
+ * Telegram's native contact-sharing flow (request_contact = true).
+ */
+export async function sendRequestContactButton(chatId: number, text: string) {
+  return callTelegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    reply_markup: {
+      keyboard: [
+        [{ text: "📱 Share Phone Number", request_contact: true }],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
+}
+
+/**
+ * Remove the custom ReplyKeyboard by sending a ReplyKeyboardRemove.
+ */
+export async function removeReplyKeyboard(chatId: number, text: string) {
+  return callTelegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    reply_markup: {
+      remove_keyboard: true,
+    },
+  });
+}

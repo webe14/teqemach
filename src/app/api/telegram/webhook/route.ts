@@ -4,6 +4,8 @@ import {
   openMiniAppButton,
   getTelegramUser,
   createTelegramUser,
+  sendRequestContactButton,
+  removeReplyKeyboard,
 } from "@/lib/telegram-bot";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -24,7 +26,12 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     if (body.message) {
-      await handleMessage(body.message);
+      // Handle contact sharing (phone number)
+      if (body.message.contact) {
+        await handleContact(body.message);
+      } else {
+        await handleMessage(body.message);
+      }
     }
 
     return NextResponse.json({ ok: true });
@@ -32,6 +39,77 @@ export async function POST(req: Request) {
     console.error("Webhook error:", error);
     return NextResponse.json({ ok: true });
   }
+}
+
+/**
+ * Handle incoming contact messages (from request_contact button).
+ * Verifies the contact belongs to the sender, then saves the phone number.
+ */
+async function handleContact(message: any) {
+  const chatId = message.chat?.id;
+  const from = message.from;
+  const contact = message.contact;
+
+  if (!chatId || !from || !contact) return;
+
+  // Verify the contact belongs to the user who sent it
+  if (contact.user_id !== from.id) {
+    await sendTelegramMessage(chatId, "❌ Please share your own phone number, not someone else's.");
+    return;
+  }
+
+  const phoneNumber = contact.phone_number;
+  if (!phoneNumber) {
+    await sendTelegramMessage(chatId, "❌ No phone number found in the shared contact.");
+    return;
+  }
+
+  const telegramId = from.id;
+  const supabase = await createAdminClient();
+
+  // Ensure telegram_users row exists
+  let tgUser = await getTelegramUser(telegramId);
+  if (!tgUser) {
+    tgUser = await createTelegramUser({
+      telegram_id: telegramId,
+      username: from.username || null,
+      first_name: from.first_name || null,
+      last_name: from.last_name || null,
+      language_code: from.language_code || null,
+    });
+  }
+
+  // Save phone number to telegram_users
+  await supabase
+    .from("telegram_users")
+    .update({ phone_number: phoneNumber })
+    .eq("telegram_id", telegramId);
+
+  // Also update phone_number on all linked profiles
+  const { data: linkedProfiles } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("telegram_id", telegramId);
+
+  if (linkedProfiles && linkedProfiles.length > 0) {
+    const profileIds = linkedProfiles.map((p: any) => p.id);
+    await supabase
+      .from("profiles")
+      .update({ phone_number: phoneNumber })
+      .in("id", profileIds);
+  }
+
+  // Remove the reply keyboard and send confirmation
+  const replyMarkup = {
+    inline_keyboard: [
+      [openMiniAppButton("Open Teqemach", APP_URL)],
+    ],
+  };
+  await removeReplyKeyboard(
+    chatId,
+    `✅ Phone number saved successfully!\n\nYou can now go back to the Mini App to continue.`
+  );
+  await sendTelegramMessage(chatId, "👇 Tap below to open the Mini App.", { reply_markup: replyMarkup });
 }
 
 async function handleMessage(message: any) {
@@ -63,6 +141,15 @@ async function handleMessage(message: any) {
     case "/start": {
       const args = text.split(" ").slice(1);
       
+      // Handle deep link: share_phone
+      if (args.length > 0 && args[0] === "share_phone") {
+        await sendRequestContactButton(
+          chatId,
+          "📱 Please tap the button below to share your verified phone number with Teqemach."
+        );
+        break;
+      }
+
       // Handle deep link logic for linking accounts
       if (args.length > 0 && args[0].startsWith("link_")) {
         const profileIdToLink = args[0].replace("link_", "");
@@ -84,11 +171,12 @@ async function handleMessage(message: any) {
           break;
         }
         
-        // Link successful
+        // Link successful — activate the profile
         await supabase.from("profiles").update({
           telegram_id: telegramId,
           telegram_verified: true,
-          telegram_linked_at: new Date().toISOString()
+          telegram_linked_at: new Date().toISOString(),
+          status: "active",
         }).eq("id", profileIdToLink);
         
         // Also update telegram_users

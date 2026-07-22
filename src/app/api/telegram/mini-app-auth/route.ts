@@ -39,9 +39,26 @@ export async function POST(req: Request) {
 
     // ─── LOGIN ──────────────────────────────────────────────────────────
     if (action === "login") {
+      // Check if user has a verified phone number in telegram_users
+      const { data: tgUser } = await adminClient
+        .from("telegram_users")
+        .select("phone_number")
+        .eq("telegram_id", telegramId)
+        .single();
+
+      const hasPhone = !!(tgUser?.phone_number);
+
       if (profiles.length === 0) {
         // Telegram verified but not linked to any Teqemach account
+        if (!hasPhone) {
+          return NextResponse.json({ linked: false, needsPhone: true, telegramUser: initDataObj });
+        }
         return NextResponse.json({ linked: false, telegramUser: initDataObj });
+      }
+
+      // If user has profiles but no phone number, require phone first
+      if (!hasPhone) {
+        return NextResponse.json({ linked: true, needsPhone: true, telegramUser: initDataObj });
       }
 
       // Filter out admin profiles (they need password auth)
@@ -131,6 +148,14 @@ export async function POST(req: Request) {
         );
       }
 
+      // Look up verified phone from telegram_users
+      const { data: tgUserForReg } = await adminClient
+        .from("telegram_users")
+        .select("phone_number")
+        .eq("telegram_id", telegramId)
+        .single();
+      const verifiedPhone = tgUserForReg?.phone_number || "";
+
       // Collector registration — instant, no password
       const fullName = [initDataObj.first_name, initDataObj.last_name].filter(Boolean).join(" ");
       const username = initDataObj.username || null;
@@ -139,7 +164,7 @@ export async function POST(req: Request) {
         .from("profiles")
         .insert({
           full_name: fullName,
-          phone_number: "",
+          phone_number: verifiedPhone,
           role: "collector",
           status: "active",
           telegram_id: telegramId,
@@ -212,11 +237,19 @@ export async function POST(req: Request) {
       const fullName = [initDataObj.first_name, initDataObj.last_name].filter(Boolean).join(" ");
       const username = initDataObj.username || null;
 
+      // Look up verified phone from telegram_users
+      const { data: tgUserForContrib } = await adminClient
+        .from("telegram_users")
+        .select("phone_number")
+        .eq("telegram_id", telegramId)
+        .single();
+      const contributorPhone = tgUserForContrib?.phone_number || "";
+
       const { data: newProfile, error: insertError } = await adminClient
         .from("profiles")
         .insert({
           full_name: fullName,
-          phone_number: phone || "",
+          phone_number: contributorPhone,
           role: "contributor",
           status: "pending",
           collector_id: collectorId,
@@ -385,6 +418,19 @@ export async function POST(req: Request) {
       return NextResponse.json({
         linked: true,
         redirect: `/dashboard/${existingProfile.role}`,
+      });
+    }
+
+    // ─── CHECK PHONE (polling from Mini App) ────────────────────────────
+    if (action === "check_phone") {
+      const { data: tgUserCheck } = await adminClient
+        .from("telegram_users")
+        .select("phone_number")
+        .eq("telegram_id", telegramId)
+        .single();
+
+      return NextResponse.json({
+        hasPhone: !!(tgUserCheck?.phone_number),
       });
     }
 

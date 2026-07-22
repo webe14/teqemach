@@ -66,7 +66,7 @@ export async function inviteContributor(formData: {
     }
   }
 
-  // 3. Insert new legacy profile
+  // 3. Insert new legacy profile with pending status (activated when user accepts link)
   const { data, error: profileError } = await adminSupabase
     .from("profiles")
     .insert({
@@ -78,6 +78,7 @@ export async function inviteContributor(formData: {
       telegram_username: formData.telegramUsername.replace("@", ""),
       role: "contributor",
       collector_id: formData.collectorId,
+      status: "pending",
     })
     .select("id")
     .single();
@@ -102,11 +103,27 @@ export async function getCollectorContributors(collectorId: string) {
       group_id,
       contributor_id,
       created_at,
-      contributor:profiles!group_memberships_contributor_id_fkey(id, full_name, phone_number, email),
+      contributor:profiles!group_memberships_contributor_id_fkey(id, full_name, phone_number, email, status),
       group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
     `
     )
     .eq("collector_id", collectorId);
+
+  if (error) return { error: error.message, data: [] };
+  // Only return contributors whose profile status is active
+  const active = (data as any[])?.filter((c) => c.contributor?.status === "active") ?? [];
+  return { data: active, error: null };
+}
+
+export async function getPendingContributors(collectorId: string) {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone_number, telegram_username, created_at")
+    .eq("collector_id", collectorId)
+    .eq("status", "pending")
+    .eq("role", "contributor")
+    .order("created_at", { ascending: false });
 
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };

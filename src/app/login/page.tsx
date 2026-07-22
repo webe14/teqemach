@@ -20,6 +20,8 @@ import {
   UserCircle2,
   ShieldCheck,
   Users,
+  Smartphone,
+  RefreshCw,
 } from "lucide-react";
 
 type EqubGroup = {
@@ -48,6 +50,7 @@ type RoleInfo = {
 type Step =
   | "init"
   | "loading"
+  | "needs_phone"
   | "options"
   | "new_user"
   | "role_picker"
@@ -79,8 +82,8 @@ export default function LoginPage() {
   const [search, setSearch] = useState("");
   const [selectedCollector, setSelectedCollector] = useState<Collector | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
-  const [phone, setPhone] = useState("");
   const [collectorsLoading, setCollectorsLoading] = useState(false);
+  const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -111,6 +114,12 @@ export default function LoginPage() {
 
       if (!res.ok) {
         throw new Error(result.error || "Authentication failed");
+      }
+
+      // Phone number required before proceeding
+      if (result.needsPhone) {
+        setStep("needs_phone");
+        return;
       }
 
       if (result.linked && result.multiRole) {
@@ -206,7 +215,6 @@ export default function LoginPage() {
           action: "register_contributor",
           collectorId: selectedCollector.id,
           groupId: selectedGroup.id,
-          phone: phone || "",
         }),
       });
       const result = await res.json();
@@ -255,6 +263,31 @@ export default function LoginPage() {
     "contributor_pick_group",
     "contributor_confirm",
   ].includes(step);
+
+  // Check if phone number has been shared via bot
+  async function checkPhoneStatus() {
+    if (!initData) return;
+    setPhoneCheckLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/telegram/mini-app-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData, action: "check_phone" }),
+      });
+      const result = await res.json();
+      if (result.hasPhone) {
+        // Phone is now available, re-run the login flow
+        checkTelegramLogin(initData);
+      } else {
+        setErrorMsg("Phone number not received yet. Please share your number with the bot first.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setPhoneCheckLoading(false);
+    }
+  }
 
   // Back handler for contributor flow
   function handleContributorBack() {
@@ -316,6 +349,59 @@ export default function LoginPage() {
               </svg>
               Open in Telegram
             </Button>
+          </div>
+        )}
+
+        {/* ─── NEEDS PHONE ─────────────────────────────────────────── */}
+        {step === "needs_phone" && (
+          <div className="text-center py-4">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Smartphone className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2 text-foreground">Phone Number Required</h2>
+            <p className="text-muted-foreground mb-6">
+              To continue, we need your verified phone number from Telegram. Tap the button below to share it with our bot.
+            </p>
+
+            {errorMsg && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive mb-4 text-left">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Button
+                className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white"
+                onClick={() => {
+                  window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
+                }}
+              >
+                <Smartphone className="h-5 w-5 mr-2" />
+                Share Phone Number
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-12 text-md"
+                onClick={checkPhoneStatus}
+                disabled={phoneCheckLoading}
+              >
+                {phoneCheckLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    I&apos;ve Shared My Number
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -679,21 +765,6 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (optional)</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+251..."
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
               <Button
                 className="w-full h-12"
                 onClick={handleRegisterContributor}

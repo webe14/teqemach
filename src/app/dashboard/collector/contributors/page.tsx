@@ -12,6 +12,7 @@ import {
   updateContributor,
   deleteContributor,
   inviteContributor,
+  getPendingContributors,
 } from "@/lib/actions/collector";
 import {
   getCurrentEthiopianDate,
@@ -55,6 +56,9 @@ import {
   Trash2,
   AlertTriangle,
   CalendarDays,
+  Clock,
+  Copy,
+  Link2,
 } from "lucide-react";
 
 type Contributor = {
@@ -67,6 +71,7 @@ type Contributor = {
     full_name: string | null;
     phone_number: string | null;
     email: string | null;
+    status: string | null;
   } | null;
   group: {
     id: string;
@@ -75,6 +80,14 @@ type Contributor = {
     total_days: number;
     frequency: string;
   } | null;
+};
+
+type PendingContributor = {
+  id: string;
+  full_name: string | null;
+  phone_number: string | null;
+  telegram_username: string | null;
+  created_at: string;
 };
 
 export default function ManageContributorsPage() {
@@ -87,6 +100,8 @@ export default function ManageContributorsPage() {
   const [groups, setGroups] = useState<
     Array<{ id: string; name: string; total_days: number }>
   >([]);
+  const [pendingContributors, setPendingContributors] = useState<PendingContributor[]>([]);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   // Default starting date to today in Ethiopian calendar
   const todayEC = getCurrentEthiopianDate();
@@ -129,22 +144,28 @@ export default function ManageContributorsPage() {
       const profile = await getCurrentProfile();
       if (!profile) return;
       setUserId(profile.id);
-      const [contRes, groupRes] = await Promise.all([
+      const [contRes, groupRes, pendingRes] = await Promise.all([
         getCollectorContributors(profile.id),
         getCollectorGroups(profile.id),
+        getPendingContributors(profile.id),
       ]);
       setContributors((contRes.data as Contributor[]) ?? []);
       setGroups(
         (groupRes.data as { id: string; name: string; total_days: number }[]) ??
           []
       );
+      setPendingContributors((pendingRes.data as PendingContributor[]) ?? []);
     })();
   }, []);
 
   async function refreshContributors() {
     if (!userId) return;
-    const res = await getCollectorContributors(userId);
+    const [res, pendingRes] = await Promise.all([
+      getCollectorContributors(userId),
+      getPendingContributors(userId),
+    ]);
     setContributors((res.data as Contributor[]) ?? []);
+    setPendingContributors((pendingRes.data as PendingContributor[]) ?? []);
   }
 
   const filtered = contributors.filter((c) => {
@@ -485,6 +506,57 @@ export default function ManageContributorsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ══════════════════ Pending Invitations ══════════════════ */}
+      {pendingContributors.length > 0 && (
+        <Card className="border border-amber-500/20 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-amber-500" />
+              <h3 className="text-sm font-semibold text-foreground">Pending Invitations ({pendingContributors.length})</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              These contributors haven't accepted their invitation yet. Share the link with them to activate their account.
+            </p>
+            <div className="space-y-2">
+              {pendingContributors.map((p) => {
+                const link = `https://t.me/TeqemachBot?start=link_${p.id}`;
+                return (
+                  <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{p.full_name || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.phone_number} · @{p.telegram_username}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        type="button"
+                        title="Copy invitation link"
+                        onClick={() => {
+                          navigator.clipboard.writeText(link);
+                          setCopiedLinkId(p.id);
+                          setTimeout(() => setCopiedLinkId(null), 2000);
+                        }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        {copiedLinkId === p.id ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">
+                        Pending
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
