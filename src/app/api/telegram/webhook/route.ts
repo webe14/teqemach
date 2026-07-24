@@ -99,17 +99,13 @@ async function handleContact(message: any) {
       .in("id", profileIds);
   }
 
-  // Remove the reply keyboard and send confirmation
-  const replyMarkup = {
-    inline_keyboard: [
-      [openMiniAppButton("Open Teqemach", APP_URL)],
-    ],
-  };
+  // Remove the reply keyboard (only needed if they used the fallback deep link)
+  // and send a simple confirmation message. We don't send an inline keyboard
+  // because the native WebApp.requestContact keeps them inside the Mini App.
   await removeReplyKeyboard(
     chatId,
-    `✅ Phone number saved successfully!\n\nYou can now go back to the Mini App to continue.`
+    `✅ Phone number saved successfully!`
   );
-  await sendTelegramMessage(chatId, "👇 Tap below to open the Mini App.", { reply_markup: replyMarkup });
 }
 
 async function handleMessage(message: any) {

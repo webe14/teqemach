@@ -376,7 +376,18 @@ export default function LoginPage() {
               <Button
                 className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white"
                 onClick={() => {
-                  window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
+                  const tg = window.Telegram?.WebApp;
+                  if (tg && tg.requestContact) {
+                    tg.requestContact((shared: boolean) => {
+                      if (shared) {
+                        // User accepted native prompt; webhook will receive the contact.
+                        // Give it a moment to process, then auto-check.
+                        setTimeout(checkPhoneStatus, 1500);
+                      }
+                    });
+                  } else {
+                    window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
+                  }
                 }}
               >
                 <Smartphone className="h-5 w-5 mr-2" />
