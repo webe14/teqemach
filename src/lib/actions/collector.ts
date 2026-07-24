@@ -288,18 +288,33 @@ export async function markCyclePaid(
         
       if (details?.telegram_chat_id && (prefs?.contribution_confirmations ?? true)) {
         const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-        const { data: collector } = await supabase.from("profiles").select("full_name").eq("id", updatedContribution.collector_id).single();
+        const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id").eq("id", updatedContribution.collector_id).single();
         
         if (group && collector) {
+          const dateStr = cycleDateText || new Date(now).toLocaleDateString();
           console.log(`[markCyclePaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
           const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
             contributorName: details.full_name || "Contributor",
             amount: group.contribution_amount,
             groupName: group.name,
-            date: cycleDateText || new Date(now).toLocaleDateString(),
+            date: dateStr,
             collectorName: collector.full_name || "Your Collector"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
+
+          if (collector.telegram_chat_id) {
+            try {
+              await TelegramNotifier.sendCollectorConfirmation(collector.telegram_chat_id, {
+                contributorName: details.full_name || "Contributor",
+                amount: group.contribution_amount,
+                groupName: group.name,
+                date: dateStr
+              });
+              console.log("[markCyclePaid] Collector notification sent");
+            } catch (ce) {
+              console.error("[markCyclePaid] Failed to send collector notification:", ce);
+            }
+          }
         }
       }
     } catch (e) {
@@ -352,19 +367,34 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
           
           const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-          const { data: collector } = await supabase.from("profiles").select("full_name").eq("id", contributorContributions[0].collector_id).single();
+          const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id").eq("id", contributorContributions[0].collector_id).single();
           
           if (group && collector) {
             const totalAmount = group.contribution_amount * contributorContributions.length;
+            const dateStr = cycleDateText || new Date(now).toLocaleDateString();
             console.log(`[markMultipleCyclesPaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
             const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
               contributorName: details.full_name || "Contributor",
               amount: totalAmount,
               groupName: group.name,
-              date: cycleDateText || new Date(now).toLocaleDateString(),
+              date: dateStr,
               collectorName: collector.full_name || "Your Collector"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
+
+            if (collector.telegram_chat_id) {
+              try {
+                await TelegramNotifier.sendCollectorConfirmation(collector.telegram_chat_id, {
+                  contributorName: details.full_name || "Contributor",
+                  amount: totalAmount,
+                  groupName: group.name,
+                  date: dateStr
+                });
+                console.log("[markMultipleCyclesPaid] Collector notification sent");
+              } catch (ce) {
+                console.error("[markMultipleCyclesPaid] Failed to send collector notification:", ce);
+              }
+            }
           }
         }
       }

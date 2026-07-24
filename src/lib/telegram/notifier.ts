@@ -24,6 +24,26 @@ Thank you for your contribution.`;
     await telegramBot.sendMessage(chatId, text);
   }
 
+  static async sendCollectorConfirmation(chatId: string | number, data: {
+    contributorName: string;
+    amount: number | string;
+    groupName: string;
+    date: string;
+  }) {
+    const text = `📥 <b>Collection Successful</b>
+
+You have successfully recorded a payment.
+
+<b>Contributor:</b> ${data.contributorName}
+<b>Amount:</b> ETB ${data.amount}
+<b>Group:</b> ${data.groupName}
+<b>Date:</b> ${data.date}
+
+The contributor has been notified.`;
+
+    await telegramBot.sendMessage(chatId, text);
+  }
+
   static async sendOTP(chatId: string | number, otpCode: string, expiryMinutes = 10) {
     const text = `🔐 <b>Teqemach Verification Code</b>
 
