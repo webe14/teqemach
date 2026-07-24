@@ -92,63 +92,7 @@ function formatShortEC(date: Date, locale: "en" | "am"): string {
   return `${months[ec.month - 1]} ${ec.day}`;
 }
 
-// ─── Toast component ──────────────────────────────────────────────────────────
-function SmsToast({
-  show,
-  success,
-  message,
-  onClose,
-}: {
-  show: boolean;
-  success: boolean;
-  message?: string;
-  onClose: () => void;
-}) {
-  const { t } = useLocale();
 
-  useEffect(() => {
-    if (show) {
-      const timer = setTimeout(onClose, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [show, onClose]);
-
-  if (!show) return null;
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50 animate-fadeInUp">
-      {success ? (
-        <div className="flex items-center gap-3 rounded-2xl bg-emerald-600 text-white px-5 py-3.5 shadow-2xl shadow-emerald-600/30 border border-emerald-500">
-          <MessageSquareCheck className="h-5 w-5 shrink-0" />
-          <div>
-            <p className="font-semibold text-sm">{t("smsSent")}</p>
-            <p className="text-xs text-emerald-100">{message || "Payment confirmation sent to contributor"}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="ml-2 text-emerald-200 hover:text-white text-xs font-bold leading-none"
-          >
-            ✕
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3 rounded-2xl bg-rose-600 text-white px-5 py-3.5 shadow-2xl shadow-rose-600/30 border border-rose-500">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-white" />
-          <div>
-            <p className="font-semibold text-sm">{t("smsFailed")}</p>
-            <p className="text-xs text-rose-100">{message || "Could not deliver message to contributor"}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="ml-2 text-rose-200 hover:text-white text-xs font-bold leading-none"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CycleGridPage({ params }: { params: Promise<{ id: string }> }) {
@@ -170,11 +114,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
   // Dialogs / toasts
   const [disburseDialog, setDisburseDialog] = useState(false);
   const [disburseSuccess, setDisburseSuccess] = useState(false);
-  const [smsToast, setSmsToast] = useState<{ show: boolean; success: boolean; message?: string }>({
-    show: false,
-    success: true,
-    message: "",
-  });
+
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(30);
 
@@ -204,55 +144,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
   }, [params, searchParams]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  async function sendSmsAndNotify(targetCycles?: Cycle[]) {
-    if (!contributorProfile || !collectorProfile) return;
 
-    let dateText = "";
-    if (targetCycles && targetCycles.length > 0) {
-      const dateLabels = targetCycles.map((cycle) => {
-        const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
-        return cycleDate
-          ? formatShortEC(cycleDate, locale)
-          : `#${cycle.cycle_number}`;
-      });
-      dateText = dateLabels.join(", ");
-    } else {
-      dateText = gregorianToEthiopianString(new Date(), locale);
-    }
-
-    const message = t("smsContributionMessage", {
-      contributorName: contributorProfile.full_name ?? "Contributor",
-      collectorName: collectorProfile.full_name ?? "Collector",
-      date: dateText,
-    });
-    try {
-      const res = await fetch("/api/sms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: contributorProfile.phone_number,
-          message,
-          type: "contribution",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setSmsToast({ show: true, success: true });
-      } else {
-        setSmsToast({ 
-          show: true, 
-          success: false, 
-          message: data.error || "Could not deliver message to contributor" 
-        });
-      }
-    } catch (e: any) {
-      setSmsToast({ 
-        show: true, 
-        success: false, 
-        message: e.message || "Failed to communicate with SMS server" 
-      });
-    }
-  }
 
   async function refreshCycles(cid: string, gid: string) {
     const res = await getContributorCycles(cid, gid);
@@ -280,7 +172,6 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       const result = await markCyclePaid(cycle.id, groupId, dateText);
       if (!result.error) {
         await refreshCycles(contributorId, groupId);
-        await sendSmsAndNotify([cycle]);
       }
       setMarkingId(null);
     });
@@ -300,7 +191,6 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       const result = await markMultipleCyclesPaid(Array.from(selected), dateText);
       if (!result.error) {
         await refreshCycles(contributorId, groupId);
-        await sendSmsAndNotify(selectedCycles);
       }
       setSelected(new Set());
       setBulkMode(false);
@@ -312,33 +202,6 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
     startTransition(async () => {
       const result = await disburseFunds(groupId, contributorId);
       if (!result.error) {
-        try {
-          const res = await fetch("/api/sms", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: contributorProfile?.phone_number,
-              message: t("smsDisburseMessage"),
-              type: "disburse",
-            }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (res.ok && data.success) {
-            setSmsToast({ show: true, success: true, message: "Disbursement SMS sent!" });
-          } else {
-            setSmsToast({ 
-              show: true, 
-              success: false, 
-              message: data.error || "Could not send disbursement SMS" 
-            });
-          }
-        } catch (e: any) {
-          setSmsToast({ 
-            show: true, 
-            success: false, 
-            message: e.message || "Failed to send disbursement SMS" 
-          });
-        }
         setDisburseSuccess(true);
         await refreshCycles(contributorId, groupId);
       }
@@ -355,12 +218,6 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="space-y-6 stagger-children">
-      <SmsToast
-        show={smsToast.show}
-        success={smsToast.success}
-        message={smsToast.message}
-        onClose={() => setSmsToast((prev) => ({ ...prev, show: false }))}
-      />
 
       {/* Back + header */}
       <div className="flex items-start gap-4">

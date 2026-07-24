@@ -167,9 +167,9 @@ async function handleMessage(message: any) {
           break;
         }
         
-        // Link successful — activate the profile
         await supabase.from("profiles").update({
           telegram_id: telegramId,
+          telegram_chat_id: telegramId,
           telegram_verified: true,
           telegram_linked_at: new Date().toISOString(),
           status: "active",

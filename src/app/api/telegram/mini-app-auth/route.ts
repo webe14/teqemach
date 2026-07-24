@@ -168,6 +168,7 @@ export async function POST(req: Request) {
           role: "collector",
           status: "active",
           telegram_id: telegramId,
+          telegram_chat_id: telegramId,
           telegram_username: username,
           telegram_verified: true,
           telegram_linked_at: new Date().toISOString(),
@@ -254,6 +255,7 @@ export async function POST(req: Request) {
           status: "pending",
           collector_id: collectorId,
           telegram_id: telegramId,
+          telegram_chat_id: telegramId,
           telegram_username: username,
           telegram_verified: true,
           telegram_linked_at: new Date().toISOString(),
@@ -394,6 +396,7 @@ export async function POST(req: Request) {
         .from("profiles")
         .update({
           telegram_id: telegramId,
+          telegram_chat_id: telegramId,
           telegram_username: username,
           telegram_verified: true,
           telegram_linked_at: new Date().toISOString(),

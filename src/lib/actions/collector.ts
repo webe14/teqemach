@@ -273,6 +273,7 @@ export async function markCyclePaid(
         .select(`
           full_name,
           telegram_chat_id,
+          telegram_id,
           telegram_notification_prefs (contribution_confirmations)
         `)
         .eq("id", updatedContribution.contributor_id)
@@ -286,14 +287,16 @@ export async function markCyclePaid(
         ? details?.telegram_notification_prefs[0] 
         : details?.telegram_notification_prefs;
         
-      if (details?.telegram_chat_id && (prefs?.contribution_confirmations ?? true)) {
+      const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+      if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
         const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-        const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id").eq("id", updatedContribution.collector_id).single();
+        const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id, telegram_id").eq("id", updatedContribution.collector_id).single();
         
         if (group && collector) {
+          const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
           const dateStr = cycleDateText || new Date(now).toLocaleDateString();
-          console.log(`[markCyclePaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
-          const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+          console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
+          const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
             contributorName: details.full_name || "Contributor",
             amount: group.contribution_amount,
             groupName: group.name,
@@ -302,9 +305,9 @@ export async function markCyclePaid(
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
 
-          if (collector.telegram_chat_id) {
+          if (collectorChatId) {
             try {
-              await TelegramNotifier.sendCollectorConfirmation(collector.telegram_chat_id, {
+              await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
                 contributorName: details.full_name || "Contributor",
                 amount: group.contribution_amount,
                 groupName: group.name,
@@ -349,6 +352,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           .select(`
             full_name,
             telegram_chat_id,
+            telegram_id,
             telegram_notification_prefs (contribution_confirmations)
           `)
           .eq("id", contributorId)
@@ -362,18 +366,20 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           ? details?.telegram_notification_prefs[0] 
           : details?.telegram_notification_prefs;
           
-        if (details?.telegram_chat_id && (prefs?.contribution_confirmations ?? true)) {
+        const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+        if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
           const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
           const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
           
           const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-          const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id").eq("id", contributorContributions[0].collector_id).single();
+          const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single();
           
           if (group && collector) {
+            const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
             const totalAmount = group.contribution_amount * contributorContributions.length;
             const dateStr = cycleDateText || new Date(now).toLocaleDateString();
-            console.log(`[markMultipleCyclesPaid] Sending telegram to ${details.telegram_chat_id} for ${details.full_name}`);
-            const tgResult = await TelegramNotifier.sendContributionConfirmation(details.telegram_chat_id, {
+            console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
+            const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
               contributorName: details.full_name || "Contributor",
               amount: totalAmount,
               groupName: group.name,
@@ -382,9 +388,9 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
 
-            if (collector.telegram_chat_id) {
+            if (collectorChatId) {
               try {
-                await TelegramNotifier.sendCollectorConfirmation(collector.telegram_chat_id, {
+                await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
                   contributorName: details.full_name || "Contributor",
                   amount: totalAmount,
                   groupName: group.name,
