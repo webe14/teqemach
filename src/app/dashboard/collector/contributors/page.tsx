@@ -138,6 +138,10 @@ export default function ManageContributorsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contributor | null>(null);
 
+  // ── Pending Delete dialog state ───────────────────────────────────────────
+  const [pendingDeleteDialogOpen, setPendingDeleteDialogOpen] = useState(false);
+  const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingContributor | null>(null);
+
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -357,6 +361,22 @@ export default function ManageContributorsPage() {
     });
   }
 
+  function openPendingDelete(p: PendingContributor) {
+    setPendingDeleteTarget(p);
+    setPendingDeleteDialogOpen(true);
+  }
+
+  async function handlePendingDelete() {
+    if (!pendingDeleteTarget || !userId) return;
+    startTransition(async () => {
+      const result = await deleteContributor(pendingDeleteTarget.id);
+      if (result.error) return; // silently fail or could show toast
+      await refreshContributors();
+      setPendingDeleteDialogOpen(false);
+      setPendingDeleteTarget(null);
+    });
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -436,7 +456,8 @@ export default function ManageContributorsPage() {
                   {filtered.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-border hover:bg-muted/30 transition-colors group"
+                      onClick={() => handleRowClick(c)}
+                      className="border-b border-border hover:bg-muted/30 transition-colors group cursor-pointer"
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -494,11 +515,14 @@ export default function ManageContributorsPage() {
                           </button>
                           <button
                             type="button"
-                            title="View Cycles"
-                            onClick={() => handleRowClick(c)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            title={t("deleteContributor")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDelete(c);
+                            }}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           >
-                            <ChevronRight className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -549,6 +573,14 @@ export default function ManageContributorsPage() {
                         ) : (
                           <Copy className="h-3.5 w-3.5" />
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        title="Delete invitation"
+                        onClick={() => openPendingDelete(p)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">
                         Pending
@@ -948,6 +980,55 @@ export default function ManageContributorsPage() {
               onClick={handleDelete}
               disabled={isPending}
               id="confirm-delete-contributor"
+            >
+              {isPending ? t("loading") : t("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* ══════════════════ Delete Pending Confirmation Dialog ══════════════════ */}
+      <Dialog open={pendingDeleteDialogOpen} onOpenChange={setPendingDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Invitation
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this pending invitation? They will no longer be able to use the invitation link.
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingDeleteTarget && (
+            <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-sm font-bold shrink-0">
+                {(
+                  pendingDeleteTarget.full_name ?? "?"
+                )[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold text-sm">
+                  {pendingDeleteTarget.full_name ?? "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {pendingDeleteTarget.phone_number} · @{pendingDeleteTarget.telegram_username}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setPendingDeleteDialogOpen(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handlePendingDelete}
+              disabled={isPending}
             >
               {isPending ? t("loading") : t("delete")}
             </Button>
