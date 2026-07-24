@@ -245,7 +245,8 @@ export async function getContributorCycles(
 
 export async function markCyclePaid(
   contributionId: string,
-  groupId: string
+  groupId: string,
+  cycleDateText?: string
 ) {
   const supabase = await createAdminClient();
   const now = new Date().toISOString();
@@ -295,7 +296,7 @@ export async function markCyclePaid(
             contributorName: details.full_name || "Contributor",
             amount: group.contribution_amount,
             groupName: group.name,
-            date: new Date(now).toLocaleDateString(),
+            date: cycleDateText || new Date(now).toLocaleDateString(),
             collectorName: collector.full_name || "Your Collector"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
@@ -310,7 +311,7 @@ export async function markCyclePaid(
   return { success: true };
 }
 
-export async function markMultipleCyclesPaid(ids: string[]) {
+export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: string) {
   const supabase = await createAdminClient();
   const now = new Date().toISOString();
   
@@ -360,7 +361,7 @@ export async function markMultipleCyclesPaid(ids: string[]) {
               contributorName: details.full_name || "Contributor",
               amount: totalAmount,
               groupName: group.name,
-              date: new Date(now).toLocaleDateString(),
+              date: cycleDateText || new Date(now).toLocaleDateString(),
               collectorName: collector.full_name || "Your Collector"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);

@@ -274,7 +274,10 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
     }
     setMarkingId(cycle.id);
     startTransition(async () => {
-      const result = await markCyclePaid(cycle.id, groupId);
+      const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
+      const dateText = cycleDate ? formatShortEC(cycleDate, locale) : `#${cycle.cycle_number}`;
+
+      const result = await markCyclePaid(cycle.id, groupId, dateText);
       if (!result.error) {
         await refreshCycles(contributorId, groupId);
         await sendSmsAndNotify([cycle]);
@@ -288,7 +291,13 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
     if (selected.size === 0) return;
     const selectedCycles = cycles.filter((c) => selected.has(c.id));
     startTransition(async () => {
-      const result = await markMultipleCyclesPaid(Array.from(selected));
+      const dateLabels = selectedCycles.map((cycle) => {
+        const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
+        return cycleDate ? formatShortEC(cycleDate, locale) : `#${cycle.cycle_number}`;
+      });
+      const dateText = dateLabels.join(", ");
+
+      const result = await markMultipleCyclesPaid(Array.from(selected), dateText);
       if (!result.error) {
         await refreshCycles(contributorId, groupId);
         await sendSmsAndNotify(selectedCycles);
