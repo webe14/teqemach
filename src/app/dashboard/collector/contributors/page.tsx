@@ -513,17 +513,6 @@ export default function ManageContributorsPage() {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            type="button"
-                            title={t("deleteContributor")}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDelete(c);
-                            }}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
                         </div>
                       </td>
                     </tr>

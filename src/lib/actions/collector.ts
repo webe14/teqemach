@@ -461,7 +461,10 @@ export async function disburseFunds(groupId: string, contributorId: string) {
 export async function getCollectorStats(collectorId: string) {
   const supabase = await createAdminClient();
 
-  const [membershipsRes, paidRes, totalRes] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const [membershipsRes, paidRes, totalRes, todayPaidRes] = await Promise.all([
     supabase
       .from("group_memberships")
       .select("id", { count: "exact" })
@@ -475,12 +478,19 @@ export async function getCollectorStats(collectorId: string) {
       .from("contributions")
       .select("id", { count: "exact" })
       .eq("collector_id", collectorId),
+    supabase
+      .from("contributions")
+      .select("id", { count: "exact" })
+      .eq("collector_id", collectorId)
+      .eq("is_marked_paid", true)
+      .gte("contribution_date", todayStart.toISOString()),
   ]);
 
   return {
     totalContributors: membershipsRes.count ?? 0,
     paidCycles: paidRes.count ?? 0,
     totalCycles: totalRes.count ?? 0,
+    todayPaid: todayPaidRes.count ?? 0,
   };
 }
 

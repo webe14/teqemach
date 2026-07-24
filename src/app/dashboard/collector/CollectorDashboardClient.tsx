@@ -28,13 +28,15 @@ export default function CollectorDashboardClient({ stats }: { stats: any }) {
           subtitle={t("activeMembersInGroups")}
           icon={<Users />}
           gradient="from-indigo-500 to-violet-600"
+          href="/dashboard/collector/contributors"
         />
         <StatsCard
-          title={t("completedCycles")}
-          value={stats.paidCycles}
-          subtitle={t("paymentsMarkedAsPaid")}
+          title={t("todayReport")}
+          value={stats.todayPaid}
+          subtitle={t("paymentsRecordedToday")}
           icon={<CheckCircle2 />}
           gradient="from-emerald-500 to-teal-600"
+          href="/dashboard/collector/reports"
         />
         <StatsCard
           title={t("pendingCycles")}

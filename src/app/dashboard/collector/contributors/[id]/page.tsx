@@ -250,7 +250,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
           <Progress
             value={progress}
             className="h-3"
-            indicatorClassName="bg-gradient-to-r from-indigo-500 to-violet-600"
+            indicatorClassName="bg-gradient-to-r from-emerald-500 to-teal-500"
           />
           <div className="flex gap-4 text-sm">
             <span className="flex items-center gap-1 text-emerald-600">

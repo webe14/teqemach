@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n/translations";
+import Link from "next/link";
 
 interface StatsCardProps {
   title: string;
@@ -13,6 +14,7 @@ interface StatsCardProps {
   trend?: { value: number; label: string };
   gradient?: string;
   className?: string;
+  href?: string;
 }
 
 export function StatsCard({
@@ -23,11 +25,13 @@ export function StatsCard({
   trend,
   gradient = "from-indigo-500 to-violet-600",
   className,
+  href,
 }: StatsCardProps) {
-  return (
+  const content = (
     <div
       className={cn(
         "relative overflow-hidden rounded-2xl bg-card border border-border p-6 card-hover",
+        href && "cursor-pointer active:scale-[0.98] transition-transform",
         className
       )}
     >
@@ -71,4 +75,10 @@ export function StatsCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+
+  return content;
 }
