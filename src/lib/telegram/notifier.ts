@@ -5,7 +5,9 @@ export class TelegramNotifier {
     contributorName: string;
     amount: number | string;
     groupName: string;
-    date: string;
+    contributionDate: string;
+    selectedDates: string;
+    totalSelected: number;
     collectorName: string;
   }) {
     const text = `✅ <b>Contribution Recorded</b>
@@ -16,10 +18,12 @@ export class TelegramNotifier {
 
 <b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
 <b>የተቀማጩ አይነት:</b> ${data.groupName}
-<b>ቀን:</b> ${data.date}
+<b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
+<b>የተመረጡ ቀናት:</b> ${data.selectedDates}
+<b>የቀናት ብዛት:</b> ${data.totalSelected}
 <b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
 
-እናመሰግናለን።`;
+በዚህ ዘመናዊ የተቀማጭ Bot ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
 
     await telegramBot.sendMessage(chatId, text);
   }
@@ -28,18 +32,22 @@ export class TelegramNotifier {
     contributorName: string;
     amount: number | string;
     groupName: string;
-    date: string;
+    contributionDate: string;
+    selectedDates: string;
+    totalSelected: number;
   }) {
     const text = `📥 <b>Collection Successful</b>
 
-ተቀማጭዎ በተሳካ ሁኔታ ተመዝግቧል።
+የመዘገቡት ተቀማጭ በተሳካ ሁኔታ ተመዝግቧል።
 
 <b>ስም:</b> ${data.contributorName}
 <b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
 <b>የተቀማጩ አይነት:</b> ${data.groupName}
-<b>ቀን:</b> ${data.date}
+<b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
+<b>የተመረጡ ቀናት:</b> ${data.selectedDates}
+<b>የቀናት ብዛት:</b> ${data.totalSelected}
 
-The contributor has been notified.`;
+አዋጭዎ መልእክቱ ይደርሰዋል።`;
 
     await telegramBot.sendMessage(chatId, text);
   }

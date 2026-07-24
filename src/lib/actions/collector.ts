@@ -294,13 +294,16 @@ export async function markCyclePaid(
         
         if (group && collector) {
           const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-          const dateStr = cycleDateText || new Date(now).toLocaleDateString();
+          const contribDate = new Date(now).toLocaleDateString();
+          const selDates = cycleDateText || "N/A";
           console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
           const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
             contributorName: details.full_name || "Contributor",
             amount: group.contribution_amount,
             groupName: group.name,
-            date: dateStr,
+            contributionDate: contribDate,
+            selectedDates: selDates,
+            totalSelected: 1,
             collectorName: collector.full_name || "Your Collector"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
@@ -311,7 +314,9 @@ export async function markCyclePaid(
                 contributorName: details.full_name || "Contributor",
                 amount: group.contribution_amount,
                 groupName: group.name,
-                date: dateStr
+                contributionDate: contribDate,
+                selectedDates: selDates,
+                totalSelected: 1
               });
               console.log("[markCyclePaid] Collector notification sent");
             } catch (ce) {
@@ -377,13 +382,16 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           if (group && collector) {
             const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
             const totalAmount = group.contribution_amount * contributorContributions.length;
-            const dateStr = cycleDateText || new Date(now).toLocaleDateString();
+            const contribDate = new Date(now).toLocaleDateString();
+            const selDates = cycleDateText || "N/A";
             console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
             const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
               contributorName: details.full_name || "Contributor",
               amount: totalAmount,
               groupName: group.name,
-              date: dateStr,
+              contributionDate: contribDate,
+              selectedDates: selDates,
+              totalSelected: contributorContributions.length,
               collectorName: collector.full_name || "Your Collector"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
@@ -394,7 +402,9 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
                   contributorName: details.full_name || "Contributor",
                   amount: totalAmount,
                   groupName: group.name,
-                  date: dateStr
+                  contributionDate: contribDate,
+                  selectedDates: selDates,
+                  totalSelected: contributorContributions.length
                 });
                 console.log("[markMultipleCyclesPaid] Collector notification sent");
               } catch (ce) {
