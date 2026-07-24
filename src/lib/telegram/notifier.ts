@@ -10,16 +10,16 @@ export class TelegramNotifier {
   }) {
     const text = `✅ <b>Contribution Recorded</b>
 
-Hello ${data.contributorName},
+ሰላም ${data.contributorName},
 
-Your contribution has been successfully recorded.
+ተቀማጭዎ በተሳካ ሁኔታ ተመዝግቧል
 
-<b>Amount:</b> ETB ${data.amount}
-<b>Group:</b> ${data.groupName}
-<b>Date:</b> ${data.date}
-<b>Collector:</b> ${data.collectorName}
+<b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
+<b>የተቀማጩ አይነት:</b> ${data.groupName}
+<b>ቀን:</b> ${data.date}
+<b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
 
-Thank you for your contribution.`;
+እናመሰግናለን።`;
 
     await telegramBot.sendMessage(chatId, text);
   }
@@ -32,12 +32,12 @@ Thank you for your contribution.`;
   }) {
     const text = `📥 <b>Collection Successful</b>
 
-You have successfully recorded a payment.
+ተቀማጭዎ በተሳካ ሁኔታ ተመዝግቧል።
 
-<b>Contributor:</b> ${data.contributorName}
-<b>Amount:</b> ETB ${data.amount}
-<b>Group:</b> ${data.groupName}
-<b>Date:</b> ${data.date}
+<b>ስም:</b> ${data.contributorName}
+<b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
+<b>የተቀማጩ አይነት:</b> ${data.groupName}
+<b>ቀን:</b> ${data.date}
 
 The contributor has been notified.`;
 
