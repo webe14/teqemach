@@ -51,6 +51,7 @@ type Step =
   | "init"
   | "loading"
   | "needs_phone"
+  | "contributor_login"
   | "options"
   | "new_user"
   | "role_picker"
@@ -84,6 +85,7 @@ export default function LoginPage() {
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
   const [collectorsLoading, setCollectorsLoading] = useState(false);
   const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
+  const [hasSharedPhone, setHasSharedPhone] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -116,10 +118,9 @@ export default function LoginPage() {
         throw new Error(result.error || "Authentication failed");
       }
 
-      // Phone number required before proceeding
-      if (result.needsPhone) {
-        setStep("needs_phone");
-        return;
+      // Track if phone is verified
+      if (!result.needsPhone) {
+        setHasSharedPhone(true);
       }
 
       if (result.linked && result.multiRole) {
@@ -130,12 +131,21 @@ export default function LoginPage() {
       } else if (result.linked && result.redirect) {
         router.push(result.redirect);
       } else {
-        // Not linked — start Contributor registration directly
-        startContributorRegistration();
+        // Unlinked new user — show Contributor Login page
+        setStep("contributor_login");
       }
     } catch (err: any) {
       setStep("error");
       setErrorMsg(err.message);
+    }
+  }
+
+  function handleRegisterClick() {
+    setErrorMsg(null);
+    if (!hasSharedPhone) {
+      setStep("needs_phone");
+    } else {
+      startContributorRegistration();
     }
   }
 
@@ -277,8 +287,8 @@ export default function LoginPage() {
       });
       const result = await res.json();
       if (result.hasPhone) {
-        // Phone is now available, re-run the login flow
-        checkTelegramLogin(initData);
+        setHasSharedPhone(true);
+        startContributorRegistration();
       } else {
         setErrorMsg("Phone number not received yet. Please share your number with the bot first.");
       }
@@ -302,12 +312,7 @@ export default function LoginPage() {
       setSelectedCollector(null);
       setSelectedGroup(null);
       setSearch("");
-      // Go back to new_user or role_picker depending on whether they have existing roles
-      if (roles.length > 0) {
-        setStep("role_picker");
-      } else {
-        setStep("new_user");
-      }
+      setStep("contributor_login");
     }
   }
 
@@ -375,6 +380,57 @@ export default function LoginPage() {
           </div>
         )}
 
+
+        {/* ─── CONTRIBUTOR LOGIN PAGE (For new / unlinked users) ───── */}
+        {step === "contributor_login" && (
+          <div className="text-center py-2">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                <UserCircle2 className="h-9 w-9 text-blue-500" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2 text-foreground">Contributor Portal</h2>
+            <p className="text-muted-foreground mb-6 text-sm">
+              Welcome to Teqemach! Connect your Telegram account to access your Equb.
+            </p>
+
+            {errorMsg && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive mb-4 text-left">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <Button
+                className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 rounded-2xl"
+                onClick={() => checkTelegramLogin(initData ?? "")}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Coins className="h-5 w-5 mr-2" />
+                    Log In as Contributor
+                  </>
+                )}
+              </Button>
+
+              <div className="pt-6 border-t border-border mt-6">
+                <p className="text-xs text-muted-foreground mb-3 font-medium">New to Teqemach?</p>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-sm font-bold border-blue-500/40 text-blue-400 hover:bg-blue-500/10 rounded-2xl"
+                  onClick={handleRegisterClick}
+                >
+                  <UserCircle2 className="h-4 w-4 mr-2" />
+                  Register as a Contributor
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ─── NEEDS PHONE ─────────────────────────────────────────── */}
         {step === "needs_phone" && (
