@@ -6,10 +6,17 @@ export default async function ContributorLayout({ children }: { children: React.
   // Works for both Supabase-Auth users and custom-cookie users
   const profile = await getCurrentProfile() as any;
 
-  if (!profile || profile.role !== "contributor") redirect("/login");
+  if (!profile) redirect("/login");
+
+  const isAdmin = profile.role === "admin" || profile.role === "collector";
 
   return (
-    <AppShell role="contributor" userName={profile.full_name ?? profile.email ?? "Contributor"}>
+    <AppShell 
+      role="contributor" 
+      userName={profile.full_name ?? profile.email ?? "Contributor"}
+      userId={profile.id}
+      isAdmin={isAdmin}
+    >
       {children}
     </AppShell>
   );

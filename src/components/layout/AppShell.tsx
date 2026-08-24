@@ -14,9 +14,10 @@ interface AppShellProps {
   pageName?: string;
   userName?: string;
   userId?: string;
+  isAdmin?: boolean;
 }
 
-export function AppShell({ children, role, pageName, userName, userId }: AppShellProps) {
+export function AppShell({ children, role, pageName, userName, userId, isAdmin }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -33,7 +34,7 @@ export function AppShell({ children, role, pageName, userName, userId }: AppShel
       <MobileHeader role={role} pageName={pageName} userName={userName} userId={userId} />
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav role={role} userName={userName} />
+      <MobileBottomNav role={role} userName={userName} isAdmin={isAdmin} />
 
       {/* Main content — offset for desktop sidebar */}
       <main
