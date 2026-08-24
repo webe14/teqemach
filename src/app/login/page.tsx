@@ -130,8 +130,8 @@ export default function LoginPage() {
       } else if (result.linked && result.redirect) {
         router.push(result.redirect);
       } else {
-        // Not linked — show options
-        setStep("options");
+        // Not linked — start Contributor registration directly
+        startContributorRegistration();
       }
     } catch (err: any) {
       setStep("error");
@@ -491,15 +491,7 @@ export default function LoginPage() {
                 onClick={() => startContributorRegistration()}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Contributor"}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full h-14 text-lg font-bold"
-                onClick={() => handleRegisterCollector()}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Admin / Collector"}
+                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Continue as Contributor"}
               </Button>
             </div>
           </div>
@@ -562,21 +554,6 @@ export default function LoginPage() {
                   Register as another role
                 </p>
                 <div className="space-y-2">
-                  {availableNewRoles.includes("collector") && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => handleRegisterCollector()}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <ShieldCheck className="h-4 w-4 mr-2" />
-                      )}
-                      Register as Collector
-                    </Button>
-                  )}
                   {availableNewRoles.includes("contributor") && (
                     <Button
                       variant="outline"

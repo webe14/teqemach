@@ -81,9 +81,9 @@ export async function POST(req: Request) {
         status: p.status,
       }));
 
-      // Determine which roles the user can still register for
+      // Determine which roles the user can still register for (Contributors only in Mini App)
       const existingRoles = nonAdminProfiles.map((p) => p.role);
-      const availableNewRoles = (["collector", "contributor"] as const).filter(
+      const availableNewRoles = (["contributor"] as const).filter(
         (r) => !existingRoles.includes(r)
       );
 
