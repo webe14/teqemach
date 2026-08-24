@@ -91,11 +91,8 @@ export async function middleware(request: NextRequest) {
 
       const role = profile.role;
 
-      if (role === "admin" && !pathname.startsWith("/dashboard/admin")) {
+      if ((role === "admin" || role === "collector") && !pathname.startsWith("/dashboard/admin") && !pathname.startsWith("/dashboard/collector")) {
         return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-      }
-      if (role === "collector" && !pathname.startsWith("/dashboard/collector")) {
-        return NextResponse.redirect(new URL("/dashboard/collector", request.url));
       }
       if (role === "contributor" && !pathname.startsWith("/dashboard/contributor")) {
         return NextResponse.redirect(new URL("/dashboard/contributor", request.url));
@@ -108,8 +105,8 @@ export async function middleware(request: NextRequest) {
     const customRole = await getCustomSessionRole(request);
 
     if (customRole) {
-      if (customRole === "collector" && !pathname.startsWith("/dashboard/collector")) {
-        return NextResponse.redirect(new URL("/dashboard/collector", request.url));
+      if ((customRole === "collector" || customRole === "admin") && !pathname.startsWith("/dashboard/admin") && !pathname.startsWith("/dashboard/collector")) {
+        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
       }
       if (customRole === "contributor" && !pathname.startsWith("/dashboard/contributor")) {
         return NextResponse.redirect(new URL("/dashboard/contributor", request.url));
@@ -117,7 +114,9 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // ── Neither session found — redirect to login ─────────────────────────
+
+    // ── Neither session found — redirect to login ──
+
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -125,6 +124,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
 
   return supabaseResponse;
 }

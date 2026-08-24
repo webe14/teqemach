@@ -14,7 +14,8 @@ import { EthiopianDatePicker } from "@/components/ui/EthiopianDatePicker";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, Filter, X } from "lucide-react";
+import Link from "next/link";
+import { History, Filter, X, ChevronLeft } from "lucide-react";
 
 type PaymentRow = {
   id: string;
@@ -92,6 +93,13 @@ export default function ContributorPaymentHistoryPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div>
+        <Link 
+          href="/dashboard/contributor/my-equbs" 
+          className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 mb-4 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back 
+        </Link>
         <h1 className="text-2xl font-bold text-foreground">{t("paymentHistory")}</h1>
         <p className="text-muted-foreground mt-1">{t("paymentHistoryDesc")}</p>
         <div className="ethiopian-divider mt-3 w-24" />

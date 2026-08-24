@@ -15,7 +15,11 @@ interface MobileHeaderProps {
 export function MobileHeader({ role, pageName, userId }: MobileHeaderProps) {
   const { t } = useLocale();
 
+  // Hide mobile header for contributor view to allow native mini app full-screen header
+  if (role === "contributor") return null;
+
   const roleGradients = {
+
     admin: "from-violet-600 to-indigo-600",
     collector: "from-indigo-600 to-blue-600",
     contributor: "from-blue-600 to-cyan-600",

@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import {
   LayoutDashboard,
+  Home,
   Users,
   BarChart3,
   FileText,
@@ -25,24 +26,24 @@ export type NavItem = {
 
 export const adminNavItems: NavItem[] = [
   { labelKey: "overview", href: "/dashboard/admin", icon: LayoutDashboard },
-  { labelKey: "managementHub", href: "/dashboard/admin/management", icon: Users },
+  { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
+  { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
   { labelKey: "financialReports", href: "/dashboard/admin/reports", icon: BarChart3 },
+  { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
+  { labelKey: "managementHub", href: "/dashboard/admin/management", icon: Users },
   { labelKey: "broadcast", href: "/dashboard/admin/broadcast", icon: Send },
 ];
 
-export const collectorNavItems: NavItem[] = [
-  { labelKey: "snapshotDashboard", href: "/dashboard/collector", icon: LayoutDashboard },
-  { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
-  { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
-  { labelKey: "globalReports", href: "/dashboard/collector/reports", icon: BarChart3 },
-  { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
-];
+export const collectorNavItems: NavItem[] = adminNavItems;
+
 
 export const contributorNavItems: NavItem[] = [
-  { labelKey: "personalDashboard", href: "/dashboard/contributor", icon: LayoutDashboard },
-  { labelKey: "systemRules", href: "/dashboard/contributor/rules", icon: BookOpen },
+  { labelKey: "personalDashboard", href: "/dashboard/contributor", icon: Home },
+  { labelKey: "myEqubs", href: "/dashboard/contributor/my-equbs", icon: BookOpen },
   { labelKey: "paymentHistory", href: "/dashboard/contributor/history", icon: CreditCard },
+  { labelKey: "systemRules", href: "/dashboard/contributor/rules", icon: FileText },
 ];
+
 
 interface NavLinksProps {
   role: "admin" | "collector" | "contributor";

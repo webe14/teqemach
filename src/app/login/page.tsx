@@ -341,7 +341,7 @@ export default function LoginPage() {
               {errorMsg || "Teqemach is a Telegram Mini App. Please open it inside Telegram to continue."}
             </p>
             <Button
-              className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white"
+              className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white mb-3"
               onClick={() => (window.location.href = "https://t.me/TeqemachBot")}
             >
               <svg className="w-5 h-5 mr-2 fill-current" viewBox="0 0 24 24">
@@ -349,8 +349,32 @@ export default function LoginPage() {
               </svg>
               Open in Telegram
             </Button>
+
+            {/* Direct Browser Dev Testing Bypass */}
+            <div className="pt-4 border-t border-border mt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                🛠️ Testing Locally in Browser?
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full text-xs font-semibold h-10 border-primary/30 hover:bg-primary/5"
+                  onClick={() => router.push("/dashboard/contributor")}
+                >
+                  📱 Test Contributor Mini App View
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-xs font-semibold h-10 border-indigo-500/30 hover:bg-indigo-500/5"
+                  onClick={() => router.push("/dashboard/admin")}
+                >
+                  👑 Test Admin Dashboard View
+                </Button>
+              </div>
+            </div>
           </div>
         )}
+
 
         {/* ─── NEEDS PHONE ─────────────────────────────────────────── */}
         {step === "needs_phone" && (
@@ -463,7 +487,7 @@ export default function LoginPage() {
 
             <div className="space-y-4">
               <Button
-                className="w-full h-14 text-lg"
+                className="w-full h-14 text-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                 onClick={() => startContributorRegistration()}
                 disabled={isSubmitting}
               >
@@ -471,15 +495,16 @@ export default function LoginPage() {
               </Button>
               <Button
                 variant="secondary"
-                className="w-full h-14 text-lg"
+                className="w-full h-14 text-lg font-bold"
                 onClick={() => handleRegisterCollector()}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Collector"}
+                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Admin / Collector"}
               </Button>
             </div>
           </div>
         )}
+
 
         {/* ─── ROLE PICKER (multi-role user) ──────────────────────── */}
         {step === "role_picker" && (

@@ -95,3 +95,23 @@ export async function getContributorRules(contributorId: string) {
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
 }
+
+export async function getPublicEqubGroups() {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("equb_groups")
+    .select(`
+      id,
+      name,
+      contribution_amount,
+      total_days,
+      frequency,
+      collector_id,
+      collector:profiles!equb_groups_collector_id_fkey(full_name)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) return { data: [], error: error.message };
+  return { data: (data as any[]) ?? [], error: null };
+}
+

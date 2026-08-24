@@ -1,15 +1,6 @@
-import { getCurrentProfile } from "@/lib/actions/auth";
-import { getCollectorStats } from "@/lib/actions/collector";
-import CollectorDashboardClient from "./CollectorDashboardClient";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Collector Dashboard — Teqemach" };
-
-export default async function CollectorDashboardPage() {
-  // Use getCurrentProfile() — works for both Supabase Auth and custom cookie sessions
-  const profile = await getCurrentProfile() as any;
-  if (!profile) return null;
-
-  const stats = await getCollectorStats(profile.id);
-
-  return <CollectorDashboardClient stats={stats} />;
+export default function CollectorDashboardPage() {
+  redirect("/dashboard/admin");
 }
+

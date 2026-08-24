@@ -1,14 +1,17 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { TelegramProvider } from "@/components/TelegramProvider";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
+const inter = { variable: "font-sans" };
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0F172A",
+};
 
 export const metadata: Metadata = {
   title: "Teqemach",
@@ -29,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased">
+    <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
+      <body className="min-h-screen bg-background font-sans antialiased text-foreground">
         <TelegramProvider />
         <LocaleProvider>{children}</LocaleProvider>
       </body>

@@ -3,14 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LogOut, HelpCircle, Info, User as UserIcon } from "lucide-react";
+import { 
+  Home, 
+  Sparkles, 
+  History as HistoryIcon, 
+  BookOpen, 
+  Menu, 
+  LogOut, 
+  HelpCircle, 
+  Info, 
+  User as UserIcon,
+  Coins,
+  ShieldCheck
+} from "lucide-react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 import {
   adminNavItems,
   collectorNavItems,
   contributorNavItems,
-  type NavItem,
 } from "./NavLinks";
 import {
   Sheet,
@@ -39,108 +50,100 @@ export function MobileBottomNav({ role, userName }: MobileBottomNavProps) {
       ? collectorNavItems
       : contributorNavItems;
 
-  // Take up to 4 items for the bottom bar, put the rest in the More menu
-  const bottomBarItems = allItems.slice(0, 4);
-  const overflowItems = allItems.slice(4);
-
-  const roleColors = {
-    admin: "text-violet-600 dark:text-violet-400",
-    collector: "text-indigo-600 dark:text-indigo-400",
-    contributor: "text-blue-600 dark:text-blue-400",
-  };
-
-  const activeBg = {
-    admin: "bg-violet-100 dark:bg-violet-500/20 shadow-inner shadow-violet-500/10",
-    collector: "bg-indigo-100 dark:bg-indigo-500/20 shadow-inner shadow-indigo-500/10",
-    contributor: "bg-blue-100 dark:bg-blue-500/20 shadow-inner shadow-blue-500/10",
-  };
+  const leftItem = allItems[1];
+  const centerItem = allItems[0];
+  const overflowItems = allItems.slice(2);
 
   return (
     <>
-      {/* Fixed Bottom Navigation Bar - Glassmorphism style */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/60 backdrop-blur-2xl border-t border-border/40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] pb-safe rounded-t-[2.5rem] transition-all duration-300">
-        <div className="flex items-center justify-around h-[80px] px-2 relative">
-          {bottomBarItems.map((item) => {
-            const isActive =
-              item.href === `/dashboard/${role}`
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
+      {/* ─── FLOATING CENTER BUTTON BOTTOM NAV BAR ────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 pb-safe pointer-events-none">
+        {/* We use pointer-events-none on the wrapper so we can click through the transparent parts above the bar, 
+            and pointer-events-auto on the actual background and buttons */}
+        
+        {/* Main Background Bar */}
+        <div className="absolute bottom-0 w-full h-[70px] bg-[#0f172a] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-800/60 pointer-events-auto rounded-t-3xl" />
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center justify-center w-full h-full gap-1 p-1 relative group"
-              >
-                {/* Active Indicator Dot */}
-                {isActive && (
-                  <span className={cn(
-                    "absolute top-1.5 w-1.5 h-1.5 rounded-full animate-in fade-in zoom-in duration-300",
-                    roleColors[role].replace('text-', 'bg-')
-                  )} />
+        <div className="flex items-center justify-between h-[70px] px-2 max-w-md mx-auto relative pointer-events-auto">
+          
+          {/* Left Item (My Equb) */}
+          <div className="flex flex-1 justify-center h-full">
+            <Link
+              href={leftItem.href}
+              className="flex flex-col items-center justify-center w-16 h-full relative group transition-all"
+            >
+              <div className={cn("transition-all duration-200", pathname.startsWith(leftItem.href) ? "text-blue-400" : "text-slate-400 group-hover:text-slate-300")}>
+                <leftItem.icon className={cn("h-6 w-6 mb-1", pathname.startsWith(leftItem.href) && "fill-blue-500/20")} />
+              </div>
+              <span className={cn("text-[10px] font-bold tracking-tight truncate max-w-full transition-colors duration-200", pathname.startsWith(leftItem.href) ? "text-blue-400" : "text-slate-400")}>
+                {t(leftItem.labelKey)}
+              </span>
+            </Link>
+          </div>
+
+          {/* Center Space for Floating Button (Home) */}
+          <div className="w-[80px] h-full flex justify-center relative">
+            {/* The Cutout Illusion (Padding around the button) */}
+            <div className="absolute -top-6 w-[72px] h-[72px] bg-background rounded-full flex items-center justify-center">
+              {/* Floating Action Button */}
+              <Link 
+                href={centerItem.href}
+                className={cn(
+                  "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95",
+                  pathname === centerItem.href 
+                    ? "bg-blue-600 shadow-blue-500/40 text-white" 
+                    : "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
                 )}
-                
-                <div
-                  className={cn(
-                    "flex flex-col items-center justify-center w-14 h-11 rounded-2xl transition-all duration-300 ease-out",
-                    isActive ? activeBg[role] : "transparent group-hover:bg-muted/50",
-                    isActive ? "-translate-y-1.5 scale-105" : "mt-1"
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "h-[22px] w-[22px] transition-all duration-300 ease-out",
-                      isActive ? roleColors[role] : "text-muted-foreground",
-                      isActive && "scale-110 drop-shadow-sm"
-                    )}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] font-semibold tracking-wide truncate max-w-[70px] transition-all duration-300 ease-out",
-                    isActive ? roleColors[role] : "text-muted-foreground",
-                    isActive ? "-translate-y-1 opacity-100" : "opacity-80"
-                  )}
-                >
-                  {t(item.labelKey)}
-                </span>
+              >
+                <centerItem.icon className={cn("w-6 h-6", pathname === centerItem.href && "fill-white/20")} />
               </Link>
-            );
-          })}
-
-          {/* More Menu Trigger */}
-          <button
-            onClick={() => setOpenMore(true)}
-            className="flex flex-col items-center justify-center w-full h-full gap-1 p-1 relative group"
-          >
-            <div className="flex flex-col items-center justify-center w-14 h-11 rounded-2xl transition-all duration-300 ease-out mt-1 transparent group-hover:bg-muted/50">
-              <Menu className="h-[22px] w-[22px] text-muted-foreground transition-transform duration-300 group-hover:scale-110" />
             </div>
-            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground opacity-80 truncate max-w-[70px] transition-all duration-300 group-hover:opacity-100">
-              {t("more")}
+            
+            {/* Label for center button */}
+            <span className={cn(
+              "absolute bottom-2 text-[10px] font-bold tracking-tight",
+              pathname === centerItem.href ? "text-blue-400" : "text-slate-400"
+            )}>
+              {t(centerItem.labelKey) === "personalDashboard" ? "Home" : t(centerItem.labelKey) === "overview" ? "Home" : t(centerItem.labelKey)}
             </span>
-          </button>
+          </div>
+
+          {/* Right Item (Account Sheet Menu Button) */}
+          <div className="flex flex-1 justify-center h-full">
+            <button
+              onClick={() => setOpenMore(true)}
+              className="flex flex-col items-center justify-center w-16 h-full relative group transition-all"
+            >
+              <div className="transition-all duration-200 text-slate-400 group-hover:text-slate-300">
+                <UserIcon className="h-6 w-6 mb-1" />
+              </div>
+              <span className="text-[10px] font-bold tracking-tight text-slate-400 truncate max-w-full">
+                Account
+              </span>
+            </button>
+          </div>
+
         </div>
       </nav>
 
-      {/* More Bottom Sheet */}
+      {/* ─── MORE MENU BOTTOM SHEET ───────────────────────────────────────── */}
       <Sheet open={openMore} onOpenChange={setOpenMore}>
-        <SheetContent side="bottom" className="rounded-t-[2.5rem] max-h-[85vh] p-0 overflow-hidden flex flex-col border-t border-border shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.5)]">
-          <div className="p-5 border-b border-border bg-muted/20 backdrop-blur-xl">
-            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5" />
+        <SheetContent side="bottom" className="rounded-t-[2.5rem] max-h-[85vh] p-0 overflow-hidden flex flex-col border-t border-slate-800 bg-[#0f172a] text-slate-100 shadow-2xl">
+          <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl">
+            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-5" />
             <SheetHeader className="text-left px-2">
-              <SheetTitle className="text-xl">Menu</SheetTitle>
+              <SheetTitle className="text-xl text-white">Menu</SheetTitle>
               {userName && (
-                <p className="text-sm text-muted-foreground">Signed in as <span className="font-semibold text-foreground">{userName}</span></p>
+                <p className="text-xs text-slate-400">Signed in as <span className="font-semibold text-white">{userName}</span></p>
               )}
             </SheetHeader>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-8">
-            {/* Overflow Nav Items */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-6">
+            {/* Overflow Navigation Items */}
             {overflowItems.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">
                   {t("navigation")}
                 </h4>
                 {overflowItems.map((item) => (
@@ -148,10 +151,10 @@ export function MobileBottomNav({ role, userName }: MobileBottomNavProps) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpenMore(false)}
-                    className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-muted/60 active:scale-[0.98] transition-all text-sm font-semibold group"
+                    className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/60 hover:bg-slate-800 transition-all text-sm font-semibold text-slate-200"
                   >
-                    <div className="bg-background border border-border/50 p-2 rounded-xl group-hover:shadow-sm transition-all">
-                      <item.icon className="h-[18px] w-[18px] text-foreground" />
+                    <div className="bg-slate-800 p-2 rounded-xl text-blue-400">
+                      <item.icon className="h-4 h-4" />
                     </div>
                     {t(item.labelKey)}
                   </Link>
@@ -159,52 +162,38 @@ export function MobileBottomNav({ role, userName }: MobileBottomNavProps) {
               </div>
             )}
 
-            {/* Admin Extra Links */}
-            {role === "admin" && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">
-                  {t("administration")}
-                </h4>
-                <Link href="/dashboard/admin/management" onClick={() => setOpenMore(false)} className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-muted/60 active:scale-[0.98] transition-all text-sm font-semibold group">
-                  <div className="bg-background border border-border/50 p-2 rounded-xl group-hover:shadow-sm transition-all">
-                    <UserIcon className="h-[18px] w-[18px] text-foreground" />
-                  </div>
-                  {t("manageUsers")}
-                </Link>
-              </div>
-            )}
-
-            {/* General Links */}
+            {/* General Actions & Profile */}
             <div className="space-y-2 flex flex-col">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">
                 {t("accountAndApp")}
               </h4>
               <EditProfileModal 
                 userName={userName ?? ""} 
                 role={role} 
-                className="w-full justify-start px-4 py-3.5 h-auto text-sm font-semibold text-foreground hover:bg-muted/60 active:scale-[0.98] rounded-2xl transition-all [&>svg]:mr-4 [&>svg]:h-[18px] [&>svg]:w-[18px] [&>svg]:p-1.5 [&>svg]:box-content [&>svg]:bg-background [&>svg]:border [&>svg]:border-border/50 [&>svg]:rounded-xl"
+                className="w-full justify-start px-4 py-3.5 h-auto text-sm font-semibold text-slate-200 bg-slate-900/50 border border-slate-800/60 hover:bg-slate-800 rounded-2xl transition-all [&>svg]:mr-4 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:p-1.5 [&>svg]:box-content [&>svg]:bg-slate-800 [&>svg]:rounded-xl [&>svg]:text-blue-400"
               />
-              <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-muted/60 active:scale-[0.98] transition-all text-sm font-semibold cursor-pointer group">
-                <div className="bg-background border border-border/50 p-2 rounded-xl group-hover:shadow-sm transition-all">
-                  <HelpCircle className="h-[18px] w-[18px] text-foreground" />
+              <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/60 hover:bg-slate-800 transition-all text-sm font-semibold text-slate-200 cursor-pointer">
+                <div className="bg-slate-800 p-2 rounded-xl text-blue-400">
+                  <HelpCircle className="h-4 h-4" />
                 </div>
                 {t("help")}
               </div>
-              <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-muted/60 active:scale-[0.98] transition-all text-sm font-semibold cursor-pointer group">
-                <div className="bg-background border border-border/50 p-2 rounded-xl group-hover:shadow-sm transition-all">
-                  <Info className="h-[18px] w-[18px] text-foreground" />
+              <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/60 hover:bg-slate-800 transition-all text-sm font-semibold text-slate-200 cursor-pointer">
+                <div className="bg-slate-800 p-2 rounded-xl text-blue-400">
+                  <Info className="h-4 h-4" />
                 </div>
                 {t("aboutTeqemach")}
               </div>
             </div>
 
-            <div className="pt-6 pb-4 border-t border-border">
+            {/* Logout Button */}
+            <div className="pt-4 pb-4 border-t border-slate-800/80">
               <Button
                 variant="ghost"
                 onClick={() => signOut()}
-                className="w-full h-12 justify-center text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl font-bold active:scale-[0.98] transition-all"
+                className="w-full h-12 justify-center text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-2xl font-bold transition-all"
               >
-                <LogOut className="h-5 w-5 mr-2" />
+                <LogOut className="h-4 w-4 mr-2" />
                 {t("logout")}
               </Button>
             </div>
