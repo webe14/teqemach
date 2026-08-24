@@ -7,12 +7,12 @@ const SECRET = new TextEncoder().encode(
   process.env.CUSTOM_SESSION_SECRET ?? "teqemach_fallback_secret_change_me_in_env"
 );
 
-async function getCustomSessionRole(request: NextRequest): Promise<string | null> {
+async function getCustomSession(request: NextRequest): Promise<{ userId: string; role: string; email?: string } | null> {
   try {
     const token = request.cookies.get(SESSION_COOKIE)?.value;
     if (!token) return null;
     const { payload } = await jwtVerify(token, SECRET);
-    return (payload as { role?: string }).role ?? null;
+    return payload as { userId: string; role: string; email?: string };
   } catch {
     return null;
   }
@@ -56,75 +56,93 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/dashboard")) {
-    // ── Check Supabase Auth session (admin, or newly registered users, or OAuth) ────────────────
+    // 1. Check Supabase Auth session
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
+    let userRole: string | null = null;
+    let userId: string | null = null;
+
     if (user) {
+      userId = user.id;
       let { data: profile } = await supabase
         .from("profiles")
         .select("role, status")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile && user.email) {
         const { data: emailProfile } = await supabase
           .from("profiles")
           .select("role, status")
           .eq("email", user.email)
-          .single();
+          .maybeSingle();
         profile = emailProfile;
       }
 
-      if (!profile) {
-        return NextResponse.redirect(new URL("/login?error=account_not_found", request.url));
+      if (profile) {
+        userRole = profile.role;
       }
+    }
 
-      // Block pending or rejected contributors
-      if (profile.role === "contributor" && profile.status === "pending") {
-        return NextResponse.redirect(new URL("/login?error=account_pending", request.url));
+    // 2. Check custom session cookie if no Supabase Auth user found
+    if (!userRole) {
+      const customSession = await getCustomSession(request);
+      if (customSession) {
+        userId = customSession.userId;
+        userRole = customSession.role;
       }
-      if (profile.role === "contributor" && profile.status === "rejected") {
-        return NextResponse.redirect(new URL("/login?error=account_rejected", request.url));
-      }
+    }
 
-      const role = profile.role;
+    // Neither session found -> redirect to login
+    if (!userId || !userRole) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
 
-      if ((role === "admin" || role === "collector") && !pathname.startsWith("/dashboard/admin") && !pathname.startsWith("/dashboard/collector")) {
-        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-      }
-      if (role === "contributor" && !pathname.startsWith("/dashboard/contributor")) {
-        return NextResponse.redirect(new URL("/dashboard/contributor", request.url));
-      }
-
+    // 3. Check profile permissions
+    // Admins and Collectors can freely visit BOTH /dashboard/admin and /dashboard/contributor
+    if (userRole === "admin" || userRole === "collector") {
       return supabaseResponse;
     }
 
-    // ── Check custom session cookie (collector / contributor) ─────────────
-    const customRole = await getCustomSessionRole(request);
+    // If session role is contributor, check if they are trying to access admin panel
+    if (userRole === "contributor") {
+      if (pathname.startsWith("/dashboard/admin")) {
+        // Check if this user profile or email has admin/collector privileges in profiles table
+        const { data: dbProfile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
 
-    if (customRole) {
-      if ((customRole === "collector" || customRole === "admin") && !pathname.startsWith("/dashboard/admin") && !pathname.startsWith("/dashboard/collector")) {
-        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-      }
-      if (customRole === "contributor" && !pathname.startsWith("/dashboard/contributor")) {
+        if (dbProfile?.role === "admin" || dbProfile?.role === "collector") {
+          return supabaseResponse;
+        }
+
+        // Also check if any profile linked to this user's telegram_id or email is admin
+        const { data: adminProfiles } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("role", ["admin", "collector"])
+          .limit(1);
+
+        if (adminProfiles && adminProfiles.length > 0) {
+          return supabaseResponse;
+        }
+
+        // Otherwise restrict contributor from non-contributor dashboard paths
         return NextResponse.redirect(new URL("/dashboard/contributor", request.url));
       }
-      return supabaseResponse;
     }
 
-
-    // ── Neither session found — redirect to login ──
-
-    return NextResponse.redirect(new URL("/login", request.url));
+    return supabaseResponse;
   }
 
   // Redirect root to login
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
 
   return supabaseResponse;
 }
