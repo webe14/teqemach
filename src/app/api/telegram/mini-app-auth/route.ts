@@ -48,81 +48,29 @@ export async function POST(req: Request) {
 
       const hasPhone = !!(tgUser?.phone_number);
 
-      if (profiles.length === 0) {
-        // Telegram verified but not linked to any Teqemach account
+      // Filter profiles strictly for contributor role (Mini App is 100% Contributor focused)
+      const contributorProfile = profiles.find((p) => p.role === "contributor");
+
+      if (!contributorProfile) {
+        // Telegram user has no contributor profile yet -> start Contributor registration
         if (!hasPhone) {
           return NextResponse.json({ linked: false, needsPhone: true, telegramUser: initDataObj });
         }
         return NextResponse.json({ linked: false, telegramUser: initDataObj });
       }
 
-      // If user has profiles but no phone number, require phone first
-      if (!hasPhone) {
-        return NextResponse.json({ linked: true, needsPhone: true, telegramUser: initDataObj });
-      }
+      // If user has a contributor profile, auto-login directly regardless of collector profiles
+      await createCustomSession({
+        userId: contributorProfile.id,
+        role: "contributor",
+        email: contributorProfile.email || "",
+      });
 
-      // 1. If the user has a contributor profile, auto-login directly
-      const contributorProfile = profiles.find((p) => p.role === "contributor");
-      if (contributorProfile && contributorProfile.status === "active") {
-        await createCustomSession({
-          userId: contributorProfile.id,
-          role: "contributor",
-          email: contributorProfile.email || "",
-        });
-
-        await syncTelegramUserActiveProfile(telegramId, contributorProfile.id, "contributor", initDataObj);
-
-        return NextResponse.json({
-          linked: true,
-          redirect: "/dashboard/contributor",
-        });
-      }
-
-      // 2. If user has only 1 non-admin profile, auto-login to it
-      const nonAdminProfiles = profiles.filter((p) => p.role !== "admin");
-      if (nonAdminProfiles.length === 1 && nonAdminProfiles[0].status === "active") {
-        const p = nonAdminProfiles[0];
-        await createCustomSession({
-          userId: p.id,
-          role: p.role as "collector" | "contributor",
-          email: p.email || "",
-        });
-
-        await syncTelegramUserActiveProfile(telegramId, p.id, p.role, initDataObj);
-
-        return NextResponse.json({
-          linked: true,
-          redirect: `/dashboard/${p.role}`,
-        });
-      }
-
-      if (nonAdminProfiles.length === 0) {
-        // If user is admin only, redirect to admin secure login
-        return NextResponse.json({
-          linked: true,
-          message: "Admin accounts use web login.",
-          redirect: "/admin-secure",
-        });
-      }
-
-      // 3. Only if user has multiple non-admin profiles, show role list
-      const roleList = nonAdminProfiles.map((p) => ({
-        id: p.id,
-        role: p.role,
-        full_name: p.full_name,
-        status: p.status,
-      }));
-
-      const existingRoles = nonAdminProfiles.map((p) => p.role);
-      const availableNewRoles = (["contributor"] as const).filter(
-        (r) => !existingRoles.includes(r)
-      );
+      await syncTelegramUserActiveProfile(telegramId, contributorProfile.id, "contributor", initDataObj);
 
       return NextResponse.json({
         linked: true,
-        multiRole: true,
-        roles: roleList,
-        availableNewRoles,
+        redirect: "/dashboard/contributor",
       });
     }
 
