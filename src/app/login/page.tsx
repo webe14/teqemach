@@ -108,7 +108,12 @@ export default function LoginPage() {
       const tg = window.Telegram?.WebApp;
       if (tg && tg.initData) {
         setInitData(tg.initData);
-        checkTelegramLogin(tg.initData);
+        const isLoggedOut = new URLSearchParams(window.location.search).get("logged_out") === "true";
+        if (isLoggedOut) {
+          setStep("contributor_login");
+        } else {
+          checkTelegramLogin(tg.initData);
+        }
       } else {
         setStep("error");
         setErrorMsg("Please open this app inside Telegram.");

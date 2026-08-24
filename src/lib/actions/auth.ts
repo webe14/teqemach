@@ -56,6 +56,7 @@ export async function signIn(formData: { phone?: string; email?: string; passwor
     .from("profiles")
     .select("*")
     .or(conditions)
+    .order("role", { ascending: true }) // "admin" comes before "contributor"
     .limit(10);
 
   const profile = profiles && profiles.length > 0 ? profiles[0] : null;
@@ -274,7 +275,7 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   await clearCustomSession();
-  redirect("/login");
+  redirect("/login?logged_out=true");
 }
 
 export async function getSession() {
