@@ -6,10 +6,12 @@ export default async function CollectorLayout({ children }: { children: React.Re
   // Works for both Supabase-Auth users and custom-cookie users
   const profile = await getCurrentProfile() as any;
 
-  if (!profile || profile.role !== "collector") redirect("/login");
+  if (!profile || (profile.role !== "collector" && profile.role !== "admin")) {
+    redirect("/login");
+  }
 
   return (
-    <AppShell role="collector" userName={profile.full_name ?? profile.email ?? "Collector"} userId={profile.id}>
+    <AppShell role={profile.role} userName={profile.full_name ?? profile.email ?? "Collector"} userId={profile.id}>
       {children}
     </AppShell>
   );
