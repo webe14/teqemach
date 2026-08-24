@@ -88,6 +88,13 @@ export default function ContributorDashboardClient({
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href="/dashboard/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 border border-indigo-400/40 text-xs font-bold text-white shadow-lg hover:scale-105 transition-all"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Admin Panel</span>
+            </a>
             {userId && (
               <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
                 <NotificationBell userId={userId} />

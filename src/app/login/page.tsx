@@ -22,7 +22,13 @@ import {
   Users,
   Smartphone,
   RefreshCw,
+  Eye,
+  EyeOff,
+  Play,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
 
 type EqubGroup = {
   id: string;
@@ -72,6 +78,12 @@ export default function LoginPage() {
   // Multi-role state
   const [roles, setRoles] = useState<RoleInfo[]>([]);
   const [availableNewRoles, setAvailableNewRoles] = useState<string[]>([]);
+
+  // UI tab state
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showHowToUse, setShowHowToUse] = useState(false);
 
   // Link form state
   const [email, setEmail] = useState("");
@@ -381,54 +393,218 @@ export default function LoginPage() {
         )}
 
 
-        {/* ─── CONTRIBUTOR LOGIN PAGE (For new / unlinked users) ───── */}
+        {/* ─── CONTRIBUTOR AUTH SCREEN (MATCHING REFERENCE UI DESIGN) ────── */}
         {step === "contributor_login" && (
-          <div className="text-center py-2">
-            <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                <UserCircle2 className="h-9 w-9 text-blue-500" />
+          <div className="py-2 space-y-6">
+            {/* Top Right Language Selector */}
+            <div className="flex justify-end -mt-2 -mr-2 mb-2">
+              <div className="bg-muted/50 rounded-full px-1 border border-border/40">
+                <LanguageToggle />
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2 text-foreground">Contributor Portal</h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              Welcome to Teqemach! Connect your Telegram account to access your Equb.
-            </p>
+
+            {/* Brand Logo & Name */}
+            <div className="flex flex-col items-center justify-center space-y-2 mb-6">
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
+                <Coins className="h-9 w-9 text-white" />
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+                ተቀማጭ <span className="text-sm font-medium text-muted-foreground">(Teqemach)</span>
+              </h1>
+            </div>
+
+            {/* Segmented Tab Pill Toggle (Login / Register) */}
+            <div className="bg-muted/80 p-1.5 rounded-2xl flex border border-border/60 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setAuthTab("login")}
+                className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
+                  authTab === "login"
+                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                }`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthTab("register");
+                  handleRegisterClick();
+                }}
+                className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
+                  authTab === "register"
+                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                }`}
+              >
+                Register
+              </button>
+            </div>
 
             {errorMsg && (
-              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive mb-4 text-left">
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-left">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            <div className="space-y-4">
-              <Button
-                className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 rounded-2xl"
-                onClick={() => checkTelegramLogin(initData ?? "")}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Coins className="h-5 w-5 mr-2" />
-                    Log In as Contributor
-                  </>
-                )}
-              </Button>
+            {/* ── TAB 1: LOGIN VIEW ── */}
+            {authTab === "login" && (
+              <div className="space-y-5 animate-fadeIn">
+                {/* Phone Number Field */}
+                <div className="space-y-2 text-left">
+                  <Label htmlFor="phone-input" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Phone Number
+                  </Label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-xs font-bold text-muted-foreground">
+                      +251
+                    </span>
+                    <Input
+                      id="phone-input"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter your phone number"
+                      className="pl-14 pr-10 h-12 text-sm rounded-2xl border-border bg-card/50"
+                    />
+                    <Phone className="absolute right-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
 
-              <div className="pt-6 border-t border-border mt-6">
-                <p className="text-xs text-muted-foreground mb-3 font-medium">New to Teqemach?</p>
+                {/* Password Field */}
+                <div className="space-y-2 text-left">
+                  <Label htmlFor="pass-input" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Password
+                  </Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      id="pass-input"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="pr-10 h-12 text-sm rounded-2xl border-border bg-card/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <div className="text-right pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setErrorMsg("Please contact your Equb collector to reset your password.")}
+                      className="text-xs font-bold text-emerald-500 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit Login Button */}
                 <Button
-                  variant="outline"
-                  className="w-full h-12 text-sm font-bold border-blue-500/40 text-blue-400 hover:bg-blue-500/10 rounded-2xl"
-                  onClick={handleRegisterClick}
+                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98]"
+                  onClick={() => checkTelegramLogin(initData ?? "")}
+                  disabled={isSubmitting}
                 >
-                  <UserCircle2 className="h-4 w-4 mr-2" />
-                  Register as a Contributor
+                  {isSubmitting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Login"
+                  )}
                 </Button>
+
+                {/* Footer Register Prompt */}
+                <div className="text-center pt-2 text-xs text-muted-foreground font-medium">
+                  Don&apos;t have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthTab("register");
+                      handleRegisterClick();
+                    }}
+                    className="text-emerald-500 font-bold hover:underline"
+                  >
+                    Register
+                  </button>
+                </div>
+
+                {/* How to Use button */}
+                <div className="flex justify-center pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowHowToUse(true)}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-current text-blue-400" />
+                    How to Use
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* ── TAB 2: REGISTER VIEW ── */}
+            {authTab === "register" && (
+              <div className="space-y-4 animate-fadeIn">
+                {!hasSharedPhone ? (
+                  <div className="space-y-4 py-2">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Step 1: Verify your phone number with Telegram to start registering.
+                    </p>
+                    <Button
+                      className="w-full h-13 text-sm font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white rounded-2xl"
+                      onClick={() => {
+                        const tg = window.Telegram?.WebApp;
+                        if (tg && tg.requestContact) {
+                          tg.requestContact((shared: boolean) => {
+                            if (shared) setTimeout(checkPhoneStatus, 1500);
+                          });
+                        } else {
+                          window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
+                        }
+                      }}
+                    >
+                      <Smartphone className="h-5 w-5 mr-2" />
+                      Share Phone Number
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 text-xs rounded-2xl"
+                      onClick={checkPhoneStatus}
+                      disabled={phoneCheckLoading}
+                    >
+                      {phoneCheckLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      I&apos;ve Shared My Number
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 py-2">
+                    <Button
+                      className="w-full h-13 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl"
+                      onClick={() => startContributorRegistration()}
+                    >
+                      Select Equb Group to Join
+                    </Button>
+                  </div>
+                )}
+
+                <div className="text-center pt-2 text-xs text-muted-foreground font-medium">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setAuthTab("login")}
+                    className="text-emerald-500 font-bold hover:underline"
+                  >
+                    Login
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -944,6 +1120,29 @@ export default function LoginPage() {
           </div>
         )}
       </div>
+
+      {/* ─── HOW TO USE GUIDANCE MODAL ───────────────────────────────────── */}
+      {showHowToUse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto">
+              <Play className="h-6 w-6 fill-current" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground">How to Use Teqemach</h3>
+            <div className="text-xs text-muted-foreground space-y-2 text-left bg-muted/40 p-4 rounded-2xl border border-border/50">
+              <p>1. <strong>Register / Share Phone</strong>: Connect your Telegram phone number to create your profile.</p>
+              <p>2. <strong>Join Equb Group</strong>: Select your preferred Equb Collector and choose a Daily, Weekly, or Monthly group.</p>
+              <p>3. <strong>Track Contributions</strong>: Make regular payments, track cycle progress, and receive payouts digitally.</p>
+            </div>
+            <Button
+              className="w-full h-11 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+              onClick={() => setShowHowToUse(false)}
+            >
+              Got it!
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
