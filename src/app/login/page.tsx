@@ -29,6 +29,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { signIn } from "@/lib/actions/auth";
 
 type EqubGroup = {
   id: string;
@@ -159,6 +160,36 @@ export default function LoginPage() {
       setStep("needs_phone");
     } else {
       startContributorRegistration();
+    }
+  }
+
+  async function handlePhonePasswordLogin(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!phone && !email) {
+      setErrorMsg("Please enter your phone number.");
+      return;
+    }
+    if (!password) {
+      setErrorMsg("Please enter your password.");
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await signIn({ phone, email, password });
+      if (res?.error) {
+        setErrorMsg(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+      if (res?.role === "admin" || res?.role === "collector") {
+        window.location.href = "/dashboard/admin";
+      } else {
+        window.location.href = "/dashboard/contributor";
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Login failed");
+      setIsSubmitting(false);
     }
   }
 
@@ -447,7 +478,7 @@ export default function LoginPage() {
 
             {/* ── TAB 1: LOGIN VIEW ── */}
             {authTab === "login" && (
-              <div className="space-y-5 animate-fadeIn">
+              <form onSubmit={handlePhonePasswordLogin} className="space-y-5 animate-fadeIn">
                 {/* Phone Number Field */}
                 <div className="space-y-2 text-left">
                   <Label htmlFor="phone-input" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -494,7 +525,7 @@ export default function LoginPage() {
                   <div className="text-right pt-1">
                     <button
                       type="button"
-                      onClick={() => setErrorMsg("Please contact your Equb collector to reset your password.")}
+                      onClick={() => setErrorMsg("Please contact your Equb admin to reset your password.")}
                       className="text-xs font-bold text-emerald-500 hover:underline"
                     >
                       Forgot Password?
@@ -504,8 +535,8 @@ export default function LoginPage() {
 
                 {/* Submit Login Button */}
                 <Button
+                  type="submit"
                   className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98]"
-                  onClick={() => checkTelegramLogin(initData ?? "")}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -541,7 +572,7 @@ export default function LoginPage() {
                     How to Use
                   </button>
                 </div>
-              </div>
+              </form>
             )}
 
             {/* ── TAB 2: REGISTER VIEW ── */}
