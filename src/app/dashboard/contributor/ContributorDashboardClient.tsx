@@ -86,24 +86,6 @@ export default function ContributorDashboardClient({
               </h2>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <a
-              href="/dashboard/admin"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 border border-indigo-400/40 text-xs font-bold text-white shadow-lg hover:scale-105 transition-all"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Admin Panel</span>
-            </a>
-            {userId && (
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                <NotificationBell userId={userId} />
-              </div>
-            )}
-            <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-              <LanguageToggle />
-            </div>
-          </div>
         </div>
 
         {/* Banner Tagline & Title */}
@@ -222,71 +204,6 @@ export default function ContributorDashboardClient({
             </a>
 
           </div>
-        </div>
-
-        {/* ─── 6. PERSONAL SAVINGS METRICS & PROGRESS ────────────────────── */}
-        <div className="space-y-4 pt-2">
-          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-blue-400" />
-            My Personal Savings Overview
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatsCard
-              title={t("amountSaved")}
-              value={`ETB ${stats.amountSaved.toLocaleString()}`}
-              subtitle={`${stats.paidCycles} ${t("paymentsMade")}`}
-              icon={<Coins />}
-              gradient="from-emerald-500 to-teal-600"
-            />
-            <StatsCard
-              title={t("daysRemaining")}
-              value={stats.daysRemaining > 0 ? stats.daysRemaining : t("complete")}
-              subtitle={`${t("outOf")} ${group?.total_days ?? "—"} ${t("totalDays")}`}
-              icon={<Clock />}
-              gradient="from-indigo-500 to-violet-600"
-            />
-            <StatsCard
-              title={t("nextCycleDate")}
-              value={nextCycleStr}
-              subtitle={t("ethiopianCalendar")}
-              icon={<CalendarDays />}
-              gradient="from-blue-600 to-indigo-600"
-            />
-          </div>
-
-          {/* Progress bar card */}
-          <Card className="border-border rounded-3xl bg-card shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
-                  <TrendingUp className="h-4 w-4 text-blue-400" />
-                  {t("mySavingsProgress")}
-                </CardTitle>
-                <Badge variant={completionPct === 100 ? "success" : "default"} className="rounded-full px-3 bg-blue-600 text-white">
-                  {completionPct === 100 ? `✓ ${t("complete")}` : `${completionPct}%`}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Progress
-                value={completionPct}
-                className="h-3 rounded-full bg-muted"
-                indicatorClassName={
-                  completionPct === 100
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-                    : "bg-gradient-to-r from-blue-600 to-violet-600"
-                }
-              />
-              <div className="flex justify-between text-xs text-muted-foreground font-medium">
-                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {stats.paidCycles} {t("paid")}
-                </span>
-                <span>{stats.totalCycles} {t("totalCycles")}</span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
       </div>

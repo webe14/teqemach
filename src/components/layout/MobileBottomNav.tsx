@@ -171,23 +171,6 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
                 {t("accountAndApp")}
               </h4>
 
-              {/* Admin Panel Direct Link (Only visible for Admins) */}
-              {showAdminLink && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenMore(false);
-                    window.location.href = "/dashboard/admin";
-                  }}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 to-slate-900 border border-indigo-500/30 hover:border-indigo-400/60 transition-all text-sm font-bold text-indigo-200 hover:text-white group text-left cursor-pointer"
-                >
-                  <div className="bg-indigo-600/80 group-hover:bg-indigo-600 p-2 rounded-xl text-white shadow-md transition-colors">
-                    <ShieldCheck className="h-4 h-4" />
-                  </div>
-                  <span>Admin Panel</span>
-                </button>
-              )}
-
               <EditProfileModal 
                 userName={userName ?? ""} 
                 role={role} 
