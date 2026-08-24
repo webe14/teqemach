@@ -181,7 +181,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ─── REGISTER CONTRIBUTOR (with collector/group selection) ───────────
+    // ─── REGISTER CONTRIBUTOR (without requiring group selection) ───────────
     if (action === "register_contributor") {
       // Check if user already has a contributor profile
       const existingContributor = profiles.find((p) => p.role === "contributor");
@@ -190,34 +190,6 @@ export async function POST(req: Request) {
           { error: "You already have a contributor account." },
           { status: 400 }
         );
-      }
-
-      if (!collectorId || !groupId) {
-        return NextResponse.json(
-          { error: "Please select a collector and group." },
-          { status: 400 }
-        );
-      }
-
-      // Block collector from joining their own group
-      const collectorProfile = profiles.find((p) => p.role === "collector");
-      if (collectorProfile && collectorProfile.id === collectorId) {
-        return NextResponse.json(
-          { error: "You cannot join your own group as a contributor." },
-          { status: 400 }
-        );
-      }
-
-      // Verify the group belongs to the selected collector
-      const { data: group, error: groupError } = await adminClient
-        .from("equb_groups")
-        .select("id, name, collector_id")
-        .eq("id", groupId)
-        .eq("collector_id", collectorId)
-        .single();
-
-      if (groupError || !group) {
-        return NextResponse.json({ error: "Invalid group selection." }, { status: 400 });
       }
 
       const fullName = [initDataObj.first_name, initDataObj.last_name].filter(Boolean).join(" ");
@@ -238,7 +210,6 @@ export async function POST(req: Request) {
           phone_number: contributorPhone,
           role: "contributor",
           status: "pending",
-          collector_id: collectorId,
           telegram_id: telegramId,
           telegram_chat_id: telegramId,
           telegram_username: username,
@@ -253,27 +224,6 @@ export async function POST(req: Request) {
         console.error("Failed to create contributor profile:", insertError);
         return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
       }
-
-      // Create group membership
-      await adminClient.from("group_memberships").insert({
-        contributor_id: newProfile.id,
-        group_id: groupId,
-        collector_id: collectorId,
-      });
-
-      // Notify the collector
-      await adminClient.from("notifications").insert({
-        user_id: collectorId,
-        type: "contributor_request",
-        title: "New Contributor Request",
-        message: `${fullName} wants to join ${group.name}.`,
-        data: {
-          contributor_id: newProfile.id,
-          contributor_name: fullName,
-          group_id: groupId,
-          group_name: group.name,
-        },
-      });
 
       // Auto-login as contributor
       await createCustomSession({

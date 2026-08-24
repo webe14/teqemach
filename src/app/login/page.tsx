@@ -244,22 +244,26 @@ export default function LoginPage() {
 
   async function startContributorRegistration() {
     setErrorMsg(null);
-    setCollectorsLoading(true);
-    setStep("contributor_pick_group");
+    setIsSubmitting(true);
     try {
       const res = await fetch("/api/telegram/mini-app-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, action: "get_all_groups" }),
+        body: JSON.stringify({ initData, action: "register_contributor" }),
       });
       const result = await res.json();
 
-      if (!res.ok) throw new Error(result.error || "Failed to load Equb groups");
-      setAvailableGroups(result.data || []);
+      if (!res.ok) throw new Error(result.error || "Registration failed");
+      
+      // Navigate to contributor dashboard where they can see groups
+      if (result.redirect) {
+        router.push(result.redirect);
+      } else {
+        setStep("contributor_success");
+      }
     } catch (err: any) {
       setErrorMsg(err.message);
-    } finally {
-      setCollectorsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -569,24 +573,6 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex justify-center pt-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowHowToUse(true)}
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
-                  >
-                    <Play className="h-3.5 w-3.5 fill-current text-blue-400" />
-                    How to Use
-                  </button>
-                  <a
-                    href="/admin-secure"
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 text-violet-400" />
-                    Admin
-                  </a>
-                </div>
               </form>
             )}
 
@@ -629,8 +615,9 @@ export default function LoginPage() {
                     <Button
                       className="w-full h-13 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl"
                       onClick={() => startContributorRegistration()}
+                      disabled={isSubmitting}
                     >
-                      Select Equb Group to Join
+                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Registration"}
                     </Button>
                   </div>
                 )}
