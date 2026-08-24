@@ -109,7 +109,18 @@ export async function middleware(request: NextRequest) {
     // If session role is contributor, check if they are trying to access admin panel
     if (userRole === "contributor") {
       if (pathname.startsWith("/dashboard/admin")) {
-        const { data: dbProfile } = await supabase
+        const adminClient = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          {
+            cookies: {
+              getAll() { return []; },
+              setAll() {},
+            },
+          }
+        );
+
+        const { data: dbProfile } = await adminClient
           .from("profiles")
           .select("role, telegram_id, email, phone_number")
           .eq("id", userId)
@@ -126,7 +137,7 @@ export async function middleware(request: NextRequest) {
           if (dbProfile.phone_number) conditions.push(`phone_number.eq.${dbProfile.phone_number}`);
 
           if (conditions.length > 0) {
-            const { data: adminMatches } = await supabase
+            const { data: adminMatches } = await adminClient
               .from("profiles")
               .select("id")
               .in("role", ["admin", "collector"])
