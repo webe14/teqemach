@@ -69,7 +69,13 @@ export async function signIn(formData: { phone?: string; email?: string; passwor
     });
 
     if (!authError && authData.user) {
-      return { success: true };
+      const userRole = profile?.role || "admin";
+      await createCustomSession({
+        userId: profile?.id || authData.user.id,
+        role: userRole as "admin" | "contributor",
+        email: emailToUse,
+      });
+      return { success: true, role: userRole };
     }
   }
 

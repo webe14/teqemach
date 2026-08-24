@@ -25,25 +25,15 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const result = await signIn({ phone, password });
-      if (result?.error) { setError(result.error); return; }
-      
-      const profile = await getCurrentProfile();
-      
-      if (!profile || !profile.role) {
-        setError("Access denied. Role not found.");
-        const supabase = createClient();
-        await supabase.auth.signOut();
+      if (result?.error) {
+        setError(result.error);
         return;
       }
-
-      if (profile.role === "admin" || profile.isAdmin) {
-        router.replace("/dashboard/admin");
-      } else if (profile.role === "contributor") {
-        router.replace("/dashboard/contributor");
+      
+      if (result?.role === "admin" || result?.role === "collector") {
+        window.location.href = "/dashboard/admin";
       } else {
-        setError("Access denied. Admin rights required.");
-        const supabase = createClient();
-        await supabase.auth.signOut();
+        window.location.href = "/dashboard/contributor";
       }
     } catch {
       setError("An unexpected error occurred");
