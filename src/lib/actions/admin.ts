@@ -139,3 +139,49 @@ export async function getFinancialReport(fromDate?: string, toDate?: string) {
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
 }
+
+export async function getAllContributors() {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("group_memberships")
+    .select(
+      `
+      id,
+      group_id,
+      contributor_id,
+      created_at,
+      collector_id,
+      contributor:profiles!group_memberships_contributor_id_fkey(id, full_name, phone_number, email, status),
+      group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
+    `
+    );
+
+  if (error) return { error: error.message, data: [] };
+  // Only return contributors whose profile status is active
+  const active = (data as any[])?.filter((c) => c.contributor?.status === "active") ?? [];
+  return { data: active, error: null };
+}
+
+export async function getAllPendingContributors() {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone_number, telegram_username, created_at, collector_id")
+    .eq("status", "pending")
+    .eq("role", "contributor")
+    .order("created_at", { ascending: false });
+
+  if (error) return { error: error.message, data: [] };
+  return { data: (data as any[]) ?? [], error: null };
+}
+
+export async function getAllGroups() {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("equb_groups")
+    .select("id, name, contribution_amount, total_days, frequency, collector_id")
+    .order("created_at", { ascending: false });
+    
+  if (error) return { error: error.message, data: [] };
+  return { data: (data as any[]) ?? [], error: null };
+}

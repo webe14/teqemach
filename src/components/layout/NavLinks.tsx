@@ -27,14 +27,20 @@ export type NavItem = {
 export const adminNavItems: NavItem[] = [
   { labelKey: "overview", href: "/dashboard/admin", icon: LayoutDashboard },
   { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
-  { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
+  { labelKey: "manageContributors", href: "/dashboard/admin/contributors", icon: Users },
   { labelKey: "financialReports", href: "/dashboard/admin/reports", icon: BarChart3 },
   { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
   { labelKey: "managementHub", href: "/dashboard/admin/management", icon: Users },
   { labelKey: "broadcast", href: "/dashboard/admin/broadcast", icon: Send },
 ];
 
-export const collectorNavItems: NavItem[] = adminNavItems;
+export const collectorNavItems: NavItem[] = [
+  { labelKey: "overview", href: "/dashboard/collector", icon: LayoutDashboard },
+  { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
+  { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
+  { labelKey: "financialReports", href: "/dashboard/collector/reports", icon: BarChart3 },
+  { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
+];
 
 
 export const contributorNavItems: NavItem[] = [
