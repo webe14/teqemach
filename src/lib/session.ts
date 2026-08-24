@@ -31,6 +31,9 @@ export async function createCustomSession(payload: CustomSessionPayload) {
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
+  
+  // Clear the explicit logout flag upon successful login
+  cookieStore.delete("teqemach_explicit_logout");
 }
 
 /**
@@ -56,4 +59,13 @@ export async function getCustomSession(): Promise<CustomSessionPayload | null> {
 export async function clearCustomSession() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
+  
+  // Set explicit logout flag to prevent auto-login loops
+  cookieStore.set("teqemach_explicit_logout", "true", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
 }

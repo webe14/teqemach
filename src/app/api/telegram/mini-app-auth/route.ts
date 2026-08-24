@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { verifyInitData, parseInitData } from "@/lib/telegram/verify";
 import { getUserByTelegramId, getProfilesByTelegramId } from "@/lib/actions/telegram";
@@ -39,6 +40,11 @@ export async function POST(req: Request) {
 
     // ─── LOGIN ──────────────────────────────────────────────────────────
     if (action === "login") {
+      const cookieStore = await cookies();
+      if (cookieStore.get("teqemach_explicit_logout")?.value === "true") {
+        return NextResponse.json({ linked: false, explicitLogout: true });
+      }
+
       // Check if user has a verified phone number in telegram_users
       const { data: tgUser } = await adminClient
         .from("telegram_users")

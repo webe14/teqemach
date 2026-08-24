@@ -108,12 +108,8 @@ export default function LoginPage() {
       const tg = window.Telegram?.WebApp;
       if (tg && tg.initData) {
         setInitData(tg.initData);
-        const isLoggedOut = new URLSearchParams(window.location.search).get("logged_out") === "true";
-        if (isLoggedOut) {
-          setStep("contributor_login");
-        } else {
-          checkTelegramLogin(tg.initData);
-        }
+        // The server will check the cookie and return explicitLogout if they logged out.
+        checkTelegramLogin(tg.initData);
       } else {
         setStep("error");
         setErrorMsg("Please open this app inside Telegram.");
@@ -133,8 +129,11 @@ export default function LoginPage() {
       });
       const result = await res.json();
 
-      if (!res.ok) {
-        throw new Error(result.error || "Authentication failed");
+      if (!res.ok) throw new Error(result.error || "Auto-login failed");
+
+      if (result.explicitLogout) {
+        setStep("contributor_login");
+        return;
       }
 
       // Track if phone is verified
