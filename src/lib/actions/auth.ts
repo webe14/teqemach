@@ -284,6 +284,8 @@ export async function getCurrentProfile() {
       data: { user },
     } = await supabase.auth.getUser();
 
+    let profile: any = null;
+
     if (user) {
       // Try matching by ID first
       const { data: idData } = await supabase
@@ -292,10 +294,10 @@ export async function getCurrentProfile() {
         .eq("id", user.id)
         .maybeSingle();
         
-      if (idData) return idData;
+      if (idData) profile = idData;
 
       // For Google OAuth users whose email exists in legacy profiles, link by email
-      if (user.email) {
+      if (!profile && user.email) {
         const adminClient = await createAdminClient();
         const { data: emailData } = await adminClient
           .from("profiles")
@@ -303,23 +305,54 @@ export async function getCurrentProfile() {
           .eq("email", user.email)
           .maybeSingle();
         
-        if (emailData) return emailData;
+        if (emailData) profile = emailData;
       }
     }
 
     // Check custom session (legacy collector / contributor)
-    const customSession = await getCustomSession();
-    if (customSession) {
-      const adminClient = await createAdminClient();
-      const { data } = await adminClient
-        .from("profiles")
-        .select("*")
-        .eq("id", customSession.userId)
-        .maybeSingle();
-      return data;
+    if (!profile) {
+      const customSession = await getCustomSession();
+      if (customSession) {
+        const adminClient = await createAdminClient();
+        const { data } = await adminClient
+          .from("profiles")
+          .select("*")
+          .eq("id", customSession.userId)
+          .maybeSingle();
+        profile = data;
+      }
     }
 
-    return null;
+    if (!profile) return null;
+
+    // Check if this profile or any related profile (by telegram_id, email, or phone_number) has admin/collector role
+    const adminClient = await createAdminClient();
+    let hasAdminRights = profile.role === "admin" || profile.role === "collector";
+
+    if (!hasAdminRights) {
+      const conditions: string[] = [];
+      if (profile.telegram_id) conditions.push(`telegram_id.eq.${profile.telegram_id}`);
+      if (profile.email) conditions.push(`email.eq.${profile.email}`);
+      if (profile.phone_number) conditions.push(`phone_number.eq.${profile.phone_number}`);
+
+      if (conditions.length > 0) {
+        const { data: adminMatches } = await adminClient
+          .from("profiles")
+          .select("id, role")
+          .in("role", ["admin", "collector"])
+          .or(conditions.join(","))
+          .limit(1);
+
+        if (adminMatches && adminMatches.length > 0) {
+          hasAdminRights = true;
+        }
+      }
+    }
+
+    return {
+      ...profile,
+      isAdmin: hasAdminRights,
+    };
   } catch (err: any) {
     if (err?.digest?.includes("DYNAMIC_SERVER_USAGE") || err?.message?.includes("DYNAMIC_SERVER_USAGE")) {
       throw err;

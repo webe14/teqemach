@@ -109,10 +109,9 @@ export async function middleware(request: NextRequest) {
     // If session role is contributor, check if they are trying to access admin panel
     if (userRole === "contributor") {
       if (pathname.startsWith("/dashboard/admin")) {
-        // Check if this user profile or email has admin/collector privileges in profiles table
         const { data: dbProfile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, telegram_id, email, phone_number")
           .eq("id", userId)
           .maybeSingle();
 
@@ -120,18 +119,26 @@ export async function middleware(request: NextRequest) {
           return supabaseResponse;
         }
 
-        // Also check if any profile linked to this user's telegram_id or email is admin
-        const { data: adminProfiles } = await supabase
-          .from("profiles")
-          .select("id")
-          .in("role", ["admin", "collector"])
-          .limit(1);
+        if (dbProfile) {
+          const conditions: string[] = [];
+          if (dbProfile.telegram_id) conditions.push(`telegram_id.eq.${dbProfile.telegram_id}`);
+          if (dbProfile.email) conditions.push(`email.eq.${dbProfile.email}`);
+          if (dbProfile.phone_number) conditions.push(`phone_number.eq.${dbProfile.phone_number}`);
 
-        if (adminProfiles && adminProfiles.length > 0) {
-          return supabaseResponse;
+          if (conditions.length > 0) {
+            const { data: adminMatches } = await supabase
+              .from("profiles")
+              .select("id")
+              .in("role", ["admin", "collector"])
+              .or(conditions.join(","))
+              .limit(1);
+
+            if (adminMatches && adminMatches.length > 0) {
+              return supabaseResponse;
+            }
+          }
         }
 
-        // Otherwise restrict contributor from non-contributor dashboard paths
         return NextResponse.redirect(new URL("/dashboard/contributor", request.url));
       }
     }

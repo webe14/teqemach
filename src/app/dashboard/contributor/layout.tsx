@@ -8,7 +8,7 @@ export default async function ContributorLayout({ children }: { children: React.
 
   if (!profile) redirect("/login");
 
-  const isAdmin = profile.role === "admin" || profile.role === "collector";
+  const isAdmin = Boolean(profile.isAdmin || profile.role === "admin" || profile.role === "collector");
 
   return (
     <AppShell 
