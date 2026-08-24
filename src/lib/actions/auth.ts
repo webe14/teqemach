@@ -6,25 +6,62 @@ import { redirect } from "next/navigation";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 
+function getPhoneVariants(rawInput: string): string[] {
+  const input = rawInput.trim();
+  const digits = input.replace(/\D/g, "");
+  const variants = new Set<string>([input]);
+
+  if (digits) {
+    variants.add(digits);
+    variants.add(`+${digits}`);
+
+    if (digits.startsWith("251") && digits.length === 12) {
+      const national = digits.slice(3);
+      variants.add(`0${national}`);
+      variants.add(national);
+      variants.add(`+251${national}`);
+    } else if (digits.startsWith("09") && digits.length === 10) {
+      const national = digits.slice(1);
+      variants.add(national);
+      variants.add(`251${national}`);
+      variants.add(`+251${national}`);
+    } else if (digits.startsWith("9") && digits.length === 9) {
+      variants.add(`0${digits}`);
+      variants.add(`251${digits}`);
+      variants.add(`+251${digits}`);
+    }
+  }
+
+  return Array.from(variants);
+}
+
 export async function signIn(formData: { phone?: string; email?: string; password: string }) {
   const supabase = await createClient();
-  const identifier = (formData.phone || formData.email || "").trim();
+  const rawIdentifier = (formData.phone || formData.email || "").trim();
 
-  if (!identifier) {
+  if (!rawIdentifier) {
     return { error: "Please enter your phone number or email." };
   }
 
   const adminClient = await createAdminClient();
+  const phoneVariants = getPhoneVariants(rawIdentifier);
 
-  // ── Step 1: Look up profile by phone_number or email ───────────────────
-  const { data: profile } = await adminClient
+  // Build OR condition for all phone number formats and email
+  const conditions = [
+    ...phoneVariants.map((v) => `phone_number.eq.${v}`),
+    `email.eq.${rawIdentifier}`,
+  ].join(",");
+
+  const { data: profiles } = await adminClient
     .from("profiles")
     .select("*")
-    .or(`phone_number.eq.${identifier},email.eq.${identifier}`)
-    .maybeSingle();
+    .or(conditions)
+    .limit(10);
 
-  // ── Step 2: Try Supabase Auth if email is available ───────────────────
-  const emailToUse = profile?.email || (identifier.includes("@") ? identifier : null);
+  const profile = profiles && profiles.length > 0 ? profiles[0] : null;
+
+  // ── Step 1: Try Supabase Auth if profile has email ───────────────────────
+  const emailToUse = profile?.email || (rawIdentifier.includes("@") ? rawIdentifier : null);
   if (emailToUse) {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: emailToUse,
@@ -36,16 +73,30 @@ export async function signIn(formData: { phone?: string; email?: string; passwor
     }
   }
 
-  // ── Step 3: Custom password check via bcrypt ───────────────────────────
-  if (profile && profile.password) {
-    const passwordMatch = await bcrypt.compare(formData.password, profile.password);
-    if (passwordMatch) {
-      await createCustomSession({
-        userId: profile.id,
-        role: profile.role as "admin" | "contributor",
-        email: profile.email || identifier,
-      });
-      return { success: true, role: profile.role };
+  // ── Step 2: Check each matching profile password with bcrypt ──────────────
+  if (profiles && profiles.length > 0) {
+    for (const p of profiles) {
+      if (p.password) {
+        let matches = false;
+        if (p.password === formData.password) {
+          matches = true;
+        } else {
+          try {
+            matches = await bcrypt.compare(formData.password, p.password);
+          } catch {
+            matches = false;
+          }
+        }
+
+        if (matches) {
+          await createCustomSession({
+            userId: p.id,
+            role: p.role as "admin" | "contributor",
+            email: p.email || rawIdentifier,
+          });
+          return { success: true, role: p.role };
+        }
+      }
     }
   }
 
