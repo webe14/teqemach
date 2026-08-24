@@ -276,49 +276,57 @@ export async function getSession() {
  *  - Custom JWT cookie users (legacy collector/contributor)
  */
 export async function getCurrentProfile() {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  // Check Supabase Auth first
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // Check Supabase Auth first
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (user) {
-    // Try matching by ID first
-    const { data: idData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-      
-    if (idData) return idData;
-
-    // For Google OAuth users whose email exists in legacy profiles, link by email
-    if (user.email) {
-      const adminClient = await createAdminClient();
-      const { data: emailData } = await adminClient
+    if (user) {
+      // Try matching by ID first
+      const { data: idData } = await supabase
         .from("profiles")
         .select("*")
-        .eq("email", user.email)
-        .single();
-      
-      if (emailData) return emailData;
+        .eq("id", user.id)
+        .maybeSingle();
+        
+      if (idData) return idData;
+
+      // For Google OAuth users whose email exists in legacy profiles, link by email
+      if (user.email) {
+        const adminClient = await createAdminClient();
+        const { data: emailData } = await adminClient
+          .from("profiles")
+          .select("*")
+          .eq("email", user.email)
+          .maybeSingle();
+        
+        if (emailData) return emailData;
+      }
     }
-  }
 
-  // Check custom session (legacy collector / contributor)
-  const customSession = await getCustomSession();
-  if (customSession) {
-    const adminClient = await createAdminClient();
-    const { data } = await adminClient
-      .from("profiles")
-      .select("*")
-      .eq("id", customSession.userId)
-      .single();
-    return data;
-  }
+    // Check custom session (legacy collector / contributor)
+    const customSession = await getCustomSession();
+    if (customSession) {
+      const adminClient = await createAdminClient();
+      const { data } = await adminClient
+        .from("profiles")
+        .select("*")
+        .eq("id", customSession.userId)
+        .maybeSingle();
+      return data;
+    }
 
-  return null;
+    return null;
+  } catch (err: any) {
+    if (err?.digest?.includes("DYNAMIC_SERVER_USAGE") || err?.message?.includes("DYNAMIC_SERVER_USAGE")) {
+      throw err;
+    }
+    console.error("getCurrentProfile error:", err);
+    return null;
+  }
 }
 
 export async function getProfileById(id: string) {
