@@ -188,8 +188,10 @@ export default function LoginPage() {
         return;
       }
       if (res?.role === "admin" || res?.role === "collector") {
+        localStorage.removeItem("teqemach_explicit_logout");
         window.location.href = "/dashboard/admin";
       } else {
+        localStorage.removeItem("teqemach_explicit_logout");
         window.location.href = "/dashboard/contributor";
       }
     } catch (err: any) {
@@ -211,6 +213,7 @@ export default function LoginPage() {
 
       if (!res.ok) throw new Error(result.error || "Login failed");
       if (result.redirect) {
+        localStorage.removeItem("teqemach_explicit_logout");
         router.push(result.redirect);
       }
     } catch (err: any) {
@@ -301,6 +304,7 @@ export default function LoginPage() {
 
       if (!res.ok) throw new Error(result.error || "Linking failed");
       if (result.redirect) {
+        localStorage.removeItem("teqemach_explicit_logout");
         router.push(result.redirect);
       }
     } catch (err: any) {
