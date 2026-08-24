@@ -6,92 +6,50 @@ import { redirect } from "next/navigation";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 
-export async function signIn(formData: { email: string; password: string }) {
+export async function signIn(formData: { phone?: string; email?: string; password: string }) {
   const supabase = await createClient();
+  const identifier = (formData.phone || formData.email || "").trim();
 
-  // ── Step 1: Try Supabase Auth (admin, or newly registered users) ─────────
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email: formData.email,
-    password: formData.password,
-  });
-
-  if (!authError && authData.user) {
-    // Supabase Auth succeeded.
-    // Ensure a profile row exists (for admins auto-created in dashboard)
-    const adminClient = await createAdminClient();
-    const { data: existingProfile } = await adminClient
-      .from("profiles")
-      .select("id, role")
-      .eq("id", authData.user.id)
-      .single();
-
-    if (!existingProfile) {
-      // Look if there's a legacy profile with this email that we should link?
-      // Since this is email/password, they wouldn't have a Supabase Auth user unless they were registered there.
-      // We only auto-create for 'admin' to preserve legacy behavior.
-      const { error: insertError } = await adminClient.from("profiles").insert({
-        id: authData.user.id,
-        full_name:
-          authData.user.user_metadata?.full_name ??
-          authData.user.user_metadata?.fullName ??
-          authData.user.email ??
-          "Admin",
-        phone_number:
-          authData.user.user_metadata?.phone_number ??
-          authData.user.user_metadata?.phoneNumber ??
-          "",
-        role: "admin",
-        email: authData.user.email ?? formData.email,
-        password: "supabase_auth",
-      });
-
-      if (insertError) {
-        await supabase.auth.signOut();
-        return { error: `Profile creation failed: ${insertError.message}` };
-      }
-    }
-
-    return { success: true };
+  if (!identifier) {
+    return { error: "Please enter your phone number or email." };
   }
 
-  // ── Step 2: Custom profile-based auth (legacy collector / contributor) ───
   const adminClient = await createAdminClient();
-  const { data: profile, error: profileError } = await adminClient
+
+  // ── Step 1: Look up profile by phone_number or email ───────────────────
+  const { data: profile } = await adminClient
     .from("profiles")
-    .select("id, role, password, email, status")
-    .eq("email", formData.email)
-    .in("role", ["collector", "contributor"])
-    .single();
+    .select("*")
+    .or(`phone_number.eq.${identifier},email.eq.${identifier}`)
+    .maybeSingle();
 
-  if (profileError || !profile) {
-    return { error: "Invalid email or password" };
+  // ── Step 2: Try Supabase Auth if email is available ───────────────────
+  const emailToUse = profile?.email || (identifier.includes("@") ? identifier : null);
+  if (emailToUse) {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password: formData.password,
+    });
+
+    if (!authError && authData.user) {
+      return { success: true };
+    }
   }
 
-  if (!profile.password) {
-    return { error: "Account has no password configured. Contact admin." };
+  // ── Step 3: Custom password check via bcrypt ───────────────────────────
+  if (profile && profile.password) {
+    const passwordMatch = await bcrypt.compare(formData.password, profile.password);
+    if (passwordMatch) {
+      await createCustomSession({
+        userId: profile.id,
+        role: profile.role as "admin" | "contributor",
+        email: profile.email || identifier,
+      });
+      return { success: true, role: profile.role };
+    }
   }
 
-  const passwordMatch = await bcrypt.compare(formData.password, profile.password);
-  if (!passwordMatch) {
-    return { error: "Invalid email or password" };
-  }
-
-  // Block pending/rejected contributors
-  if (profile.role === "contributor" && profile.status === "pending") {
-    return { error: "Your account is pending approval from the collector. Please wait." };
-  }
-  if (profile.role === "contributor" && profile.status === "rejected") {
-    return { error: "Your registration was rejected by the collector." };
-  }
-
-  // Issue custom JWT cookie
-  await createCustomSession({
-    userId: profile.id,
-    role: profile.role as "collector" | "contributor",
-    email: profile.email ?? formData.email,
-  });
-
-  return { success: true, role: profile.role };
+  return { error: "Invalid phone number or password." };
 }
 
 export async function signInWithGoogle(options?: { role?: string; collectorId?: string; groupId?: string }) {

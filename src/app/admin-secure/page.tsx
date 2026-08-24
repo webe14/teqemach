@@ -14,7 +14,7 @@ import { ShieldCheck, Mail, Lock, AlertCircle } from "lucide-react";
 export default function AdminLoginPage() {
   const { t } = useLocale();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const result = await signIn({ email, password });
+      const result = await signIn({ phone, password });
       if (result?.error) { setError(result.error); return; }
       
       const profile = await getCurrentProfile();
@@ -36,14 +36,12 @@ export default function AdminLoginPage() {
         return;
       }
 
-      if (profile.role === "admin") {
+      if (profile.role === "admin" || profile.isAdmin) {
         router.replace("/dashboard/admin");
-      } else if (profile.role === "collector") {
-        router.replace("/dashboard/collector");
       } else if (profile.role === "contributor") {
         router.replace("/dashboard/contributor");
       } else {
-        setError("Access denied. Unknown role.");
+        setError("Access denied. Admin rights required.");
         const supabase = createClient();
         await supabase.auth.signOut();
       }
@@ -90,16 +88,18 @@ export default function AdminLoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="admin-email">{t("email")}</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="admin-phone">Phone Number</Label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-xs font-bold text-muted-foreground">
+                  +251
+                </span>
                 <Input
-                  id="admin-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@teqemach.com"
-                  className="pl-10"
+                  id="admin-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="9XXXXXXXX"
+                  className="pl-14"
                   required
                 />
               </div>

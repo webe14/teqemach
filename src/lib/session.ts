@@ -8,7 +8,7 @@ const SECRET = new TextEncoder().encode(
 
 export interface CustomSessionPayload {
   userId: string;
-  role: "collector" | "contributor";
+  role: "admin" | "collector" | "contributor";
   email: string;
 }
 
