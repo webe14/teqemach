@@ -61,19 +61,51 @@ export async function POST(req: Request) {
         return NextResponse.json({ linked: true, needsPhone: true, telegramUser: initDataObj });
       }
 
-      // Filter out admin profiles (they need password auth)
-      const nonAdminProfiles = profiles.filter((p) => p.role !== "admin");
+      // 1. If the user has a contributor profile, auto-login directly
+      const contributorProfile = profiles.find((p) => p.role === "contributor");
+      if (contributorProfile && contributorProfile.status === "active") {
+        await createCustomSession({
+          userId: contributorProfile.id,
+          role: "contributor",
+          email: contributorProfile.email || "",
+        });
 
-      if (nonAdminProfiles.length === 0) {
+        await syncTelegramUserActiveProfile(telegramId, contributorProfile.id, "contributor", initDataObj);
+
         return NextResponse.json({
           linked: true,
-          message: "Admin accounts require password authentication.",
-          redirect: "/login",
+          redirect: "/dashboard/contributor",
         });
       }
 
-      // Always return role list for picker to prevent auto-login loops
-      // and allow users to register for additional roles.
+      // 2. If user has only 1 non-admin profile, auto-login to it
+      const nonAdminProfiles = profiles.filter((p) => p.role !== "admin");
+      if (nonAdminProfiles.length === 1 && nonAdminProfiles[0].status === "active") {
+        const p = nonAdminProfiles[0];
+        await createCustomSession({
+          userId: p.id,
+          role: p.role as "collector" | "contributor",
+          email: p.email || "",
+        });
+
+        await syncTelegramUserActiveProfile(telegramId, p.id, p.role, initDataObj);
+
+        return NextResponse.json({
+          linked: true,
+          redirect: `/dashboard/${p.role}`,
+        });
+      }
+
+      if (nonAdminProfiles.length === 0) {
+        // If user is admin only, redirect to admin secure login
+        return NextResponse.json({
+          linked: true,
+          message: "Admin accounts use web login.",
+          redirect: "/admin-secure",
+        });
+      }
+
+      // 3. Only if user has multiple non-admin profiles, show role list
       const roleList = nonAdminProfiles.map((p) => ({
         id: p.id,
         role: p.role,
@@ -81,7 +113,6 @@ export async function POST(req: Request) {
         status: p.status,
       }));
 
-      // Determine which roles the user can still register for (Contributors only in Mini App)
       const existingRoles = nonAdminProfiles.map((p) => p.role);
       const availableNewRoles = (["contributor"] as const).filter(
         (r) => !existingRoles.includes(r)
