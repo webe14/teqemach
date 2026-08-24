@@ -8,6 +8,7 @@ import {
   getAllContributors,
   getAllPendingContributors,
   getAllGroups,
+  approveContributor,
 } from "@/lib/actions/admin";
 import {
   addContributor,
@@ -143,6 +144,12 @@ export default function ManageContributorsPage() {
   // ── Pending Delete dialog state ───────────────────────────────────────────
   const [pendingDeleteDialogOpen, setPendingDeleteDialogOpen] = useState(false);
   const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingContributor | null>(null);
+
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveTarget, setApproveTarget] = useState<PendingContributor | null>(null);
+  const [approveForm, setApproveForm] = useState({ groupId: "", startDate: todayECStr });
+  const [approveError, setApproveError] = useState<string | null>(null);
+  const [approveSuccess, setApproveSuccess] = useState(false);
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -348,6 +355,66 @@ export default function ManageContributorsPage() {
     });
   }
 
+  // ── Approve Pending helpers ───────────────────────────────────────────────
+  function openApprove(c: PendingContributor) {
+    setApproveTarget(c);
+    setApproveForm({
+      groupId: "",
+      startDate: todayECStr,
+    });
+    setApproveError(null);
+    setApproveSuccess(false);
+    setApproveDialogOpen(true);
+  }
+
+  function updateApprove(field: string, value: string) {
+    setApproveForm((f) => ({ ...f, [field]: value }));
+    setApproveError(null);
+    setApproveSuccess(false);
+  }
+
+  async function handleApprove(e: React.FormEvent) {
+    e.preventDefault();
+    if (!approveTarget || !userId) return;
+    if (!approveForm.groupId) {
+      setApproveError("Please select a group");
+      return;
+    }
+
+    startTransition(async () => {
+      let startDateISO: string | undefined = undefined;
+      if (approveForm.startDate) {
+        const parsed = parseEthiopianDate(approveForm.startDate);
+        if (!parsed) {
+          setApproveError(t("invalidDateFormat"));
+          return;
+        }
+        startDateISO = toGregorian(parsed).toISOString();
+      }
+
+      // We need the group's collector_id for the group membership
+      const selectedGroup = groups.find((g) => g.id === approveForm.groupId) as any;
+      const targetCollectorId = selectedGroup?.collector_id || userId;
+
+      const result = await approveContributor(
+        approveTarget.id,
+        approveForm.groupId,
+        targetCollectorId,
+        startDateISO
+      );
+      
+      if (result.error) {
+        setApproveError(result.error);
+        return;
+      }
+      
+      setApproveSuccess(true);
+      await refreshContributors();
+      // Keep open for a second to show success, or close immediately
+      setTimeout(() => setApproveDialogOpen(false), 1000);
+    });
+  }
+
   // ── Delete helpers ────────────────────────────────────────────────────────
   function openDelete(c: Contributor) {
     setDeleteTarget(c);
@@ -537,7 +604,7 @@ export default function ManageContributorsPage() {
               <h3 className="text-sm font-semibold text-foreground">Pending Invitations ({pendingContributors.length})</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              These contributors haven't accepted their invitation yet. Share the link with them to activate their account.
+              These contributors have registered and are waiting to be approved and assigned to an Equb Group.
             </p>
             <div className="space-y-2">
               {pendingContributors.map((p) => {
@@ -551,22 +618,16 @@ export default function ManageContributorsPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
-                      <button
+                      <Button
                         type="button"
-                        title="Copy invitation link"
-                        onClick={() => {
-                          navigator.clipboard.writeText(link);
-                          setCopiedLinkId(p.id);
-                          setTimeout(() => setCopiedLinkId(null), 2000);
-                        }}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        size="sm"
+                        variant="default"
+                        className="h-7 text-[11px] px-2.5 rounded-md gap-1 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => openApprove(p)}
                       >
-                        {copiedLinkId === p.id ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </button>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Approve
+                      </Button>
                       <button
                         type="button"
                         title="Delete invitation"
@@ -586,7 +647,88 @@ export default function ManageContributorsPage() {
           </CardContent>
         </Card>
       )}
+      {/* ══════════════════ Approve Pending Dialog ══════════════════ */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              Approve Contributor
+            </DialogTitle>
+            <DialogDescription>
+              Assign {approveTarget?.full_name} to an Equb Group to complete their registration.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleApprove} className="space-y-4">
+            {approveError && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{approveError}</span>
+              </div>
+            )}
+            {approveSuccess && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Contributor Approved Successfully!</span>
+              </div>
+            )}
 
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="approve-group" className="text-xs">
+                  Equb Group <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={approveForm.groupId}
+                  onValueChange={(v) => updateApprove("groupId", v)}
+                >
+                  <SelectTrigger id="approve-group" className="h-9">
+                    <SelectValue placeholder="Choose a group..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        {t("noEqubGroups")}
+                      </div>
+                    ) : (
+                      groups.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {g.name} ({g.total_days} {t("days")})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <EthiopianDatePicker
+                  label={t("startDate")}
+                  value={approveForm.startDate}
+                  onChange={(val) => updateApprove("startDate", val)}
+                  locale={locale}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setApproveDialogOpen(false)}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {isPending ? "Approving..." : "Approve Contributor"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       {/* ══════════════════ Add Contributor Dialog ══════════════════ */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="sm:max-w-lg">

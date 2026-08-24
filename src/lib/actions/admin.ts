@@ -185,3 +185,31 @@ export async function getAllGroups() {
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
 }
+
+export async function approveContributor(contributorId: string, groupId: string, collectorId: string, startDate?: string) {
+  const supabase = await createAdminClient();
+  
+  // 1. Update status to active
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", contributorId);
+    
+  if (updateError) return { error: updateError.message };
+
+  // 2. Add to group
+  const insertData: Record<string, unknown> = {
+    contributor_id: contributorId,
+    group_id: groupId,
+    collector_id: collectorId,
+  };
+  if (startDate) {
+    insertData.created_at = startDate;
+  }
+  
+  const { error: groupError } = await supabase.from("group_memberships").insert(insertData);
+  if (groupError) return { error: groupError.message };
+  
+  revalidatePath("/dashboard/admin/contributors");
+  return { success: true };
+}

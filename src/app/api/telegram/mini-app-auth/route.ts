@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { verifyInitData, parseInitData } from "@/lib/telegram/verify";
 import { getUserByTelegramId, getProfilesByTelegramId } from "@/lib/actions/telegram";
-import { createCustomSession } from "@/lib/session";
+import { createCustomSession, getCustomSession } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 
@@ -43,6 +43,15 @@ export async function POST(req: Request) {
       const cookieStore = await cookies();
       if (cookieStore.get("teqemach_explicit_logout")?.value === "true") {
         return NextResponse.json({ linked: false, explicitLogout: true });
+      }
+      
+      // If user is already logged in with an active session, preserve it!
+      const existingSession = await getCustomSession();
+      if (existingSession && existingSession.role) {
+        return NextResponse.json({
+          linked: true,
+          redirect: `/dashboard/${existingSession.role}`,
+        });
       }
 
       // Check if user has a verified phone number in telegram_users
