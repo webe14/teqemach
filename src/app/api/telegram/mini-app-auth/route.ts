@@ -284,28 +284,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // ─── GET COLLECTORS (for contributor registration flow) ──────────────
-    if (action === "get_collectors") {
-      // Get current user's collector profile id (if any) to exclude it
-      const collectorProfile = profiles.find((p) => p.role === "collector");
-      const excludeId = collectorProfile?.id || null;
-
-      // Fetch all collectors
-      const { data: collectors, error: collectorError } = await adminClient
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("role", "collector");
-
-      if (collectorError) {
-        return NextResponse.json({ error: collectorError.message }, { status: 500 });
-      }
-
-      // Filter out the user's own collector profile
-      const filteredCollectors = excludeId
-        ? (collectors || []).filter((c) => c.id !== excludeId)
-        : collectors || [];
-
-      // Fetch all equb groups
+    // ─── GET EQUB GROUPS (for contributor registration flow) ──────────────
+    if (action === "get_collectors" || action === "get_all_groups") {
       const { data: groups, error: groupError } = await adminClient
         .from("equb_groups")
         .select("id, name, contribution_amount, total_days, frequency, collector_id");
@@ -314,18 +294,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: groupError.message }, { status: 500 });
       }
 
-      // Also filter out groups owned by the user's own collector profile
-      const filteredGroups = excludeId
-        ? (groups || []).filter((g) => g.collector_id !== excludeId)
-        : groups || [];
-
-      // Attach groups to each collector
-      const collectorsWithGroups = filteredCollectors.map((collector) => ({
-        ...collector,
-        groups: filteredGroups.filter((g) => g.collector_id === collector.id),
-      }));
-
-      return NextResponse.json({ data: collectorsWithGroups });
+      return NextResponse.json({ data: groups || [] });
     }
 
     // ─── LINK (existing account) ────────────────────────────────────────

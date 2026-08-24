@@ -92,6 +92,7 @@ export default function LoginPage() {
 
   // Contributor registration state
   const [collectors, setCollectors] = useState<Collector[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<EqubGroup[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCollector, setSelectedCollector] = useState<Collector | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
@@ -206,17 +207,17 @@ export default function LoginPage() {
   async function startContributorRegistration() {
     setErrorMsg(null);
     setCollectorsLoading(true);
-    setStep("contributor_pick_collector");
+    setStep("contributor_pick_group");
     try {
       const res = await fetch("/api/telegram/mini-app-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, action: "get_collectors" }),
+        body: JSON.stringify({ initData, action: "get_all_groups" }),
       });
       const result = await res.json();
 
-      if (!res.ok) throw new Error(result.error || "Failed to load collectors");
-      setCollectors(result.data || []);
+      if (!res.ok) throw new Error(result.error || "Failed to load Equb groups");
+      setAvailableGroups(result.data || []);
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -225,7 +226,7 @@ export default function LoginPage() {
   }
 
   async function handleRegisterContributor() {
-    if (!selectedCollector || !selectedGroup) return;
+    if (!selectedGroup) return;
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
@@ -235,7 +236,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           initData,
           action: "register_contributor",
-          collectorId: selectedCollector.id,
+          collectorId: selectedCollector?.id || selectedGroup.collector_id || "admin",
           groupId: selectedGroup.id,
         }),
       });
@@ -335,11 +336,6 @@ export default function LoginPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-md z-10 bg-card border border-border rounded-2xl p-8 shadow-xl animate-fadeInUp">
-        <div className="flex justify-center mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl gradient-hero shadow-md">
-            <Coins className="h-6 w-6 text-white" />
-          </div>
-        </div>
 
         {/* ─── LOADING ─────────────────────────────────────────────── */}
         {(step === "init" || step === "loading") && (
@@ -898,97 +894,75 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ─── CONTRIBUTOR FLOW: PICK GROUP ────────────────────────── */}
-        {step === "contributor_pick_group" && selectedCollector && (
+        {/* ─── CONTRIBUTOR FLOW: PICK GROUP DIRECTLY (NO COLLECTORS) ───── */}
+        {step === "contributor_pick_group" && (
           <div>
             <Button
               variant="ghost"
               className="mb-4 text-muted-foreground -ml-4 gap-1"
-              onClick={handleContributorBack}
+              onClick={() => setStep("contributor_login")}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Collectors
+              Back
             </Button>
-            <h2 className="text-xl font-bold mb-1">Select a Group</h2>
-            <p className="text-muted-foreground text-sm mb-4">Step 2: Choose an equb group</p>
+            <h2 className="text-xl font-bold mb-1 text-foreground">Select Equb Group</h2>
+            <p className="text-muted-foreground text-sm mb-4">Choose an Equb group to join</p>
 
-            {/* Step indicator */}
-            <div className="flex items-center gap-2 mb-4">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className="flex-1">
-                  <div
-                    className={`h-1.5 rounded-full transition-colors ${
-                      s <= 2 ? "bg-primary" : "bg-muted"
-                    }`}
-                  />
+            <div className="border border-border/60 rounded-2xl max-h-72 overflow-y-auto bg-card divide-y border-border/40">
+              {collectorsLoading ? (
+                <div className="p-8 text-center text-sm text-muted-foreground flex flex-col items-center">
+                  <Loader2 className="h-6 w-6 animate-spin mb-2 text-primary" />
+                  Loading Equb groups...
                 </div>
-              ))}
-            </div>
-
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-sm mb-4">
-              Collector: <strong>{selectedCollector.full_name}</strong>
-            </div>
-
-            <div className="border rounded-xl max-h-60 overflow-y-auto bg-card">
-              {selectedCollector.groups.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No groups available.
+              ) : availableGroups.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  No Equb groups available right now.
                 </div>
               ) : (
-                <div className="divide-y">
-                  {selectedCollector.groups.map((group) => (
-                    <button
-                      key={group.id}
-                      onClick={() => {
-                        setSelectedGroup(group);
-                        setErrorMsg(null);
-                        setStep("contributor_confirm");
-                      }}
-                      className="w-full flex items-center justify-between p-3 hover:bg-muted/50 text-left transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shrink-0">
-                          <Coins className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">{group.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            ETB {group.contribution_amount.toLocaleString()} · {group.frequency} ·{" "}
-                            {group.total_days} days
-                          </div>
+                availableGroups.map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGroup(group);
+                      setSelectedCollector({ id: group.collector_id || "admin", full_name: "Teqemach Admin", email: null, groups: [] });
+                      setErrorMsg(null);
+                      setStep("contributor_confirm");
+                    }}
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 text-left transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shrink-0 shadow-md">
+                        <Coins className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-foreground">{group.name}</div>
+                        <div className="text-xs font-semibold text-emerald-500 mt-0.5">
+                          ETB {group.contribution_amount.toLocaleString()} · {group.frequency}
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                ))
               )}
             </div>
           </div>
         )}
 
-        {/* ─── CONTRIBUTOR FLOW: CONFIRM & PHONE ──────────────────── */}
-        {step === "contributor_confirm" && selectedCollector && selectedGroup && (
+        {/* ─── CONTRIBUTOR FLOW: CONFIRM ──────────────────── */}
+        {step === "contributor_confirm" && selectedGroup && (
           <div>
             <Button
               variant="ghost"
               className="mb-4 text-muted-foreground -ml-4 gap-1"
-              onClick={handleContributorBack}
+              onClick={() => setStep("contributor_pick_group")}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Groups
             </Button>
-            <h2 className="text-xl font-bold mb-1">Confirm & Register</h2>
-            <p className="text-muted-foreground text-sm mb-4">Step 3: Review and submit</p>
-
-            {/* Step indicator */}
-            <div className="flex items-center gap-2 mb-4">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className="flex-1">
-                  <div className="h-1.5 rounded-full bg-primary transition-colors" />
-                </div>
-              ))}
-            </div>
+            <h2 className="text-xl font-bold mb-1 text-foreground">Confirm & Register</h2>
+            <p className="text-muted-foreground text-sm mb-4">Review and submit your registration</p>
 
             {errorMsg && (
               <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive mb-4">
@@ -997,27 +971,23 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-sm space-y-1 mb-4">
-              <div>
-                Collector: <strong>{selectedCollector.full_name}</strong>
-              </div>
-              <div>
-                Group: <strong>{selectedGroup.name}</strong>{" "}
-                <span className="text-muted-foreground">
-                  (ETB {selectedGroup.contribution_amount.toLocaleString()})
-                </span>
+            <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 text-sm space-y-2 mb-6">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Selected Equb Group</div>
+              <div className="text-base font-extrabold text-foreground">{selectedGroup.name}</div>
+              <div className="text-xs font-bold text-emerald-500">
+                Contribution: ETB {selectedGroup.contribution_amount.toLocaleString()} ({selectedGroup.frequency})
               </div>
             </div>
 
             <div className="space-y-4">
               <Button
-                className="w-full h-12"
+                className="w-full h-13 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg"
                 onClick={handleRegisterContributor}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     Submitting...
                   </>
                 ) : (
