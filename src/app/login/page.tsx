@@ -561,8 +561,8 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                {/* How to Use button */}
-                <div className="flex justify-center pt-3">
+                {/* Action Buttons */}
+                <div className="flex justify-center pt-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setShowHowToUse(true)}
@@ -571,6 +571,13 @@ export default function LoginPage() {
                     <Play className="h-3.5 w-3.5 fill-current text-blue-400" />
                     How to Use
                   </button>
+                  <a
+                    href="/admin-secure"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-violet-400" />
+                    Admin
+                  </a>
                 </div>
               </form>
             )}
@@ -629,6 +636,25 @@ export default function LoginPage() {
                   >
                     Login
                   </button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-center pt-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowHowToUse(true)}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-current text-blue-400" />
+                    How to Use
+                  </button>
+                  <a
+                    href="/admin-secure"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-violet-400" />
+                    Admin
+                  </a>
                 </div>
               </div>
             )}
