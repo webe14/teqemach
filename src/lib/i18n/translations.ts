@@ -46,7 +46,7 @@ export const translations = {
     accountNotFound: "Account not found. Please contact an administrator to register.",
 
     // Navigation
-    overview: "Overview Dashboard",
+    overview: "Dashboard",
     managementHub: "Management Hub",
     financialReports: "Financial Reports",
     snapshotDashboard: "Dashboard",

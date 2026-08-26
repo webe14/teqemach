@@ -164,35 +164,35 @@ export async function getAllContributors() {
 
 export async function getAllPendingContributors() {
   const supabase = await createAdminClient();
-  const { data, error } = await supabase
+  const { data: profiles, error } = await supabase
     .from("profiles")
-    .select(`
-      id,
-      full_name,
-      phone_number,
-      telegram_username,
-      created_at,
-      collector_id,
-      group_memberships (
-        id,
-        group_id,
-        created_at,
-        equb_groups (
-          id,
-          name,
-          total_days
-        )
-      )
-    `)
+    .select("id, full_name, phone_number, telegram_username, created_at, collector_id")
     .eq("status", "pending")
     .eq("role", "contributor")
     .order("created_at", { ascending: false });
 
-  if (error) return { error: error.message, data: [] };
+  if (error || !profiles) return { error: error?.message, data: [] };
 
-  const formatted = (data as any[])?.map((profile) => {
-    const membership = profile.group_memberships?.[0];
-    const group = membership?.equb_groups;
+  // Fetch pending group memberships separately to avoid PostgREST relationship ambiguity
+  const profileIds = profiles.map((p) => p.id);
+  let membershipsMap: Record<string, any> = {};
+
+  if (profileIds.length > 0) {
+    const { data: memberships } = await supabase
+      .from("group_memberships")
+      .select("contributor_id, group_id, created_at, equb_groups(id, name, total_days)")
+      .in("contributor_id", profileIds);
+
+    if (memberships) {
+      for (const m of memberships) {
+        membershipsMap[m.contributor_id] = m;
+      }
+    }
+  }
+
+  const formatted = profiles.map((profile) => {
+    const m = membershipsMap[profile.id];
+    const group = m?.equb_groups;
     return {
       id: profile.id,
       full_name: profile.full_name,
@@ -202,11 +202,11 @@ export async function getAllPendingContributors() {
       collector_id: profile.collector_id,
       requested_group_id: group?.id || null,
       requested_group_name: group?.name || null,
-      requested_start_date: membership?.created_at || profile.created_at,
+      requested_start_date: m?.created_at || profile.created_at,
     };
   });
 
-  return { data: formatted ?? [], error: null };
+  return { data: formatted, error: null };
 }
 
 export async function getAllGroups() {
