@@ -366,12 +366,12 @@ export default function ManageContributorsPage() {
     // Auto-select requested group or fallback to first group
     const initialGroupId = c.requested_group_id || (groups.length > 0 ? groups[0].id : "");
     
-    // Auto-format requested start date into Ethiopian date
+    // Auto-format requested start date into Ethiopian date (DD/MM/YYYY)
     let initialStartDate = todayECStr;
     if (c.requested_start_date) {
       try {
         const ethDate = toEthiopian(new Date(c.requested_start_date));
-        initialStartDate = formatEthiopianDate(ethDate, locale);
+        initialStartDate = `${String(ethDate.day).padStart(2, "0")}/${String(ethDate.month).padStart(2, "0")}/${ethDate.year}`;
       } catch {
         initialStartDate = todayECStr;
       }

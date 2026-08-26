@@ -125,15 +125,40 @@ export function ethiopianDaysDiff(from: EthiopianDate, to: EthiopianDate): numbe
  * Parse a string "DD/MM/YYYY" in Ethiopian calendar to EthiopianDate.
  */
 export function parseEthiopianDate(str: string): EthiopianDate | null {
-  const parts = str.split("/");
-  if (parts.length !== 3) return null;
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const year = parseInt(parts[2], 10);
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-  if (month < 1 || month > 13) return null;
-  if (day < 1 || day > getDaysInEthiopianMonth(year, month)) return null;
-  return { year, month, day };
+  if (!str) return null;
+
+  // 1. Try DD/MM/YYYY format
+  if (str.includes("/")) {
+    const parts = str.split("/");
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const year = parseInt(parts[2], 10);
+      if (
+        !isNaN(day) && 
+        !isNaN(month) && 
+        !isNaN(year) && 
+        month >= 1 && 
+        month <= 13 && 
+        day >= 1 && 
+        day <= getDaysInEthiopianMonth(year, month)
+      ) {
+        return { year, month, day };
+      }
+    }
+  }
+
+  // 2. Fallback: try parsing as ISO/Gregorian date and converting
+  try {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return toEthiopian(d);
+    }
+  } catch {
+    // Ignore
+  }
+
+  return null;
 }
 
 // ─── Internal Julian Day Number helpers ───────────────────────────────────────
