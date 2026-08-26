@@ -128,19 +128,19 @@ export async function requestJoinGroup(contributorId: string, groupId: string) {
   try {
     const supabase = await createAdminClient();
 
-    // Check if already a member or has a pending request
+    // Check if already a member in group_memberships
     const { data: existing } = await supabase
       .from("group_memberships")
-      .select("id, status")
+      .select("id")
       .eq("contributor_id", contributorId)
       .eq("group_id", groupId)
       .maybeSingle();
 
     if (existing) {
-      return { error: "You have already requested to join or are a member of this group.", success: false };
+      return { error: "You are already a member of this group.", success: false };
     }
 
-    // Get the group's collector_id
+    // Get the group's collector_id and name
     const { data: group } = await supabase
       .from("equb_groups")
       .select("collector_id, name")
@@ -151,29 +151,29 @@ export async function requestJoinGroup(contributorId: string, groupId: string) {
       return { error: "Group not found.", success: false };
     }
 
-    // Create a pending membership
-    const { error: insertError } = await supabase
-      .from("group_memberships")
-      .insert({
-        contributor_id: contributorId,
-        group_id: groupId,
-        collector_id: group.collector_id,
+    // 1. Update contributor profile status to 'pending' and set collector_id
+    // This makes them show up in Admin's "Pending Requests / Invitations" list
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
         status: "pending",
-      });
+        collector_id: group.collector_id,
+      })
+      .eq("id", contributorId);
 
-    if (insertError) return { error: insertError.message, success: false };
+    if (profileError) return { error: profileError.message, success: false };
 
-    // Send a notification to the admin/collector
+    // 2. Send a notification to the admin/collector
     try {
       await supabase.from("notifications").insert({
         user_id: group.collector_id,
         title: "New Join Request",
-        body: `A contributor has requested to join "${group.name}".`,
+        body: `A contributor requested to join "${group.name}".`,
         type: "join_request",
         read: false,
       });
     } catch {
-      // Non-critical - don't fail if notification fails
+      // Non-critical
     }
 
     return { success: true, error: null };

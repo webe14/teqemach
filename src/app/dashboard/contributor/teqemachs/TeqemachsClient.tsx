@@ -138,8 +138,14 @@ export default function TeqemachsClient({
     }
   }
 
+  const [joinError, setJoinError] = useState<string | null>(null);
+
   function handleAcceptTerms() {
-    if (!userId || !selectedGroup) return;
+    if (!userId || !selectedGroup) {
+      setJoinError("User or Group ID missing. Please log in.");
+      return;
+    }
+    setJoinError(null);
     startTransition(async () => {
       const result = await requestJoinGroup(userId, selectedGroup.id);
       if (result.success) {
@@ -148,19 +154,32 @@ export default function TeqemachsClient({
           closeSheet();
           router.refresh();
         }, 2000);
+      } else {
+        setJoinError(result.error || "Failed to submit join request");
       }
     });
   }
 
   // Calculate group details for the sheet
-  const groupDetails = selectedGroup ? {
-    totalAmount: (selectedGroup.contribution_amount || selectedGroup.amount || 0) * (selectedGroup.total_days || selectedGroup.days || 0),
-    quota: selectedGroup.total_days || selectedGroup.days || 0,
-    duration: `${selectedGroup.total_days || selectedGroup.days || 0} days`,
-    startDate: selectedGroup.created_at ? new Date(selectedGroup.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "TBD",
-    payoutAmount: ((selectedGroup.contribution_amount || selectedGroup.amount || 0) * (selectedGroup.total_days || selectedGroup.days || 0)),
-    serviceCharge: Math.round(((selectedGroup.contribution_amount || selectedGroup.amount || 0) * (selectedGroup.total_days || selectedGroup.days || 0)) * 0.05),
-  } : null;
+  const groupDetails = selectedGroup ? (() => {
+    const amount = selectedGroup.contribution_amount || selectedGroup.amount || 0;
+    const days = selectedGroup.total_days || selectedGroup.days || 0;
+    const totalAmount = amount * days;
+    
+    // Base payout is calculated on 100 days (or 100/105 ratio for other group lengths)
+    const payoutDays = days >= 105 ? 100 : Math.round(days * (100 / 105));
+    const payoutAmount = amount * payoutDays;
+    const serviceCharge = totalAmount - payoutAmount;
+    
+    return {
+      totalAmount,
+      quota: days,
+      duration: `${days} days`,
+      startDate: selectedGroup.created_at ? new Date(selectedGroup.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "TBD",
+      payoutAmount,
+      serviceCharge,
+    };
+  })() : null;
 
   return (
     <div className="min-h-screen bg-background pb-20 -m-4 md:-m-6 lg:-m-8 text-foreground">
@@ -402,6 +421,12 @@ export default function TeqemachsClient({
                       </p>
                     </div>
                   </div>
+
+                  {joinError && (
+                    <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
+                      {joinError}
+                    </div>
+                  )}
 
                   <div className="border border-border rounded-2xl p-4 mb-5 max-h-[45vh] overflow-y-auto bg-muted/30">
                     <p className="text-sm text-card-foreground whitespace-pre-line leading-relaxed">
