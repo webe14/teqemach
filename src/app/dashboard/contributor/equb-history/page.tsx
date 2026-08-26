@@ -23,30 +23,9 @@ export default async function EqubHistoryPage() {
   // Fetch all active equbs for contributor
   const activeEqubs = stats?.groups?.length 
     ? stats.groups 
-    : (stats?.group ? [stats.group] : [
-        {
-          id: "active-1",
-          name: "Daily Savings Equb",
-          contribution_amount: 500,
-          total_days: 30,
-          frequency: "daily",
-          status: "active",
-          collector: { full_name: "Abebe Kebede" }
-        }
-      ]);
+    : (stats?.group ? [stats.group] : []);
 
-  const finishedEqubs = [
-    {
-      id: "finished-1",
-      name: "Weekly Corporate Equb",
-      contribution_amount: 2000,
-      total_days: 12,
-      frequency: "weekly",
-      status: "finished",
-      collector: { full_name: "Chala Bekele" },
-      completedDate: "23/04/2016"
-    }
-  ];
+  const finishedEqubs: any[] = [];
 
   return (
     <Suspense 

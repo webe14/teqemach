@@ -263,70 +263,57 @@ export default function TeqemachsClient({
               </p>
             </div>
             <Badge className="rounded-full text-xs font-semibold px-3 py-1 bg-blue-600 text-white">
-              {(
-                filteredGroups.length > 0 
-                  ? filteredGroups.length 
-                  : { daily: 6, weekly: 4, monthly: 3, corporate: 2 }[selectedType]
-              )} Active
+              {filteredGroups.length} Active
             </Badge>
           </div>
 
           {/* List items */}
-          <div className="space-y-3">
-            {(filteredGroups.length > 0 ? filteredGroups.map((g) => ({
-              id: g.id,
-              name: g.name,
-              amount: g.contribution_amount,
-              days: g.total_days,
-              rate: g.frequency ? `Every ${g.frequency}` : (selectedType === "daily" ? "Every daily" : selectedType === "weekly" ? "Every week" : "Every month"),
-              collector: g.collector?.full_name ? `Collector: ${g.collector.full_name}` : "Collector: webshet worku",
-              created_at: g.created_at,
-              contribution_amount: g.contribution_amount,
-              total_days: g.total_days,
-            })).sort((a, b) => (b.amount || 0) - (a.amount || 0)) : {
-              daily: [
-                { id: "d1", name: "ባለ 2000", amount: 2000, days: 105, rate: "Every daily", collector: "Collector: webshet worku", created_at: null, contribution_amount: 2000, total_days: 105 },
-                { id: "d2", name: "ባለ 700", amount: 700, days: 105, rate: "Every daily", collector: "Collector: webshet worku", created_at: null, contribution_amount: 700, total_days: 105 },
-              ],
-              weekly: [
-                { id: "w1", name: "Prime Weekly Equb", amount: 5000, days: 84, rate: "Every week", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 5000, total_days: 84 },
-                { id: "w2", name: "ባለ 2500 ሳምንታዊ", amount: 2500, days: 84, rate: "Every week", collector: "Collector: webshet worku", created_at: null, contribution_amount: 2500, total_days: 84 },
-                { id: "w3", name: "ባለ 1000 ሳምንታዊ", amount: 1000, days: 84, rate: "Every week", collector: "Collector: webshet worku", created_at: null, contribution_amount: 1000, total_days: 84 },
-              ],
-              monthly: [
-                { id: "m1", name: "Heritage Monthly Equb", amount: 25000, days: 365, rate: "Every month", collector: "Collector: Fikre", created_at: null, contribution_amount: 25000, total_days: 365 },
-                { id: "m2", name: "Investment Monthly Equb", amount: 10000, days: 365, rate: "Every month", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 10000, total_days: 365 },
-                { id: "m3", name: "Home Savings Monthly Equb", amount: 5000, days: 365, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 5000, total_days: 365 },
-              ],
-              corporate: [
-                { id: "c1", name: "Enterprise Growth Equb", amount: 100000, days: 365, rate: "Every month", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 100000, total_days: 365 },
-                { id: "c2", name: "Merchant Corporate Equb", amount: 50000, days: 180, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 50000, total_days: 180 },
-              ]
-            }[selectedType]).map((g) => (
-              <button 
-                key={g.id}
-                onClick={() => openGroupSheet(g)}
-                className="w-full text-left p-4 rounded-2xl border border-border bg-card hover:bg-muted/30 transition-all flex items-center justify-between gap-4 shadow-sm"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
-                    <Coins className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-base text-card-foreground leading-tight">{g.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{g.collector}</p>
-                    <div className="flex items-center gap-2 mt-1 text-xs font-semibold text-blue-400">
-                      <span>ETB {g.amount.toLocaleString()} ({g.rate})</span>
-                      <span>•</span>
-                      <span>{g.days} Days</span>
+          {filteredGroups.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl">
+              <Layers className="w-10 h-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm font-medium">No active {selectedType} Teqemachs available at the moment.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredGroups
+                .map((g) => ({
+                  id: g.id,
+                  name: g.name,
+                  amount: g.contribution_amount,
+                  days: g.total_days,
+                  rate: g.frequency ? `Every ${g.frequency}` : (selectedType === "daily" ? "Every daily" : selectedType === "weekly" ? "Every week" : "Every month"),
+                  collector: g.collector?.full_name ? `Collector: ${g.collector.full_name}` : "Collector: Assigned Collector",
+                  created_at: g.created_at,
+                  contribution_amount: g.contribution_amount,
+                  total_days: g.total_days,
+                }))
+                .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+                .map((g) => (
+                  <button 
+                    key={g.id}
+                    onClick={() => openGroupSheet(g)}
+                    className="w-full text-left p-4 rounded-2xl border border-border bg-card hover:bg-muted/30 transition-all flex items-center justify-between gap-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
+                        <Coins className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-base text-card-foreground leading-tight">{g.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">{g.collector}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs font-semibold text-blue-400">
+                          <span>ETB {g.amount.toLocaleString()} ({g.rate})</span>
+                          <span>•</span>
+                          <span>{g.days} Days</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
-              </button>
-            ))}
-          </div>
+                    <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
 
       </div>

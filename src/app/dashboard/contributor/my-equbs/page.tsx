@@ -17,20 +17,7 @@ export default async function MyEqubsPage() {
     role: "contributor"
   };
 
-  let stats: any = { 
-    amountSaved: 12500, 
-    daysRemaining: 14, 
-    paidCycles: 16, 
-    totalCycles: 30, 
-    group: { 
-      id: "joined-group-1",
-      name: "Daily Savings Equb", 
-      contribution_amount: 500, 
-      total_days: 30, 
-      frequency: "daily",
-      collector: { full_name: "Webshet W." }
-    } 
-  };
+  let stats: any = null;
   
   if (currentProfile?.id) {
     try {
