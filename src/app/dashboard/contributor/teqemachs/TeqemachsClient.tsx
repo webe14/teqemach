@@ -147,7 +147,8 @@ export default function TeqemachsClient({
     }
     setJoinError(null);
     startTransition(async () => {
-      const result = await requestJoinGroup(userId, selectedGroup.id);
+      const startDateISO = new Date().toISOString();
+      const result = await requestJoinGroup(userId, selectedGroup.id, startDateISO);
       if (result.success) {
         setJoinStep("success");
         setTimeout(() => {

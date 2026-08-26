@@ -20,6 +20,7 @@ import {
 import {
   getCurrentEthiopianDate,
   parseEthiopianDate,
+  formatEthiopianDate,
   toGregorian,
   toEthiopian,
 } from "@/lib/ethiopian-calendar";
@@ -91,6 +92,9 @@ type PendingContributor = {
   phone_number: string | null;
   telegram_username: string | null;
   created_at: string;
+  requested_group_id?: string | null;
+  requested_group_name?: string | null;
+  requested_start_date?: string | null;
 };
 
 export default function ManageContributorsPage() {
@@ -358,9 +362,24 @@ export default function ManageContributorsPage() {
   // ── Approve Pending helpers ───────────────────────────────────────────────
   function openApprove(c: PendingContributor) {
     setApproveTarget(c);
+    
+    // Auto-select requested group or fallback to first group
+    const initialGroupId = c.requested_group_id || (groups.length > 0 ? groups[0].id : "");
+    
+    // Auto-format requested start date into Ethiopian date
+    let initialStartDate = todayECStr;
+    if (c.requested_start_date) {
+      try {
+        const ethDate = toEthiopian(new Date(c.requested_start_date));
+        initialStartDate = formatEthiopianDate(ethDate, locale);
+      } catch {
+        initialStartDate = todayECStr;
+      }
+    }
+
     setApproveForm({
-      groupId: "",
-      startDate: todayECStr,
+      groupId: initialGroupId,
+      startDate: initialStartDate,
     });
     setApproveError(null);
     setApproveSuccess(false);
@@ -626,6 +645,12 @@ export default function ManageContributorsPage() {
                       <p className="text-xs text-muted-foreground">
                         {p.phone_number} · @{p.telegram_username}
                       </p>
+                      {p.requested_group_name && (
+                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                          <span>Requested Equb:</span>
+                          <span className="font-bold">{p.requested_group_name}</span>
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
                       <Button

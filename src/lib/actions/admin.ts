@@ -166,13 +166,47 @@ export async function getAllPendingContributors() {
   const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone_number, telegram_username, created_at, collector_id")
+    .select(`
+      id,
+      full_name,
+      phone_number,
+      telegram_username,
+      created_at,
+      collector_id,
+      group_memberships (
+        id,
+        group_id,
+        created_at,
+        equb_groups (
+          id,
+          name,
+          total_days
+        )
+      )
+    `)
     .eq("status", "pending")
     .eq("role", "contributor")
     .order("created_at", { ascending: false });
 
   if (error) return { error: error.message, data: [] };
-  return { data: (data as any[]) ?? [], error: null };
+
+  const formatted = (data as any[])?.map((profile) => {
+    const membership = profile.group_memberships?.[0];
+    const group = membership?.equb_groups;
+    return {
+      id: profile.id,
+      full_name: profile.full_name,
+      phone_number: profile.phone_number,
+      telegram_username: profile.telegram_username,
+      created_at: profile.created_at,
+      collector_id: profile.collector_id,
+      requested_group_id: group?.id || null,
+      requested_group_name: group?.name || null,
+      requested_start_date: membership?.created_at || profile.created_at,
+    };
+  });
+
+  return { data: formatted ?? [], error: null };
 }
 
 export async function getAllGroups() {
