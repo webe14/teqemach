@@ -74,7 +74,7 @@ export default function ContributorDashboardClient({
         {/* Top Header Row: User Info & Icons */}
         <div className="flex items-center justify-between relative z-10 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/10  border border-white/20 flex items-center justify-center text-white shadow-inner">
+            <div className="w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white shadow-inner">
               <User className="w-6 h-6" />
             </div>
             <div>
@@ -82,6 +82,17 @@ export default function ContributorDashboardClient({
               <h2 className="text-base font-bold text-white tracking-tight leading-tight">
                 {userName}
               </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {userId && (
+              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
+                <NotificationBell userId={userId} />
+              </div>
+            )}
+            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
+              <LanguageToggle />
             </div>
           </div>
         </div>
