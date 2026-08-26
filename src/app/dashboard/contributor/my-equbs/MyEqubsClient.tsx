@@ -8,10 +8,13 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 interface MyEqubsClientProps {
   userName?: string;
   group?: any;
+  groups?: any[];
 }
 
-export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqubsClientProps) {
+export default function MyEqubsClient({ userName = "Webshet W.", group, groups = [] }: MyEqubsClientProps) {
   const { t } = useLocale();
+
+  const activeGroups = groups && groups.length > 0 ? groups : (group ? [group] : []);
 
   return (
     <div className="min-h-screen bg-background dark:bg-background pb-20 -m-4 md:-m-6 lg:-m-8 text-foreground">
@@ -51,8 +54,8 @@ export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqub
       {/* ─── 2. MAIN CONTAINER ────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 relative z-20 space-y-4">
         
-        {/* Conditionally render Joined Equb or Empty State */}
-        {!group ? (
+        {/* Conditionally render Joined Equbs or Empty State */}
+        {activeGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
             <div className="text-slate-500/80 dark:text-slate-600 mb-2">
               <Users className="w-20 h-20" />
@@ -74,29 +77,49 @@ export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqub
           </div>
         ) : (
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 px-1">My Active Equb</h3>
-            <Link href={`/dashboard/contributor/my-equbs/${group.id}`} className="p-4 rounded-2xl border border-blue-500/30 bg-card hover:bg-muted/30 transition-all shadow-md shadow-blue-500/5 block group cursor-pointer">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
-                    <Coins className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-base text-card-foreground leading-tight group-hover:text-blue-500 transition-colors">{group.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">Collector: {group.collector?.full_name || "Assigned Collector"}</p>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-blue-400">
-                      <span>ETB {group.contribution_amount?.toLocaleString() || 500} ({group.frequency || 'daily'})</span>
-                      <span>•</span>
-                      <span>{group.total_days || 30} Days</span>
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                My Active Equbs ({activeGroups.length})
+              </h3>
+              <Link href="/dashboard/contributor/teqemachs" className="text-xs font-semibold text-blue-500 hover:underline">
+                + Join Another
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {activeGroups.map((g, idx) => (
+                <Link 
+                  key={g.id || idx}
+                  href={`/dashboard/contributor/my-equbs/${g.id}`} 
+                  className="p-4 rounded-2xl border border-blue-500/30 bg-card hover:bg-muted/30 transition-all shadow-md shadow-blue-500/5 block group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
+                        <Coins className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-base text-card-foreground leading-tight group-hover:text-blue-500 transition-colors">
+                          {g.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                          Collector: {g.collector?.full_name || "Assigned Collector"}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-blue-400">
+                          <span>ETB {g.contribution_amount?.toLocaleString() || 500} ({g.frequency || 'daily'})</span>
+                          <span>•</span>
+                          <span>{g.total_days || 30} Days</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1.5 rounded-full text-[11px] font-bold border border-emerald-500/20 whitespace-nowrap">
+                      Active
                     </div>
                   </div>
-                </div>
-                
-                <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1.5 rounded-full text-[11px] font-bold border border-emerald-500/20 whitespace-nowrap">
-                  Active
-                </div>
-              </div>
-            </Link>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

@@ -20,18 +20,20 @@ export default async function EqubHistoryPage() {
     }
   }
 
-  // Mocking an active and finished equb for UI demonstration
-  const activeEqubs = stats?.group ? [stats.group] : [
-    {
-      id: "active-1",
-      name: "Daily Savings Equb",
-      contribution_amount: 500,
-      total_days: 30,
-      frequency: "daily",
-      status: "active",
-      collector: { full_name: "Abebe Kebede" }
-    }
-  ];
+  // Fetch all active equbs for contributor
+  const activeEqubs = stats?.groups?.length 
+    ? stats.groups 
+    : (stats?.group ? [stats.group] : [
+        {
+          id: "active-1",
+          name: "Daily Savings Equb",
+          contribution_amount: 500,
+          total_days: 30,
+          frequency: "daily",
+          status: "active",
+          collector: { full_name: "Abebe Kebede" }
+        }
+      ]);
 
   const finishedEqubs = [
     {

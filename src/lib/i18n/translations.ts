@@ -253,7 +253,7 @@ export const translations = {
     broadcast: "Broadcast",
     // Header and Select Type Grid
     hello: "Hello,",
-    virtualEqub: "Virtual Equb",
+    virtualEqub: "Digital Equb",
     heroTitle1: "Let's make our dreams come true with",
     heroTitle2: "Teqemach",
     selectType: "Select type",

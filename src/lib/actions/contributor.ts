@@ -6,7 +6,7 @@ export async function getContributorStats(contributorId: string) {
   try {
     const supabase = await createAdminClient();
 
-    const [paidRes, totalRes, groupRes] = await Promise.all([
+    const [paidRes, totalRes, membershipsRes] = await Promise.all([
       supabase
         .from("contributions")
         .select("id", { count: "exact" })
@@ -18,34 +18,43 @@ export async function getContributorStats(contributorId: string) {
         .eq("contributor_id", contributorId),
       supabase
         .from("group_memberships")
-        .select("group_id")
-        .eq("contributor_id", contributorId)
-        .limit(1)
-        .maybeSingle(),
+        .select(`
+          id,
+          created_at,
+          equb_groups (
+            id,
+            name,
+            contribution_amount,
+            total_days,
+            frequency,
+            collector:profiles!collector_id (
+              full_name,
+              phone_number
+            )
+          )
+        `)
+        .eq("contributor_id", contributorId),
     ]);
 
     const paidCount = paidRes?.count ?? 0;
     const totalCount = totalRes?.count ?? 0;
     
-    let group: any = null;
-    if (groupRes?.data?.group_id) {
-      const { data: gData } = await supabase
-        .from("equb_groups")
-        .select("id, name, contribution_amount, total_days, frequency")
-        .eq("id", groupRes.data.group_id)
-        .maybeSingle();
-      group = gData;
-    }
+    const groups: any[] = (membershipsRes?.data as any[])
+      ?.map((m) => m.equb_groups)
+      .filter(Boolean) ?? [];
 
-    const amountSaved = paidCount * (group?.contribution_amount ?? 0);
-    const daysRemaining = Math.max(0, (group?.total_days ?? 0) - paidCount);
+    const primaryGroup = groups[0] || null;
+
+    const amountSaved = paidCount * (primaryGroup?.contribution_amount ?? 0);
+    const daysRemaining = Math.max(0, (primaryGroup?.total_days ?? 0) - paidCount);
 
     return {
       amountSaved,
       daysRemaining,
       paidCycles: paidCount,
       totalCycles: totalCount,
-      group,
+      group: primaryGroup,
+      groups,
     };
   } catch (e) {
     console.error("Failed to load contributor stats:", e);

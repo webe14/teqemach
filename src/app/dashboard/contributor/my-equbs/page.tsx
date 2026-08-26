@@ -48,7 +48,11 @@ export default async function MyEqubsPage() {
         </div>
       }
     >
-      <MyEqubsClient userName={profile?.full_name || "Webshet W."} group={stats?.group} />
+      <MyEqubsClient 
+        userName={profile?.full_name || "Webshet W."} 
+        group={stats?.group} 
+        groups={stats?.groups || []}
+      />
     </Suspense>
   );
 }
