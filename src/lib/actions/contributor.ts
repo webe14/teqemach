@@ -77,7 +77,26 @@ export async function getContributorPaymentHistory(
     const supabase = await createAdminClient();
     let query = supabase
       .from("contributions")
-      .select("id, cycle_number, contribution_date, is_marked_paid, group_id, collector_id")
+      .select(`
+        id,
+        cycle_number,
+        contribution_date,
+        is_marked_paid,
+        group_id,
+        collector_id,
+        group:equb_groups!contributions_group_id_fkey (
+          id,
+          name,
+          contribution_amount,
+          total_days,
+          frequency,
+          created_at
+        ),
+        collector:profiles!contributions_collector_id_fkey (
+          full_name,
+          phone_number
+        )
+      `)
       .eq("contributor_id", contributorId)
       .eq("is_marked_paid", true)
       .order("contribution_date", { ascending: false });

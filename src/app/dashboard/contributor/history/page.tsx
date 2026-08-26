@@ -23,7 +23,7 @@ type PaymentRow = {
   contribution_date: string;
   is_marked_paid: boolean;
   collector: { full_name: string | null } | null;
-  group: { name: string; contribution_amount: number } | null;
+  group: { name: string; contribution_amount: number; created_at?: string } | null;
 };
 
 export default function ContributorPaymentHistoryPage() {
@@ -172,25 +172,28 @@ export default function ContributorPaymentHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium">{row.group?.name ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="secondary">#{row.cycle_number}</Badge>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-emerald-600">
-                        ETB {(row.group?.contribution_amount ?? 0).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                        {row.collector?.full_name ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs font-semibold">
-                        {row.contribution_date
-                          ? gregorianToEthiopianString(new Date(row.contribution_date), locale)
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((row) => {
+                    const dateStr = row.contribution_date || row.group?.created_at;
+                    return (
+                      <tr key={row.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-medium">{row.group?.name ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="secondary">#{row.cycle_number}</Badge>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-emerald-600">
+                          ETB {(row.group?.contribution_amount ?? 0).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                          {row.collector?.full_name ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs font-semibold">
+                          {dateStr
+                            ? gregorianToEthiopianString(new Date(dateStr), locale)
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
