@@ -9,6 +9,7 @@ import {
   markCyclePaid,
   markMultipleCyclesPaid,
   disburseFunds,
+  unmarkCyclePaid,
 } from "@/lib/actions/collector";
 import {
   toEthiopian,
@@ -154,8 +155,9 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
 
   // ── Single cycle mark ─────────────────────────────────────────────────────
   async function handleMarkPaid(cycle: Cycle) {
-    if (cycle.is_marked_paid || isPending) return;
+    if (isPending) return;
     if (bulkMode) {
+      if (cycle.is_marked_paid) return; // Cannot bulk-select already paid cycles
       // In bulk mode: toggle selection
       setSelected((prev) => {
         const next = new Set(prev);
@@ -164,14 +166,18 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       });
       return;
     }
+    
+    // Toggle paid/unpaid if not in bulk mode
     setMarkingId(cycle.id);
     startTransition(async () => {
-      const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
-      const dateText = cycleDate ? formatShortEC(cycleDate, locale) : `#${cycle.cycle_number}`;
-
-      const result = await markCyclePaid(cycle.id, groupId, dateText);
-      if (!result.error) {
-        await refreshCycles(contributorId, groupId);
+      if (cycle.is_marked_paid) {
+        const result = await unmarkCyclePaid(cycle.id, groupId);
+        if (!result.error) await refreshCycles(contributorId, groupId);
+      } else {
+        const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
+        const dateText = cycleDate ? formatShortEC(cycleDate, locale) : `#${cycle.cycle_number}`;
+        const result = await markCyclePaid(cycle.id, groupId, dateText);
+        if (!result.error) await refreshCycles(contributorId, groupId);
       }
       setMarkingId(null);
     });
@@ -339,17 +345,18 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
                     <button
                       key={cycle.id}
                       onClick={() => handleMarkPaid(cycle)}
-                      disabled={(cycle.is_marked_paid && !bulkMode) || (!bulkMode && isPending)}
+                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending)}
                       className={`
                         relative flex flex-col items-center justify-center rounded-xl p-2 text-[11px] font-semibold
                         transition-all duration-150 aspect-square border-2
                         ${cycle.is_marked_paid
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 cursor-default"
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-500/20 cursor-pointer active:scale-95"
                           : isSelected
                           ? "bg-indigo-500/15 border-indigo-500 text-indigo-700 scale-105 shadow-lg"
                           : "bg-muted/50 border-border hover:border-primary hover:bg-primary/5 hover:text-primary cursor-pointer hover:scale-105 active:scale-95"
                         }
                         ${isLoading ? "animate-pulse" : ""}
+                        ${cycle.is_marked_paid && bulkMode ? "opacity-50 cursor-not-allowed" : ""}
                       `}
                       title={
                         cycle.is_marked_paid && cycle.contribution_date

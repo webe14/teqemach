@@ -263,7 +263,6 @@ export async function markCyclePaid(
     .single();
 
   if (error) return { error: error.message };
-  
   // 2. Telegram Notification
   if (updatedContribution) {
     try {
@@ -580,4 +579,21 @@ export async function getGroupContributors(groupId: string) {
     .eq("group_id", groupId);
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
+}
+
+export async function unmarkCyclePaid(contributionId: string, groupId: string) {
+  const supabase = await createAdminClient();
+
+  const { error } = await supabase
+    .from("contributions")
+    .update({
+      is_marked_paid: false,
+      contribution_date: null,
+    })
+    .eq("id", contributionId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/collector/contributors`);
+  return { success: true };
 }

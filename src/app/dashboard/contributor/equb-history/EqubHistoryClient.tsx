@@ -35,7 +35,7 @@ export default function EqubHistoryClient({
           
           <div className="space-y-3">
             {activeEqubs.length > 0 ? activeEqubs.map((eq, i) => (
-              <div key={i} className="p-4 rounded-2xl border border-blue-500/30 bg-card shadow-sm group">
+              <Link href={`/dashboard/contributor/my-equbs/${eq.id}`} key={i} className="p-4 rounded-2xl border border-blue-500/30 bg-card shadow-sm group block cursor-pointer">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
                     <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
@@ -55,7 +55,7 @@ export default function EqubHistoryClient({
                     Active
                   </div>
                 </div>
-              </div>
+              </Link>
             )) : (
               <div className="p-6 text-center text-slate-500 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
                 No active equbs found.

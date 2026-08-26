@@ -77,7 +77,7 @@ export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqub
         ) : (
           <div className="space-y-4">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 px-1">My Active Equb</h3>
-            <div className="p-4 rounded-2xl border border-blue-500/30 bg-card hover:bg-muted/30 transition-all shadow-md shadow-blue-500/5 block group">
+            <Link href={`/dashboard/contributor/my-equbs/${group.id}`} className="p-4 rounded-2xl border border-blue-500/30 bg-card hover:bg-muted/30 transition-all shadow-md shadow-blue-500/5 block group cursor-pointer">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
@@ -98,7 +98,7 @@ export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqub
                   Active
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
         )}
 
