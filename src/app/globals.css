@@ -36,7 +36,7 @@
   --brand-600: #146ef5; /* Modern Blue */
   --brand-700: #105bd2; 
   --brand-800: #0d46a6;
-  --brand-900: #0b1f3a; /* Deep Navy */
+  --brand-900: #064e3b; /* Dark Green */
 
   --accent-amber: #f5b942; /* Gold */
   --accent-amber-light: #fde68a;
@@ -46,19 +46,19 @@
   /* Shadcn tokens — Modern Fintech Light Theme */
   --radius: 1.25rem; /* 20px */
   --background: 210 40% 98.0%; /* #F8FAFC (Off-White) */
-  --foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --foreground: 164.1 85.7% 16.5%; /* #064E3B (Dark Green) */
   --card: 0 0% 100%; /* #FFFFFF (White) */
-  --card-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --card-foreground: 164.1 85.7% 16.5%; /* #064E3B (Dark Green) */
   --popover: 0 0% 100%; /* #FFFFFF (White) */
-  --popover-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --popover-foreground: 164.1 85.7% 16.5%; /* #064E3B (Dark Green) */
   --primary: 216 91.9% 52.0%; /* #146EF5 (Modern Blue) */
   --primary-foreground: 0 0% 100%; /* #FFFFFF (White) */
   --secondary: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
-  --secondary-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --secondary-foreground: 164.1 85.7% 16.5%; /* #064E3B (Dark Green) */
   --muted: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
   --muted-foreground: 215.4 16.3% 46.9%; /* #64748B (Soft Gray) */
   --accent: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
-  --accent-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --accent-foreground: 164.1 85.7% 16.5%; /* #064E3B (Dark Green) */
   --destructive: 0 84.2% 60.2%; /* #EF4444 */
   --destructive-foreground: 0 0% 100%; /* #FFFFFF */
   --border: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
