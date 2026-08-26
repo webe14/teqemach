@@ -407,6 +407,16 @@ export default function ManageContributorsPage() {
         setApproveError(result.error);
         return;
       }
+
+      // Step 3: Create contribution cycle placeholders
+      if (selectedGroup) {
+        await createContributionCycles(
+          approveTarget.id,
+          targetCollectorId,
+          approveForm.groupId,
+          selectedGroup.total_days
+        );
+      }
       
       setApproveSuccess(true);
       await refreshContributors();

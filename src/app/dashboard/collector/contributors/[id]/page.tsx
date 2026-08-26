@@ -52,6 +52,7 @@ type Cycle = {
 type GroupMeta = {
   created_at: string;
   frequency: "daily" | "weekly" | "monthly";
+  total_days: number;
 } | null;
 
 type ProfileData = {
@@ -217,7 +218,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
 
   // ── Derived stats ─────────────────────────────────────────────────────────
   const paidCount = cycles.filter((c) => c.is_marked_paid).length;
-  const totalCount = cycles.length;
+  const totalCount = groupMeta?.total_days || cycles.length || 0;
   const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
   const isFullyDisbursed = totalCount > 0 && cycles.every((c) => c.disbursed);
   const unpaidCycles = cycles.filter((c) => !c.is_marked_paid);
@@ -328,12 +329,21 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {cycles.length === 0 ? (
+          {totalCount === 0 ? (
             <div className="py-12 text-center text-muted-foreground">{t("noCyclesGenerated")}</div>
           ) : (
             <>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {cycles.slice(0, visibleLimit).map((cycle) => {
+                {Array.from({ length: totalCount }).slice(0, visibleLimit).map((_, i) => {
+                  const cycleNum = i + 1;
+                  const cycle = cycles.find((c) => c.cycle_number === cycleNum) || {
+                    id: `virtual-${cycleNum}`,
+                    cycle_number: cycleNum,
+                    is_marked_paid: false,
+                    contribution_date: null,
+                    disbursed: false,
+                  } as Cycle;
+
                   const isLoading = markingId === cycle.id;
                   const isSelected = selected.has(cycle.id);
                   const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
@@ -345,7 +355,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
                     <button
                       key={cycle.id}
                       onClick={() => handleMarkPaid(cycle)}
-                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending)}
+                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending) || cycle.id.startsWith('virtual-')}
                       className={`
                         relative flex flex-col items-center justify-center rounded-xl p-2 text-[11px] font-semibold
                         transition-all duration-150 aspect-square border-2
@@ -395,9 +405,9 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
                 })}
               </div>
 
-              {cycles.length > 30 && (
+              {totalCount > 30 && (
                 <div className="flex justify-center gap-4 pt-2">
-                  {cycles.length > visibleLimit && (
+                  {totalCount > visibleLimit && (
                     <Button
                       variant="outline"
                       onClick={() => setVisibleLimit((prev) => prev + 30)}

@@ -27,6 +27,7 @@ type Cycle = {
 type GroupMeta = {
   created_at: string;
   frequency: "daily" | "weekly" | "monthly";
+  total_days: number;
 } | null;
 
 /** Compute the expected date for a cycle given the group's start date and frequency */
@@ -105,7 +106,7 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
 
   // ── Derived stats ─────────────────────────────────────────────────────────
   const paidCount = cycles.filter((c) => c.is_marked_paid).length;
-  const totalCount = cycles.length;
+  const totalCount = groupMeta?.total_days || cycles.length || 0;
   const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
 
   return (
@@ -167,39 +168,43 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {cycles.length === 0 ? (
+          {totalCount === 0 ? (
             <div className="py-12 text-center text-muted-foreground">{t("noCyclesGenerated")}</div>
           ) : (
             <>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {cycles.slice(0, visibleLimit).map((cycle) => {
-                  const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
+                {Array.from({ length: totalCount }).slice(0, visibleLimit).map((_, i) => {
+                  const cycleNum = i + 1;
+                  const cycle = cycles.find((c) => c.cycle_number === cycleNum);
+                  const isPaid = cycle?.is_marked_paid ?? false;
+                  
+                  const cycleDate = getCycleDate(cycleNum, groupMeta);
                   const dateLabel = cycleDate
                     ? formatShortEC(cycleDate, locale)
-                    : `#${cycle.cycle_number}`;
+                    : `#${cycleNum}`;
 
                   return (
                     <div
-                      key={cycle.id}
+                      key={cycle?.id || `virtual-${cycleNum}`}
                       className={`
                         relative flex flex-col items-center justify-center rounded-xl p-2 text-[11px] font-semibold
                         transition-all duration-150 aspect-square border-2 cursor-default
-                        ${cycle.is_marked_paid
+                        ${isPaid
                           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700"
                           : "bg-muted/50 border-border text-muted-foreground"
                         }
                       `}
                       title={
-                        cycle.is_marked_paid && cycle.contribution_date
+                        isPaid && cycle?.contribution_date
                           ? `Paid: ${gregorianToEthiopianString(new Date(cycle.contribution_date), locale)}`
                           : cycleDate
-                          ? `Cycle #${cycle.cycle_number} — ${formatEthiopianDate(toEthiopian(cycleDate), locale)}`
-                          : `Cycle #${cycle.cycle_number}`
+                          ? `Cycle #${cycleNum} — ${formatEthiopianDate(toEthiopian(cycleDate), locale)}`
+                          : `Cycle #${cycleNum}`
                       }
                     >
                       {/* Status icon */}
                       <span className="mb-0.5">
-                        {cycle.is_marked_paid ? (
+                        {isPaid ? (
                           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         ) : (
                           <Circle className="h-4 w-4 opacity-30" />
@@ -210,7 +215,7 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
                       <span className="leading-tight text-center">{dateLabel}</span>
 
                       {/* Paid dot */}
-                      {cycle.is_marked_paid && cycle.contribution_date && (
+                      {isPaid && cycle?.contribution_date && (
                         <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500 shadow-sm" />
                       )}
                     </div>
@@ -218,9 +223,9 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
                 })}
               </div>
 
-              {cycles.length > 30 && (
+              {totalCount > 30 && (
                 <div className="flex justify-center gap-4 pt-2">
-                  {cycles.length > visibleLimit && (
+                  {totalCount > visibleLimit && (
                     <Button
                       variant="outline"
                       onClick={() => setVisibleLimit((prev) => prev + 30)}
