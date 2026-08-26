@@ -26,44 +26,44 @@
 }
 
 :root, .dark {
-  /* Brand Palette — Premium Blue + Black Theme */
-  --brand-50: #eff6ff;
-  --brand-100: #dbeafe;
-  --brand-200: #bfdbfe;
-  --brand-300: #93c5fd;
-  --brand-400: #60a5fa;
-  --brand-500: #3b82f6;
-  --brand-600: #2563eb; /* Primary Blue */
-  --brand-700: #1d4ed8; /* Dark Blue */
-  --brand-800: #1e40af;
-  --brand-900: #1e3a8a;
+  /* Brand Palette — Modern Fintech Theme */
+  --brand-50: #f8fafc;
+  --brand-100: #f1f5f9;
+  --brand-200: #e2e8f0;
+  --brand-300: #cbd5e1;
+  --brand-400: #94a3b8;
+  --brand-500: #64748b; /* Soft Gray */
+  --brand-600: #146ef5; /* Modern Blue */
+  --brand-700: #105bd2; 
+  --brand-800: #0d46a6;
+  --brand-900: #0b1f3a; /* Deep Navy */
 
-  --accent-amber: #f59e0b;
+  --accent-amber: #f5b942; /* Gold */
   --accent-amber-light: #fde68a;
-  --accent-emerald: #10b981;
+  --accent-emerald: #10b981; /* Teal Green */
   --accent-rose: #ef4444;
 
-  /* Shadcn tokens — Unified Dark Premium Theme */
+  /* Shadcn tokens — Modern Fintech Light Theme */
   --radius: 1.25rem; /* 20px */
-  --background: 222.2 47.4% 11.2%; /* #0F172A */
-  --foreground: 210 40% 98%; /* #F8FAFC */
-  --card: 217.2 32.6% 17.5%; /* #1E293B */
-  --card-foreground: 210 40% 98%; /* #F8FAFC */
-  --popover: 217.2 32.6% 17.5%; /* #1E293B */
-  --popover-foreground: 210 40% 98%; /* #F8FAFC */
-  --primary: 221.2 83.2% 53.3%; /* #2563EB */
-  --primary-foreground: 210 40% 98%; /* #F8FAFC */
-  --secondary: 224.3 76.3% 48%; /* #1D4ED8 */
-  --secondary-foreground: 210 40% 98%; /* #F8FAFC */
-  --muted: 217.2 32.6% 17.5%; /* #1E293B */
-  --muted-foreground: 215 16.3% 65.1%; /* #94A3B8 */
-  --accent: 198.4 93.2% 59.6%; /* #38BDF8 */
-  --accent-foreground: 222.2 47.4% 11.2%; /* #0F172A */
+  --background: 210 40% 98.0%; /* #F8FAFC (Off-White) */
+  --foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --card: 0 0% 100%; /* #FFFFFF (White) */
+  --card-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --popover: 0 0% 100%; /* #FFFFFF (White) */
+  --popover-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --primary: 216 91.9% 52.0%; /* #146EF5 (Modern Blue) */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF (White) */
+  --secondary: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
+  --secondary-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
+  --muted: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
+  --muted-foreground: 215.4 16.3% 46.9%; /* #64748B (Soft Gray) */
+  --accent: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
+  --accent-foreground: 214.5 68.1% 13.5%; /* #0B1F3A (Deep Navy) */
   --destructive: 0 84.2% 60.2%; /* #EF4444 */
-  --destructive-foreground: 210 40% 98%; /* #F8FAFC */
-  --border: 215 27.9% 16.9%; /* Lighter border */
-  --input: 215 27.9% 16.9%; /* Input border */
-  --ring: 221.2 83.2% 53.3%; /* Primary Blue */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --border: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
+  --input: 214.3 31.8% 91.4%; /* #E2E8F0 (Light Gray) */
+  --ring: 216 91.9% 52.0%; /* #146EF5 (Modern Blue) */
 
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 72px;
