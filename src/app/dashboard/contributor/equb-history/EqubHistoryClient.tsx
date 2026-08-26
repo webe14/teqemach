@@ -16,7 +16,7 @@ export default function EqubHistoryClient({
   return (
     <div className="min-h-screen bg-background pb-20 -m-4 md:-m-6 lg:-m-8 text-foreground">
       {/* Header */}
-      <div className="bg-[#0f172a] text-white pt-12 pb-6 px-4 md:px-8 shadow-md rounded-b-[2rem] relative">
+      <div className="bg-brand-900 text-white pt-12 pb-6 px-4 md:px-8 shadow-md rounded-b-[2rem] relative">
         <Link href="/dashboard/contributor/my-equbs" className="absolute top-10 left-4 text-white/80 hover:text-white transition-colors">
           <ChevronLeft className="w-6 h-6" />
         </Link>

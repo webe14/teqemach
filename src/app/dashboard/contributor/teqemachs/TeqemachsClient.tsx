@@ -61,7 +61,7 @@ export default function TeqemachsClient({
     <div className="min-h-screen bg-background pb-20 -m-4 md:-m-6 lg:-m-8 text-foreground">
       
       {/* ─── 1. TOP HEADER BANNER (GRADIENT CURVED CONTAINER) ──────────────── */}
-      <div className="relative bg-gradient-to-br from-[#111827] via-[#1e1b4b] to-[#0f172a] text-white pt-6 pb-12 px-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 text-white pt-6 pb-12 px-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20 overflow-hidden">
         {/* Optimized GPU-friendly background radial overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_60%)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.15),transparent_60%)] pointer-events-none" />

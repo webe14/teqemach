@@ -68,7 +68,7 @@ export default function ContributorDashboardClient({
     <div className="min-h-screen bg-background pb-20 -m-4 md:-m-6 lg:-m-8 text-foreground">
       
       {/* ─── 1. TOP HEADER BANNER (GRADIENT CURVED CONTAINER) ──────────────── */}
-      <div className="relative bg-gradient-to-br from-[#111827] via-[#1e1b4b] to-[#0f172a] text-white pt-6 pb-12 px-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 text-white pt-6 pb-12 px-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20 overflow-hidden">
         {/* Optimized GPU-friendly background radial overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_60%)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.15),transparent_60%)] pointer-events-none" />
@@ -122,7 +122,7 @@ export default function ContributorDashboardClient({
             {/* Rectangle Card 1: Daily Equb */}
             <a
               href="/dashboard/contributor/teqemachs?type=daily"
-              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-[#131d33] via-[#172342] to-[#0f172a] hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
+              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
             >
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export default function ContributorDashboardClient({
             {/* Rectangle Card 2: Weekly Equb */}
             <a
               href="/dashboard/contributor/teqemachs?type=weekly"
-              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-[#131d33] via-[#172342] to-[#0f172a] hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
+              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
             >
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-2">
@@ -164,7 +164,7 @@ export default function ContributorDashboardClient({
             {/* Rectangle Card 3: Monthly Equb */}
             <a
               href="/dashboard/contributor/teqemachs?type=monthly"
-              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-[#131d33] via-[#172342] to-[#0f172a] hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
+              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
             >
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export default function ContributorDashboardClient({
             {/* Rectangle Card 4: Corporate Equb */}
             <a
               href="/dashboard/contributor/teqemachs?type=corporate"
-              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-[#131d33] via-[#172342] to-[#0f172a] hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
+              className="text-left p-4 rounded-2xl border-2 border-blue-500/80 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 relative overflow-hidden group block shadow-md"
             >
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-2">

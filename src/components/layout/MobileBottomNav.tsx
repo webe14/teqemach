@@ -65,7 +65,7 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
             and pointer-events-auto on the actual background and buttons */}
         
         {/* Main Background Bar */}
-        <div className="absolute bottom-0 w-full h-[70px] bg-[#0f172a] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-800/60 pointer-events-auto rounded-t-3xl" />
+        <div className="absolute bottom-0 w-full h-[70px] bg-brand-900 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-800/60 pointer-events-auto rounded-t-3xl" />
 
         <div className="flex items-center justify-between h-[70px] px-2 max-w-md mx-auto relative pointer-events-auto">
           
@@ -131,7 +131,7 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
 
       {/* ─── MORE MENU BOTTOM SHEET ───────────────────────────────────────── */}
       <Sheet open={openMore} onOpenChange={setOpenMore}>
-        <SheetContent side="bottom" className="rounded-t-[2.5rem] max-h-[85vh] p-0 overflow-hidden flex flex-col border-t border-slate-800 bg-[#0f172a] text-slate-100 shadow-2xl">
+        <SheetContent side="bottom" className="rounded-t-[2.5rem] max-h-[85vh] p-0 overflow-hidden flex flex-col border-t border-slate-800 bg-brand-900 text-slate-100 shadow-2xl">
           <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl">
             <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-5" />
             <SheetHeader className="text-left px-2">

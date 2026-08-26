@@ -397,7 +397,7 @@ export default function LoginPage() {
               {errorMsg || "Teqemach is a Telegram Mini App. Please open it inside Telegram to continue."}
             </p>
             <Button
-              className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white mb-3"
+              className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white mb-3"
               onClick={() => (window.location.href = "https://t.me/TeqemachBot")}
             >
               <svg className="w-5 h-5 mr-2 fill-current" viewBox="0 0 24 24">
@@ -585,7 +585,7 @@ export default function LoginPage() {
                       Step 1: Verify your phone number with Telegram to start registering.
                     </p>
                     <Button
-                      className="w-full h-13 text-sm font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white rounded-2xl"
+                      className="w-full h-13 text-sm font-bold bg-primary hover:bg-brand-700 text-white rounded-2xl"
                       onClick={() => {
                         const tg = window.Telegram?.WebApp;
                         if (tg && tg.requestContact) {
@@ -678,7 +678,7 @@ export default function LoginPage() {
 
             <div className="space-y-3">
               <Button
-                className="w-full h-12 text-md font-bold bg-[#2481cc] hover:bg-[#1d6ba8] text-white"
+                className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white"
                 onClick={() => {
                   const tg = window.Telegram?.WebApp;
                   if (tg && tg.requestContact) {
