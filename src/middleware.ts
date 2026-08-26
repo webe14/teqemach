@@ -56,42 +56,40 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/dashboard")) {
-    // 1. Check Supabase Auth session
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    // 1. Try custom session cookie FIRST (cheaper - just JWT verify, no DB call)
     let userRole: string | null = null;
     let userId: string | null = null;
 
-    if (user) {
-      userId = user.id;
-      let { data: profile } = await supabase
-        .from("profiles")
-        .select("role, status")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile && user.email) {
-        const { data: emailProfile } = await supabase
-          .from("profiles")
-          .select("role, status")
-          .eq("email", user.email)
-          .maybeSingle();
-        profile = emailProfile;
-      }
-
-      if (profile) {
-        userRole = profile.role;
-      }
+    const customSession = await getCustomSession(request);
+    if (customSession) {
+      userId = customSession.userId;
+      userRole = customSession.role;
     }
 
-    // 2. Check custom session cookie if no Supabase Auth user found
+    // 2. Only check Supabase Auth if no custom session found
     if (!userRole) {
-      const customSession = await getCustomSession(request);
-      if (customSession) {
-        userId = customSession.userId;
-        userRole = customSession.role;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        userId = user.id;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          userRole = profile.role;
+        } else if (user.email) {
+          const { data: emailProfile } = await supabase
+            .from("profiles")
+            .select("role, status")
+            .eq("email", user.email)
+            .maybeSingle();
+          if (emailProfile) userRole = emailProfile.role;
+        }
       }
     }
 

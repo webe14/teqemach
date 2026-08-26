@@ -19,13 +19,11 @@ export default function MyEqubsClient({ userName = "Webshet W.", group }: MyEqub
       {/* ─── 1. TOP HEADER BANNER (GRADIENT CURVED CONTAINER) ──────────────── */}
       <div className="relative bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 text-white pt-6 pb-12 px-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20 overflow-hidden">
         {/* Optimized GPU-friendly background radial overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_60%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.15),transparent_60%)] pointer-events-none" />
 
         {/* Top Header Row: User Info & Icons */}
         <div className="flex items-center justify-between relative z-10 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-inner">
+            <div className="w-11 h-11 rounded-full bg-white/10  border border-white/20 flex items-center justify-center text-white shadow-inner">
               <User className="w-6 h-6" />
             </div>
             <div>

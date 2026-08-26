@@ -132,7 +132,7 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
       {/* ─── MORE MENU BOTTOM SHEET ───────────────────────────────────────── */}
       <Sheet open={openMore} onOpenChange={setOpenMore}>
         <SheetContent side="bottom" className="rounded-t-[2.5rem] max-h-[85vh] p-0 overflow-hidden flex flex-col border-t border-slate-800 bg-brand-900 text-slate-100 shadow-2xl">
-          <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl">
+          <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 ">
             <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-5" />
             <SheetHeader className="text-left px-2">
               <SheetTitle className="text-xl text-white">Menu</SheetTitle>

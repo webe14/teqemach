@@ -140,16 +140,14 @@ html {
   background: rgb(var(--muted-foreground));
 }
 
-/* Glass morphism utility */
+/* Glass morphism utility — simplified for mobile performance */
 .glass {
-  background: rgba(30, 41, 59, 0.7); /* Surface color var(--card) */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(30, 41, 59, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .dark .glass {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(30, 41, 59, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -162,17 +160,9 @@ html {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%);
 }
 
-/* Animated gradient border */
-@keyframes gradient-border {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
+/* Gradient border — static for performance */
 .gradient-border {
   background: linear-gradient(90deg, var(--brand-700), var(--brand-600), var(--brand-400), var(--brand-700));
-  background-size: 300% 300%;
-  animation: gradient-border 4s ease infinite;
 }
 
 /* Fade in animation */
@@ -203,22 +193,15 @@ html {
 .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
 .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
 
-/* Pulse glow for active elements */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
-}
-
+/* Pulse glow — reduced for performance */
 .pulse-glow {
-  animation: pulse-glow 2s infinite;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
 }
 
-/* Ethiopian decorative line (Now updated to Blue + Black Theme) */
+/* Ethiopian decorative line — static gradient for performance */
 .ethiopian-divider {
   height: 3px;
   background: linear-gradient(90deg, var(--brand-700), var(--brand-400), var(--brand-600), var(--brand-700));
-  background-size: 200% 100%;
-  animation: gradient-border 3s linear infinite;
   border-radius: 2px;
 }
 

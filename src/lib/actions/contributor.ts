@@ -114,12 +114,70 @@ export async function getPublicEqubGroups() {
     const supabase = await createAdminClient();
     const { data, error } = await supabase
       .from("equb_groups")
-      .select("id, name, contribution_amount, total_days, frequency, collector_id")
+      .select("id, name, contribution_amount, total_days, frequency, collector_id, created_at")
       .order("created_at", { ascending: false });
 
     if (error) return { data: [], error: error.message };
     return { data: (data as any[]) ?? [], error: null };
   } catch (err: any) {
     return { data: [], error: err.message };
+  }
+}
+
+export async function requestJoinGroup(contributorId: string, groupId: string) {
+  try {
+    const supabase = await createAdminClient();
+
+    // Check if already a member or has a pending request
+    const { data: existing } = await supabase
+      .from("group_memberships")
+      .select("id, status")
+      .eq("contributor_id", contributorId)
+      .eq("group_id", groupId)
+      .maybeSingle();
+
+    if (existing) {
+      return { error: "You have already requested to join or are a member of this group.", success: false };
+    }
+
+    // Get the group's collector_id
+    const { data: group } = await supabase
+      .from("equb_groups")
+      .select("collector_id, name")
+      .eq("id", groupId)
+      .single();
+
+    if (!group) {
+      return { error: "Group not found.", success: false };
+    }
+
+    // Create a pending membership
+    const { error: insertError } = await supabase
+      .from("group_memberships")
+      .insert({
+        contributor_id: contributorId,
+        group_id: groupId,
+        collector_id: group.collector_id,
+        status: "pending",
+      });
+
+    if (insertError) return { error: insertError.message, success: false };
+
+    // Send a notification to the admin/collector
+    try {
+      await supabase.from("notifications").insert({
+        user_id: group.collector_id,
+        title: "New Join Request",
+        body: `A contributor has requested to join "${group.name}".`,
+        type: "join_request",
+        read: false,
+      });
+    } catch {
+      // Non-critical - don't fail if notification fails
+    }
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { error: err.message, success: false };
   }
 }

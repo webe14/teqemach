@@ -44,7 +44,7 @@ export function AppShell({ children, role, pageName, userName, userId, isAdmin }
         )}
       >
         {/* Desktop top bar */}
-        <div className="hidden lg:flex sticky top-0 z-20 h-16 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-6">
+        <div className="hidden lg:flex sticky top-0 z-20 h-16 items-center justify-between border-b border-border bg-card/80  px-6">
           <h1 className="text-base font-semibold text-foreground">{pageName}</h1>
           <div className="flex items-center gap-2">
             {role === "collector" && userId && (

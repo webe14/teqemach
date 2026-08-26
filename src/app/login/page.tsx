@@ -1145,7 +1145,7 @@ export default function LoginPage() {
 
       {/* ─── HOW TO USE GUIDANCE MODAL ───────────────────────────────────── */}
       {showHowToUse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70  animate-fadeIn">
           <div className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto">
               <Play className="h-6 w-6 fill-current" />

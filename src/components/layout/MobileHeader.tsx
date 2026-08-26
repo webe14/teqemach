@@ -26,7 +26,7 @@ export function MobileHeader({ role, pageName, userId }: MobileHeaderProps) {
   };
 
   return (
-    <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-card/80 backdrop-blur-xl px-4">
+    <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-card/80  px-4">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div
           className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${roleGradients[role]} shrink-0`}

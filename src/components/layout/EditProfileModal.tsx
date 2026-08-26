@@ -150,7 +150,7 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
             <button
               type="button"
               onClick={() => { setOpen(false); reset(); }}
-              className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors z-50 bg-black/20 rounded-full p-1.5 backdrop-blur-sm cursor-pointer"
+              className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors z-50 bg-black/20 rounded-full p-1.5  cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>

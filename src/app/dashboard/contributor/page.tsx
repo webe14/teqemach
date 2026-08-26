@@ -4,6 +4,7 @@ import { getCurrentEthiopianDate, addDaysToEthiopian, formatEthiopianDate } from
 import ContributorDashboardClient from "./ContributorDashboardClient";
 
 export const metadata = { title: "My Dashboard — Teqemach" };
+export const revalidate = 30; // Cache page data for 30 seconds
 
 export default async function ContributorDashboardPage() {
   const currentProfile = await getCurrentProfile() as any;

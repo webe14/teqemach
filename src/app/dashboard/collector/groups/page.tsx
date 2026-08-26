@@ -131,7 +131,7 @@ export default function EqubGroupsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="sticky top-[64px] lg:top-16 z-10 bg-background/95 backdrop-blur pb-4 pt-1 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 border-b border-border mb-6">
+      <div className="sticky top-[64px] lg:top-16 z-10 bg-background/95  pb-4 pt-1 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 border-b border-border mb-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("equbGroups")}</h1>
