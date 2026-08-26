@@ -528,7 +528,8 @@ export async function getCollectorGroups(collectorId: string) {
   const { data, error } = await supabase
     .from("equb_groups")
     .select("*, group_memberships(id)")
-    .eq("collector_id", collectorId);
+    .eq("collector_id", collectorId)
+    .order("contribution_amount", { ascending: false });
   if (error) return { error: error.message, data: [] };
   
   const mapped = data?.map((g: any) => ({

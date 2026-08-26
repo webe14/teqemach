@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { getCurrentProfile } from "@/lib/actions/auth";
 import { getCollectorGroups, createEqubGroup, getGroupContributors } from "@/lib/actions/collector";
+import { deleteEqubGroup } from "@/lib/actions/admin";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2, Users } from "lucide-react";
+import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2, Users, Trash2, Loader2 } from "lucide-react";
 
 type EqubGroup = {
   id: string;
@@ -35,6 +36,11 @@ export default function EqubGroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
   const [groupContributors, setGroupContributors] = useState<any[]>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+
+  // Delete Group State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<EqubGroup | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -68,6 +74,27 @@ export default function EqubGroupsPage() {
     const result = await getGroupContributors(group.id);
     setGroupContributors(result.data || []);
     setContributorsLoading(false);
+  }
+
+  function openDeleteGroup(e: React.MouseEvent, group: EqubGroup) {
+    e.stopPropagation();
+    setDeleteTarget(group);
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  }
+
+  function handleConfirmDeleteGroup() {
+    if (!deleteTarget || !collectorId) return;
+    startTransition(async () => {
+      const result = await deleteEqubGroup(deleteTarget.id);
+      if (result.error) {
+        setDeleteError(result.error);
+        return;
+      }
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      await loadGroups(collectorId);
+    });
   }
 
   function update(field: string, value: string) {
@@ -173,9 +200,19 @@ export default function EqubGroupsPage() {
                       {group.member_count || 0} Contributors
                     </div>
                   </div>
-                  <Badge variant="info" className="capitalize shrink-0">
-                    {group.frequency}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge variant="info" className="capitalize shrink-0">
+                      {group.frequency}
+                    </Badge>
+                    <button
+                      type="button"
+                      title="Delete Equb Group"
+                      onClick={(e) => openDeleteGroup(e, group)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -336,6 +373,48 @@ export default function EqubGroupsPage() {
           </div>
           <DialogFooter className="mt-4">
             <Button onClick={() => setContributorsDialogOpen(false)}>{t("close")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Equb Group Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Equb Group
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong className="text-foreground">{deleteTarget?.name}</strong>? This action cannot be undone and will remove all group memberships and contribution cycles associated with this group.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive my-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeleteGroup}
+              disabled={isPending}
+              className="gap-2 font-bold"
+            >
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete Group
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

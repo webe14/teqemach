@@ -214,7 +214,7 @@ export async function getAllGroups() {
   const { data, error } = await supabase
     .from("equb_groups")
     .select("id, name, contribution_amount, total_days, frequency, collector_id")
-    .order("created_at", { ascending: false });
+    .order("contribution_amount", { ascending: false });
     
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
@@ -246,4 +246,29 @@ export async function approveContributor(contributorId: string, groupId: string,
   
   revalidatePath("/dashboard/admin/contributors");
   return { success: true };
+}
+
+export async function deleteEqubGroup(groupId: string) {
+  try {
+    const supabase = await createAdminClient();
+
+    // 1. Delete associated contributions
+    await supabase.from("contributions").delete().eq("group_id", groupId);
+
+    // 2. Delete associated group memberships
+    await supabase.from("group_memberships").delete().eq("group_id", groupId);
+
+    // 3. Delete the group itself
+    const { error } = await supabase.from("equb_groups").delete().eq("id", groupId);
+
+    if (error) return { error: error.message, success: false };
+
+    revalidatePath("/dashboard/collector/groups");
+    revalidatePath("/dashboard/admin/contributors");
+    revalidatePath("/dashboard/contributor/teqemachs");
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { error: err.message, success: false };
+  }
 }

@@ -143,12 +143,12 @@ export async function getPublicEqubGroups() {
     const { data, error } = await supabase
       .from("equb_groups")
       .select("id, name, contribution_amount, total_days, frequency, collector_id, created_at")
-      .order("created_at", { ascending: false });
+      .order("contribution_amount", { ascending: false });
 
-    if (error) return { data: [], error: error.message };
+    if (error) return { error: error.message, data: [] };
     return { data: (data as any[]) ?? [], error: null };
   } catch (err: any) {
-    return { data: [], error: err.message };
+    return { error: err.message, data: [] };
   }
 }
 

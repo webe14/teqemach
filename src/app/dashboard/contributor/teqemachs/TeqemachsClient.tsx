@@ -283,19 +283,24 @@ export default function TeqemachsClient({
               created_at: g.created_at,
               contribution_amount: g.contribution_amount,
               total_days: g.total_days,
-            })) : {
+            })).sort((a, b) => (b.amount || 0) - (a.amount || 0)) : {
               daily: [
                 { id: "d1", name: "ባለ 2000", amount: 2000, days: 105, rate: "Every daily", collector: "Collector: webshet worku", created_at: null, contribution_amount: 2000, total_days: 105 },
                 { id: "d2", name: "ባለ 700", amount: 700, days: 105, rate: "Every daily", collector: "Collector: webshet worku", created_at: null, contribution_amount: 700, total_days: 105 },
               ],
               weekly: [
-                { id: "w1", name: "ባለ 1000 ሳምንታዊ", amount: 1000, days: 84, rate: "Every week", collector: "Collector: webshet worku", created_at: null, contribution_amount: 1000, total_days: 84 },
+                { id: "w1", name: "Prime Weekly Equb", amount: 5000, days: 84, rate: "Every week", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 5000, total_days: 84 },
+                { id: "w2", name: "ባለ 2500 ሳምንታዊ", amount: 2500, days: 84, rate: "Every week", collector: "Collector: webshet worku", created_at: null, contribution_amount: 2500, total_days: 84 },
+                { id: "w3", name: "ባለ 1000 ሳምንታዊ", amount: 1000, days: 84, rate: "Every week", collector: "Collector: webshet worku", created_at: null, contribution_amount: 1000, total_days: 84 },
               ],
               monthly: [
-                { id: "m1", name: "Home Savings Monthly Equb", amount: 5000, days: 365, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 5000, total_days: 365 },
+                { id: "m1", name: "Heritage Monthly Equb", amount: 25000, days: 365, rate: "Every month", collector: "Collector: Fikre", created_at: null, contribution_amount: 25000, total_days: 365 },
+                { id: "m2", name: "Investment Monthly Equb", amount: 10000, days: 365, rate: "Every month", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 10000, total_days: 365 },
+                { id: "m3", name: "Home Savings Monthly Equb", amount: 5000, days: 365, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 5000, total_days: 365 },
               ],
               corporate: [
-                { id: "c1", name: "Merchant Corporate Equb", amount: 50000, days: 180, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 50000, total_days: 180 },
+                { id: "c1", name: "Enterprise Growth Equb", amount: 100000, days: 365, rate: "Every month", collector: "Collector: BRUK TAYE", created_at: null, contribution_amount: 100000, total_days: 365 },
+                { id: "c2", name: "Merchant Corporate Equb", amount: 50000, days: 180, rate: "Every month", collector: "Collector: webshet worku", created_at: null, contribution_amount: 50000, total_days: 180 },
               ]
             }[selectedType]).map((g) => (
               <button 
