@@ -294,48 +294,47 @@ export async function getSession() {
 export async function getCurrentProfile() {
   try {
     const supabase = await createClient();
-
-    // Check Supabase Auth first
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     let profile: any = null;
 
-    if (user) {
-      // Try matching by ID first
-      const { data: idData } = await supabase
+    // 1. Check custom session FIRST (instant - verified locally from JWT cookie)
+    const customSession = await getCustomSession();
+    if (customSession) {
+      const adminClient = await createAdminClient();
+      const { data: cProfile } = await adminClient
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", customSession.userId)
         .maybeSingle();
-        
-      if (idData) profile = idData;
-
-      // For Google OAuth users whose email exists in legacy profiles, link by email
-      if (!profile && user.email) {
-        const adminClient = await createAdminClient();
-        const { data: emailData } = await adminClient
-          .from("profiles")
-          .select("*")
-          .eq("email", user.email)
-          .maybeSingle();
-        
-        if (emailData) profile = emailData;
-      }
+      if (cProfile) profile = cProfile;
     }
 
-    // Check custom session (legacy collector / contributor)
+    // 2. Fallback to Supabase Auth if no custom session profile found
     if (!profile) {
-      const customSession = await getCustomSession();
-      if (customSession) {
-        const adminClient = await createAdminClient();
-        const { data } = await adminClient
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        // Try matching by ID first
+        const { data: idData } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", customSession.userId)
+          .eq("id", user.id)
           .maybeSingle();
-        profile = data;
+          
+        if (idData) profile = idData;
+
+        // For Google OAuth users whose email exists in legacy profiles, link by email
+        if (!profile && user.email) {
+          const adminClient = await createAdminClient();
+          const { data: emailData } = await adminClient
+            .from("profiles")
+            .select("*")
+            .eq("email", user.email)
+            .maybeSingle();
+          
+          if (emailData) profile = emailData;
+        }
       }
     }
 

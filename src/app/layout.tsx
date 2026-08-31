@@ -33,6 +33,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://telegram.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://telegram.org" />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased text-foreground">
         <TelegramProvider />
         <LocaleProvider>{children}</LocaleProvider>

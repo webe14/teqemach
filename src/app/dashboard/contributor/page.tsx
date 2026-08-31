@@ -16,18 +16,12 @@ export default async function ContributorDashboardPage() {
     role: "contributor"
   };
 
-  let stats: any = { amountSaved: 12500, daysRemaining: 14, paidCycles: 16, totalCycles: 30, group: { contribution_amount: 500, total_days: 30, frequency: "daily" } };
-  
-  if (currentProfile?.id) {
-    try {
-      stats = await getContributorStats(currentProfile.id);
-    } catch (e) {
-      console.error("Failed to load contributor stats:", e);
-    }
-  }
+  const [statsRes, groupsRes] = await Promise.all([
+    currentProfile?.id ? getContributorStats(currentProfile.id).catch(() => null) : Promise.resolve(null),
+    getPublicEqubGroups(),
+  ]);
 
-
-  const groupsRes = await getPublicEqubGroups();
+  const stats = statsRes || { amountSaved: 0, daysRemaining: 0, paidCycles: 0, totalCycles: 0, group: null, groups: [] };
 
   // Compute next cycle date (Ethiopian Calendar)
   const today = getCurrentEthiopianDate();
