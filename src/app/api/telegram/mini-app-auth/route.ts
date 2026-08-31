@@ -15,14 +15,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No initData provided" }, { status: 400 });
     }
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
     if (!botToken) {
+      console.error("[mini-app-auth] Missing TELEGRAM_BOT_TOKEN environment variable");
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     // Verify cryptographic integrity
     const isValid = verifyInitData(initData, botToken);
     if (!isValid) {
+      console.warn("[mini-app-auth] Failed to verify initData signature");
       return NextResponse.json({ error: "Invalid initData" }, { status: 401 });
     }
 

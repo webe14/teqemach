@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,25 +101,74 @@ export default function LoginPage() {
   const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
   const [hasSharedPhone, setHasSharedPhone] = useState(false);
 
+  const isLoggingInRef = useRef(false);
+
+  // Helper to extract Telegram initData from all available sources
+  function getTelegramInitData(): string | null {
+    if (typeof window === "undefined") return null;
+
+    // 1. Check window.Telegram.WebApp.initData (official SDK)
+    if (window.Telegram?.WebApp?.initData) {
+      return window.Telegram.WebApp.initData;
+    }
+
+    // 2. Check URL hash fragment (#tgWebAppData=...)
+    try {
+      if (window.location.hash) {
+        const hash = window.location.hash.replace(/^#/, "");
+        const hashParams = new URLSearchParams(hash);
+        const tgWebAppData = hashParams.get("tgWebAppData");
+        if (tgWebAppData) {
+          return tgWebAppData;
+        }
+      }
+    } catch {
+      // Ignore hash parse errors
+    }
+
+    // 3. Check Telegram cached sessionStorage ('__telegram__initParams')
+    try {
+      const stored = window.sessionStorage.getItem("__telegram__initParams");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.tgWebAppData) {
+          return parsed.tgWebAppData;
+        }
+      }
+    } catch {
+      // Ignore sessionStorage parse errors
+    }
+
+    return null;
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // The Telegram Web App SDK loads asynchronously via next/script.
-    // Poll until it's available (up to 3 seconds) before giving up.
+    // Step 1: Check immediately on mount (zero-latency if launched via direct hash or cached)
+    const instantData = getTelegramInitData();
+    if (instantData) {
+      setInitData(instantData);
+      checkTelegramLogin(instantData);
+      return;
+    }
+
+    // Step 2: Poll for the Telegram Web App SDK to finish loading asynchronously.
+    // Allow up to 12 seconds (120 attempts × 100ms) to accommodate slow cellular connections.
     let attempts = 0;
-    const maxAttempts = 30; // 30 × 100ms = 3 seconds
+    const maxAttempts = 120;
 
     const timer = setInterval(() => {
       attempts++;
-      const tg = window.Telegram?.WebApp;
-      if (tg && tg.initData) {
+      const currentData = getTelegramInitData();
+      if (currentData) {
         clearInterval(timer);
-        setInitData(tg.initData);
-        checkTelegramLogin(tg.initData);
+        setInitData(currentData);
+        checkTelegramLogin(currentData);
       } else if (attempts >= maxAttempts) {
         clearInterval(timer);
         setStep("error");
-        setErrorMsg("Please open this app inside Telegram.");
+        setErrorMsg("Please open this app inside Telegram, or log in with your phone number below.");
       }
     }, 100);
 
@@ -127,6 +176,8 @@ export default function LoginPage() {
   }, []);
 
   async function checkTelegramLogin(data: string) {
+    if (isLoggingInRef.current) return;
+    isLoggingInRef.current = true;
     setStep("loading");
     try {
       const res = await fetch("/api/telegram/mini-app-auth", {
@@ -160,6 +211,7 @@ export default function LoginPage() {
         setStep("contributor_login");
       }
     } catch (err: any) {
+      isLoggingInRef.current = false;
       setStep("error");
       setErrorMsg(err.message);
     }
@@ -403,18 +455,51 @@ export default function LoginPage() {
             <p className="text-muted-foreground mb-6">
               {errorMsg || "Teqemach is a Telegram Mini App. Please open it inside Telegram to continue."}
             </p>
-            <Button
-              className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white mb-3"
-              onClick={() => (window.location.href = "https://t.me/TeqemachBot")}
-            >
-              <svg className="w-5 h-5 mr-2 fill-current" viewBox="0 0 24 24">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-              Open in Telegram
-            </Button>
+            <div className="flex flex-col gap-2.5 mb-4">
+              <Button
+                className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white"
+                onClick={() => {
+                  setErrorMsg(null);
+                  isLoggingInRef.current = false;
+                  const data = getTelegramInitData();
+                  if (data) {
+                    setInitData(data);
+                    checkTelegramLogin(data);
+                  } else {
+                    setStep("contributor_login");
+                  }
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry Telegram Login
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-12 text-sm font-semibold border-primary/40 text-foreground hover:bg-primary/5"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep("contributor_login");
+                }}
+              >
+                <Phone className="w-4 h-4 mr-2 text-primary" />
+                Continue with Phone Number
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full h-11 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => (window.location.href = "https://t.me/TeqemachBot")}
+              >
+                <svg className="w-4 h-4 mr-2 fill-current" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+                Open in Telegram App
+              </Button>
+            </div>
 
             {/* Direct Browser Dev Testing Bypass */}
-            <div className="pt-4 border-t border-border mt-4">
+            <div className="pt-4 border-t border-border mt-2">
               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                 🛠️ Testing Locally in Browser?
               </p>

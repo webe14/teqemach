@@ -18,7 +18,7 @@ export function verifyInitData(initData: string, botToken: string): boolean {
     });
     const dataCheckString = dataToCheck.join("\n");
     
-    const secretKey = crypto.createHmac("sha256", "WebAppData").update(botToken).digest();
+    const secretKey = crypto.createHmac("sha256", "WebAppData").update(botToken.trim()).digest();
     const calculatedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
     
     return calculatedHash === hash;
