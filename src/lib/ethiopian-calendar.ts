@@ -24,14 +24,44 @@ const DAYS_OF_WEEK_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday",
 const DAYS_OF_WEEK_AM = ["እሑድ", "ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙስ", "ዓርብ", "ቅዳሜ"];
 
 /**
+ * Helper to extract Gregorian year, month, day in East Africa Time (UTC+3 / Africa/Addis_Ababa).
+ * This ensures consistency across both local and UTC server environments.
+ */
+function getGregorianPartsInEAT(date: Date): { year: number; month: number; day: number } {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Addis_Ababa",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+    const parts = formatter.formatToParts(date);
+    const year = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);
+    const month = parseInt(parts.find((p) => p.type === "month")?.value || "0", 10);
+    const day = parseInt(parts.find((p) => p.type === "day")?.value || "0", 10);
+    if (year && month && day) {
+      return { year, month, day };
+    }
+  } catch {
+    // Fallback if Intl.DateTimeFormat is unavailable or timeZone option fails
+  }
+
+  // Fallback: manually add 3 hours (UTC+3) to UTC time
+  const eatTime = new Date(date.getTime() + 3 * 60 * 60 * 1000);
+  return {
+    year: eatTime.getUTCFullYear(),
+    month: eatTime.getUTCMonth() + 1,
+    day: eatTime.getUTCDate(),
+  };
+}
+
+/**
  * Convert a Gregorian date to Ethiopian Calendar date.
+ * Uses East Africa Time (UTC+3) to ensure accuracy across server and client timezones.
  */
 export function toEthiopian(gregorianDate: Date): EthiopianDate {
-  const jdn = gregorianToJDN(
-    gregorianDate.getFullYear(),
-    gregorianDate.getMonth() + 1,
-    gregorianDate.getDate()
-  );
+  const { year, month, day } = getGregorianPartsInEAT(gregorianDate);
+  const jdn = gregorianToJDN(year, month, day);
   return jdnToEthiopian(jdn);
 }
 

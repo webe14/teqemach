@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
+import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -293,7 +294,7 @@ export async function markCyclePaid(
         
         if (group && collector) {
           const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-          const contribDate = new Date(now).toLocaleDateString();
+          const contribDate = gregorianToEthiopianString(new Date(now), "am");
           const selDates = cycleDateText || "N/A";
           console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
           const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
@@ -381,7 +382,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           if (group && collector) {
             const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
             const totalAmount = group.contribution_amount * contributorContributions.length;
-            const contribDate = new Date(now).toLocaleDateString();
+            const contribDate = gregorianToEthiopianString(new Date(now), "am");
             const selDates = cycleDateText || "N/A";
             console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
             const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {

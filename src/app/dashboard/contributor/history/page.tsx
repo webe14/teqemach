@@ -173,7 +173,7 @@ export default function ContributorPaymentHistoryPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => {
-                    const dateStr = row.contribution_date || row.group?.created_at;
+                    const dateStr = row.contribution_date;
                     return (
                       <tr key={row.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-medium">{row.group?.name ?? "—"}</td>
