@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import Script from "next/script";
 
 export function TelegramProvider() {
-  useEffect(() => {
-    // Ensure this only runs on the client and when Telegram WebApp is available
+  const initTelegram = useCallback(() => {
     if (typeof window !== "undefined" && window.Telegram && window.Telegram.WebApp) {
       const tg = window.Telegram.WebApp;
 
@@ -29,10 +28,16 @@ export function TelegramProvider() {
     }
   }, []);
 
+  // Also try on mount in case the script loaded before React hydration
+  useEffect(() => {
+    initTelegram();
+  }, [initTelegram]);
+
   return (
     <Script
       src="https://telegram.org/js/telegram-web-app.js"
-      strategy="afterInteractive"
+      strategy="beforeInteractive"
+      onLoad={initTelegram}
     />
   );
 }

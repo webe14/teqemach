@@ -104,19 +104,26 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const timer = setTimeout(() => {
+    // The Telegram Web App SDK loads asynchronously via next/script.
+    // Poll until it's available (up to 3 seconds) before giving up.
+    let attempts = 0;
+    const maxAttempts = 30; // 30 × 100ms = 3 seconds
+
+    const timer = setInterval(() => {
+      attempts++;
       const tg = window.Telegram?.WebApp;
       if (tg && tg.initData) {
+        clearInterval(timer);
         setInitData(tg.initData);
-        // The server will check the cookie and return explicitLogout if they logged out.
         checkTelegramLogin(tg.initData);
-      } else {
+      } else if (attempts >= maxAttempts) {
+        clearInterval(timer);
         setStep("error");
         setErrorMsg("Please open this app inside Telegram.");
       }
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => clearInterval(timer);
   }, []);
 
   async function checkTelegramLogin(data: string) {
