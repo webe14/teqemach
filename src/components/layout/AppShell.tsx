@@ -28,6 +28,7 @@ export function AppShell({ children, role, pageName, userName, userId, isAdmin }
         userName={userName} 
         collapsed={collapsed} 
         onToggleCollapse={() => setCollapsed(!collapsed)} 
+        isAdmin={isAdmin}
       />
 
       {/* Mobile Header (simplified top bar) */}

@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   UserCircle2,
   ShieldCheck,
+  ShieldAlert,
   Users,
   Smartphone,
   RefreshCw,
@@ -153,10 +154,22 @@ export default function LoginPage() {
       return;
     }
 
-    // Step 2: Poll for the Telegram Web App SDK to finish loading asynchronously.
-    // Allow up to 12 seconds (120 attempts × 100ms) to accommodate slow cellular connections.
+    // Step 2: Detect whether we are running inside Telegram
+    const isTelegramEnv =
+      typeof window !== "undefined" &&
+      (Boolean(window.Telegram?.WebApp?.initData) ||
+        Boolean(window.location.hash.includes("tgWebAppData")) ||
+        Boolean(window.sessionStorage.getItem("__telegram__initParams")));
+
+    // If NOT in Telegram (e.g. desktop browser, standard mobile browser), IMMEDIATELY open phone login
+    if (!isTelegramEnv) {
+      setStep("contributor_login");
+      return;
+    }
+
+    // Step 3: Inside Telegram, poll briefly (up to 2.5 seconds) for WebApp SDK initialization
     let attempts = 0;
-    const maxAttempts = 120;
+    const maxAttempts = 25; // 25 attempts * 100ms = 2.5s max
 
     const timer = setInterval(() => {
       attempts++;
@@ -167,8 +180,8 @@ export default function LoginPage() {
         checkTelegramLogin(currentData);
       } else if (attempts >= maxAttempts) {
         clearInterval(timer);
-        setStep("error");
-        setErrorMsg("Please open this app inside Telegram, or log in with your phone number below.");
+        // Fall back directly to login form without any "Access Denied" screen
+        setStep("contributor_login");
       }
     }, 100);
 
@@ -212,7 +225,8 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       isLoggingInRef.current = false;
-      setStep("error");
+      // Never block the user with "Access Denied" — gracefully show login page with the message
+      setStep("contributor_login");
       setErrorMsg(err.message);
     }
   }
@@ -447,81 +461,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ─── ERROR ───────────────────────────────────────────────── */}
-        {step === "error" && (
-          <div className="text-center py-4">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2 text-foreground">Access Denied</h2>
-            <p className="text-muted-foreground mb-6">
-              {errorMsg || "Teqemach is a Telegram Mini App. Please open it inside Telegram to continue."}
-            </p>
-            <div className="flex flex-col gap-2.5 mb-4">
-              <Button
-                className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white"
-                onClick={() => {
-                  setErrorMsg(null);
-                  isLoggingInRef.current = false;
-                  const data = getTelegramInitData();
-                  if (data) {
-                    setInitData(data);
-                    checkTelegramLogin(data);
-                  } else {
-                    setStep("contributor_login");
-                  }
-                }}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Retry Telegram Login
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full h-12 text-sm font-semibold border-primary/40 text-foreground hover:bg-primary/5"
-                onClick={() => {
-                  setErrorMsg(null);
-                  setStep("contributor_login");
-                }}
-              >
-                <Phone className="w-4 h-4 mr-2 text-primary" />
-                Continue with Phone Number
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="w-full h-11 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => (window.location.href = "https://t.me/TeqemachBot")}
-              >
-                <svg className="w-4 h-4 mr-2 fill-current" viewBox="0 0 24 24">
-                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-                </svg>
-                Open in Telegram App
-              </Button>
-            </div>
-
-            {/* Direct Browser Dev Testing Bypass */}
-            <div className="pt-4 border-t border-border mt-2">
-              <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
-                🛠️ Testing Locally in Browser?
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  className="w-full text-xs font-semibold h-10 border-primary/30 hover:bg-primary/5"
-                  onClick={() => router.push("/dashboard/contributor")}
-                >
-                  📱 Test Contributor Mini App View
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs font-semibold h-10 border-indigo-500/30 hover:bg-indigo-500/5"
-                  onClick={() => router.push("/dashboard/admin")}
-                >
-                  👑 Test Admin Dashboard View
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
 
         {/* ─── CONTRIBUTOR AUTH SCREEN (MATCHING REFERENCE UI DESIGN) ────── */}
@@ -894,11 +833,15 @@ export default function LoginPage() {
                   className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    r.role === "collector"
+                    r.role === "admin"
+                      ? "bg-gradient-to-br from-violet-600 to-indigo-700 shadow-md shadow-violet-500/20"
+                      : r.role === "collector"
                       ? "bg-gradient-to-br from-emerald-500 to-teal-600"
                       : "bg-gradient-to-br from-indigo-500 to-blue-600"
                   }`}>
-                    {r.role === "collector" ? (
+                    {r.role === "admin" ? (
+                      <ShieldAlert className="h-5 w-5 text-white" />
+                    ) : r.role === "collector" ? (
                       <ShieldCheck className="h-5 w-5 text-white" />
                     ) : (
                       <Users className="h-5 w-5 text-white" />

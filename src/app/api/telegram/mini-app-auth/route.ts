@@ -65,29 +65,41 @@ export async function POST(req: Request) {
 
       const hasPhone = !!(tgUser?.phone_number);
 
-      // Filter profiles strictly for contributor role (Mini App is 100% Contributor focused)
-      const contributorProfile = profiles.find((p) => p.role === "contributor");
-
-      if (!contributorProfile) {
-        // Telegram user has no contributor profile yet -> start Contributor registration
+      if (profiles.length === 0) {
+        // Telegram user has no profile yet -> start registration flow
         if (!hasPhone) {
           return NextResponse.json({ linked: false, needsPhone: true, telegramUser: initDataObj });
         }
         return NextResponse.json({ linked: false, telegramUser: initDataObj });
       }
 
-      // If user has a contributor profile, auto-login directly regardless of collector profiles
+      // If user has multiple roles (e.g. contributor + admin/collector), show role picker
+      if (profiles.length > 1) {
+        return NextResponse.json({
+          linked: true,
+          multiRole: true,
+          roles: profiles.map((p) => ({
+            id: p.id,
+            role: p.role,
+            full_name: p.full_name,
+            status: p.status,
+          })),
+        });
+      }
+
+      // Single profile: auto-login directly to their role dashboard
+      const targetProfile = profiles[0];
       await createCustomSession({
-        userId: contributorProfile.id,
-        role: "contributor",
-        email: contributorProfile.email || "",
+        userId: targetProfile.id,
+        role: targetProfile.role as "admin" | "collector" | "contributor",
+        email: targetProfile.email || "",
       });
 
-      await syncTelegramUserActiveProfile(telegramId, contributorProfile.id, "contributor", initDataObj);
+      await syncTelegramUserActiveProfile(telegramId, targetProfile.id, targetProfile.role, initDataObj);
 
       return NextResponse.json({
         linked: true,
-        redirect: "/dashboard/contributor",
+        redirect: `/dashboard/${targetProfile.role}`,
       });
     }
 
@@ -103,13 +115,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Profile not found for this Telegram account" }, { status: 404 });
       }
 
-      if (profile.role === "admin") {
-        return NextResponse.json({ error: "Admin accounts require password authentication." }, { status: 400 });
-      }
-
       await createCustomSession({
         userId: profile.id,
-        role: profile.role as "collector" | "contributor",
+        role: profile.role as "admin" | "collector" | "contributor",
         email: profile.email || "",
       });
 

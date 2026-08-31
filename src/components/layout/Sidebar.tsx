@@ -6,11 +6,14 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { signOut } from "@/lib/actions/auth";
 import { EditProfileModal } from "./EditProfileModal";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
   LogOut,
   Coins,
+  ShieldAlert,
+  Home,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -18,10 +21,12 @@ interface SidebarProps {
   userName?: string;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  isAdmin?: boolean;
 }
 
-export function Sidebar({ role, userName, collapsed, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ role, userName, collapsed, onToggleCollapse, isAdmin }: SidebarProps) {
   const { t } = useLocale();
+  const showAdminSwitch = role === "admin" || isAdmin;
 
   const roleColors = {
     admin: "from-violet-600 via-indigo-600 to-indigo-700 shadow-violet-500/20",
@@ -107,6 +112,29 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse }: Sidebar
               </div>
             </div>
             
+            {/* Role switch button if user has admin privileges */}
+            {showAdminSwitch && (
+              <div className="pt-2 border-t border-border/40">
+                {role !== "admin" ? (
+                  <Link
+                    href="/dashboard/admin"
+                    className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-violet-600/10 hover:bg-violet-600/20 text-violet-600 dark:text-violet-400 font-semibold text-xs border border-violet-500/20 transition-all"
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                    <span>Switch to Admin</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dashboard/contributor"
+                    className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 font-semibold text-xs border border-blue-500/20 transition-all"
+                  >
+                    <Home className="h-3.5 w-3.5 shrink-0" />
+                    <span>Switch to Contributor</span>
+                  </Link>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center gap-1.5 pt-2 border-t border-border/40">
               <EditProfileModal
                 userName={userName ?? ""}
@@ -131,6 +159,20 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse }: Sidebar
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-500/10 shrink-0" title={userName}>
               {(userName ?? "?")[0].toUpperCase()}
             </div>
+            {showAdminSwitch && (
+              <Link
+                href={role !== "admin" ? "/dashboard/admin" : "/dashboard/contributor"}
+                className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center border transition-all",
+                  role !== "admin"
+                    ? "bg-violet-600/10 hover:bg-violet-600/20 text-violet-600 dark:text-violet-400 border-violet-500/20"
+                    : "bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                )}
+                title={role !== "admin" ? "Switch to Admin" : "Switch to Contributor"}
+              >
+                {role !== "admin" ? <ShieldAlert className="h-4 w-4" /> : <Home className="h-4 w-4" />}
+              </Link>
+            )}
             <div className="flex flex-col items-center gap-1.5 w-full pt-3 border-t border-border/40">
               <EditProfileModal
                 userName={userName ?? ""}

@@ -6,10 +6,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await getCurrentProfile();
   if (!profile) redirect("/admin-secure");
 
-  if (profile.role !== "admin" && profile.role !== "collector") redirect("/login");
+  if (!profile.isAdmin && profile.role !== "admin" && profile.role !== "collector") {
+    redirect("/login");
+  }
 
   return (
-    <AppShell role="admin" userName={profile?.full_name ?? profile?.email ?? profile?.phone_number ?? "Admin"}>
+    <AppShell 
+      role="admin" 
+      userName={profile?.full_name ?? profile?.email ?? profile?.phone_number ?? "Admin"}
+      userId={profile?.id}
+      isAdmin={true}
+    >
       {children}
     </AppShell>
   );

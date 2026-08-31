@@ -68,7 +68,7 @@ export async function registerUser(formData: {
 }
 
 export async function getAdminStats() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const [collectorsRes, equbsRes, contributionsRes] = await Promise.all([
     supabase
@@ -94,7 +94,7 @@ export async function getAdminStats() {
 }
 
 export async function getAllProfiles() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, phone_number, role, email, created_at")
@@ -115,7 +115,7 @@ export async function getCollectors() {
 }
 
 export async function getFinancialReport(fromDate?: string, toDate?: string) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   let query = supabase
     .from("contributions")
     .select(

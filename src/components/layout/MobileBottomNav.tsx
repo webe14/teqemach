@@ -171,6 +171,33 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
                 {t("accountAndApp")}
               </h4>
 
+              {/* Role Switcher for Admin-authorized users */}
+              {showAdminLink && role !== "admin" && (
+                <Link
+                  href="/dashboard/admin"
+                  onClick={() => setOpenMore(false)}
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-violet-950/80 to-indigo-950/80 border border-violet-700/50 hover:bg-violet-900/60 transition-all text-sm font-semibold text-violet-200"
+                >
+                  <div className="bg-violet-900/80 p-2 rounded-xl text-violet-300">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  Switch to Admin Dashboard
+                </Link>
+              )}
+
+              {showAdminLink && role === "admin" && (
+                <Link
+                  href="/dashboard/contributor"
+                  onClick={() => setOpenMore(false)}
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-blue-950/80 to-cyan-950/80 border border-blue-700/50 hover:bg-blue-900/60 transition-all text-sm font-semibold text-blue-200"
+                >
+                  <div className="bg-blue-900/80 p-2 rounded-xl text-blue-300">
+                    <Home className="h-4 w-4" />
+                  </div>
+                  Switch to Contributor View
+                </Link>
+              )}
+
               <EditProfileModal 
                 userName={userName ?? ""} 
                 role={role} 

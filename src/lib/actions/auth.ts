@@ -481,3 +481,52 @@ export async function activateAccount(newPassword: string) {
   return { success: true };
 }
 
+/**
+ * Switch the active session to another linked role (e.g. contributor <-> admin)
+ */
+export async function switchActiveRole(targetRole: "admin" | "collector" | "contributor") {
+  const current = await getCurrentProfile();
+  if (!current) {
+    return { error: "Not authenticated" };
+  }
+
+  // Must have admin rights to switch to admin or collector
+  if ((targetRole === "admin" || targetRole === "collector") && !current.isAdmin) {
+    return { error: "Unauthorized to switch to this role" };
+  }
+
+  const adminClient = await createAdminClient();
+
+  // Find target profile matching the user's telegram_id, email, or phone
+  const conditions: string[] = [];
+  if (current.telegram_id) conditions.push(`telegram_id.eq.${current.telegram_id}`);
+  if (current.email) conditions.push(`email.eq.${current.email}`);
+  if (current.phone_number) conditions.push(`phone_number.eq.${current.phone_number}`);
+
+  let targetUserId = current.id;
+  let targetEmail = current.email || "";
+
+  if (conditions.length > 0) {
+    const { data: matched } = await adminClient
+      .from("profiles")
+      .select("id, role, email")
+      .eq("role", targetRole)
+      .or(conditions.join(","))
+      .limit(1)
+      .maybeSingle();
+
+    if (matched) {
+      targetUserId = matched.id;
+      if (matched.email) targetEmail = matched.email;
+    }
+  }
+
+  await createCustomSession({
+    userId: targetUserId,
+    role: targetRole,
+    email: targetEmail,
+  });
+
+  return { success: true, redirect: `/dashboard/${targetRole}` };
+}
+
