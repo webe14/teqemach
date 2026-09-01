@@ -259,11 +259,6 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {locale === "am" ? "የተከፈለ ጠቅላላ ክፍያ" : "Total Collected"}
               </p>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-2xl font-extrabold text-foreground">
-                  ETB {totalPaid.toLocaleString()}
-                </span>
-              </div>
             </div>
             <div className="text-right">
               <span className="text-2xl font-black text-primary">{progress}%</span>
