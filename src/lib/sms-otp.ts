@@ -90,11 +90,10 @@ export async function sendRegistrationOtp({
       is_verified: false,
     });
 
-    // Queue SMS job in sms_jobs for the local phone gateway (09... format for Ethio Telecom SIM)
-    const localPhone = toLocalEthiopianPhone(formattedPhone);
+    // Queue SMS job in sms_jobs for the phone gateway
     const { error: smsError } = await adminClient.from("sms_jobs").insert({
       type: "otp",
-      recipient: localPhone,
+      recipient: formattedPhone,
       message: `Your Teqemach verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
       status: "pending",
       attempts: 0,
