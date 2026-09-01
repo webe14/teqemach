@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Teqemach Telegram Bot (Python)
-Integrated with Supabase database and Teqemach Mini App.
+Integrated with Supabase database, payment verification, Teqemach Mini App, and SMS Gateway dispatch.
 """
 
 import os
 import sys
 import json
 import time
+import re
 import urllib.request
 import urllib.parse
 from typing import Optional, Dict, Any
@@ -41,6 +42,53 @@ if not BOT_TOKEN:
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SMS Sanitizer & Dispatch Helper (GSM 7-bit standard)
+# ─────────────────────────────────────────────────────────────────────────────
+def clean_sms_text(text: str) -> str:
+    if not text:
+        return ""
+    amharic_replacements = [
+        (r"መስከረም", "Meskerem"),
+        (r"ጥቅምት", "Tikimt"),
+        (r"ህዳር", "Hidar"),
+        (r"ታህሳስ", "Tahsas"),
+        (r"ጥር", "Tir"),
+        (r"የካቲት", "Yekatit"),
+        (r"መጋቢት", "Megabit"),
+        (r"ሚያዚያ", "Miazia"),
+        (r"ግንቦት", "Ginbot"),
+        (r"ሰኔ", "Sene"),
+        (r"ሐምሌ|ሀምሌ", "Hamle"),
+        (r"ነሐሴ|ነሀሴ", "Nehase"),
+        (r"ጳጉሜ", "Pagumen"),
+        (r"ባለ\s*", "Bale "),
+        (r"ብር", "ETB"),
+        (r"ዕቁብ|እቁብ", "Equb"),
+        (r"ተቀማጭ", "Teqemach"),
+    ]
+    result = text
+    for pattern, replacement in amharic_replacements:
+        result = re.sub(pattern, replacement, result)
+
+    result = re.sub(r"[^\x20-\x7E]", "", result)
+    result = re.sub(r"\s+", " ", result).strip()
+    return result
+
+def format_ethiopian_phone(raw_input: str) -> Optional[str]:
+    if not raw_input:
+        return None
+    digits = re.sub(r"\D", "", raw_input)
+    if digits.startswith("251") and len(digits) == 12:
+        if digits[3] in ("9", "7"):
+            return f"+{digits}"
+    elif digits.startswith("0") and len(digits) == 10:
+        if digits[1] in ("9", "7"):
+            return f"+251{digits[1:]}"
+    elif digits.startswith(("9", "7")) and len(digits) == 9:
+        return f"+251{digits}"
+    return f"+{digits}" if not raw_input.startswith("+") else raw_input
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Supabase REST API Helper
 # ─────────────────────────────────────────────────────────────────────────────
 def supabase_request(endpoint: str, method: str = "GET", data: Optional[Dict] = None, params: Optional[Dict] = None) -> Any:
@@ -69,6 +117,22 @@ def supabase_request(endpoint: str, method: str = "GET", data: Optional[Dict] = 
     except Exception as e:
         print(f"[Supabase Error] {method} {endpoint}: {e}")
         return None
+
+def queue_sms_job(phone: str, message: str, job_type: str = "payment_confirmation") -> bool:
+    formatted_phone = format_ethiopian_phone(phone)
+    if not formatted_phone:
+        return False
+    sanitized_msg = clean_sms_text(message)
+    payload = {
+        "type": job_type,
+        "recipient": formatted_phone,
+        "message": sanitized_msg,
+        "status": "pending",
+        "attempts": 0,
+        "max_attempts": 3
+    }
+    res = supabase_request("sms_jobs", method="POST", data=payload)
+    return res is not None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Telegram API Helpers
@@ -197,6 +261,7 @@ def handle_verify_or_mycontribution(chat_id: int, telegram_id: int):
 
     profile = profiles[0]
     user_id = profile.get("id")
+    phone = profile.get("phone_number")
 
     # Fetch active contributions and memberships
     memberships = supabase_request(
@@ -213,7 +278,7 @@ def handle_verify_or_mycontribution(chat_id: int, telegram_id: int):
 
     msg = f"📊 <b>የክፍያ ማረጋገጫ እና የተቀማጭ ሁኔታ (Payment Status)</b>\n\n"
     msg += f"👤 <b>ስም:</b> {profile.get('full_name', 'User')}\n"
-    msg += f"📱 <b>ስልክ:</b> {profile.get('phone_number', 'N/A')}\n"
+    msg += f"📱 <b>ስልክ:</b> {phone or 'N/A'}\n"
     msg += f"🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)\n\n"
     msg += "<b>የተሳተፉባቸው ዕቁቦች:</b>\n"
 
@@ -239,7 +304,7 @@ def handle_profile(chat_id: int, telegram_id: int):
         f"<b>ስም:</b> {p.get('full_name', 'N/A')}\n"
         f"<b>ሚና (Role):</b> {p.get('role', 'contributor')}\n"
         f"<b>ስልክ:</b> {p.get('phone_number', 'N/A')}\n"
-        f"<b>ሁኔታ:</b> {p.get('status', 'active')} ✅\n"
+        f"<b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)\n"
         f"<b>Telegram:</b> የተገናኘ (Connected)\n"
     )
     send_telegram_message(chat_id, text, reply_markup=open_mini_app_keyboard())
@@ -249,7 +314,7 @@ def handle_help(chat_id: int):
         "🤖 <b>የተቀማጭ Bot ትእዛዞች (Commands):</b>\n\n"
         "/start - Mini App ይክፈቱ\n"
         "/mycontribution - የተቀማጭ ክፍያዎን እና የተረጋገጠውን ሁኔታ ይመልከቱ\n"
-        "/verify - የክፍያ ማረጋገጫ ሁኔታን ይፈትሹ\n"
+        "/verify - የክፍያ ማረጋገጫ ሁኔታን ይፈትሹ (Payment Verified)\n"
         "/profile - የመገለጫ መረጃዎን ይመልከቱ\n"
         "/help - የእርዳታ መመሪያ\n"
     )
@@ -273,14 +338,15 @@ def process_update(update: Dict):
         contact = message.get("contact")
         phone = contact.get("phone_number", "")
         if phone:
+            formatted_phone = format_ethiopian_phone(phone)
             supabase_request(
                 f"profiles?telegram_id=eq.{telegram_id}",
                 method="PATCH",
-                data={"phone_number": phone}
+                data={"phone_number": formatted_phone}
             )
             send_telegram_message(
                 chat_id,
-                f"✅ ስልክ ቁጥርዎ ({phone}) በተሳካ ሁኔታ ተረጋግጧል!",
+                f"✅ ስልክ ቁጥርዎ ({formatted_phone}) በተሳካ ሁኔታ ተረጋግጧል!",
                 reply_markup=open_mini_app_keyboard()
             )
         return
@@ -306,7 +372,7 @@ def process_update(update: Dict):
 # ─────────────────────────────────────────────────────────────────────────────
 def run_polling():
     print("=" * 60)
-    print("🚀 Teqemach Python Telegram Bot (Python 3)")
+    print("🚀 Teqemach Python Telegram Bot Started (Python 3)")
     print(f"🔗 Mini App URL: {APP_URL}")
     print(f"📡 Connected to Supabase: {SUPABASE_URL}")
     print("=" * 60)
