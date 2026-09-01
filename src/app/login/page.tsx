@@ -77,21 +77,6 @@ type Step =
   | "contributor_success"
   | "error";
 
-function TeqemachLogo({ className = "w-20 h-20" }: { className?: string }) {
-  return (
-    <div className={`relative flex items-center justify-center ${className}`}>
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Navy V shape base */}
-        <path d="M16 40L50 82L84 40H68L50 62L32 40H16Z" fill="#0B1F3A" />
-        {/* Green stacked card layers */}
-        <polygon points="50,16 76,32 50,48 24,32" fill="#10B981" />
-        <polygon points="50,24 71,37 50,51 29,37" fill="#34D399" />
-        <polygon points="50,32 66,42 50,53 34,42" fill="#6EE7B7" />
-      </svg>
-    </div>
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -650,8 +635,13 @@ export default function LoginPage() {
             </div>
 
             {/* Brand Logo & Name */}
-            <div className="flex flex-col items-center justify-center space-y-1.5 mb-6">
-              <TeqemachLogo className="w-20 h-20" />
+            <div className="flex flex-col items-center justify-center space-y-2 mb-6">
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
+                <Coins className="h-9 w-9 text-white" />
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+                ተቀማጭ <span className="text-sm font-medium text-muted-foreground">(Teqemach)</span>
+              </h1>
             </div>
 
             {/* Segmented Tab Pill Toggle (Login / Register) */}
@@ -664,7 +654,7 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "login"
-                    ? "bg-white dark:bg-card text-foreground font-bold shadow-md border border-border/40"
+                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
                     : "text-muted-foreground hover:text-foreground font-medium"
                 }`}
               >
@@ -679,7 +669,7 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "register"
-                    ? "bg-white dark:bg-card text-foreground font-bold shadow-md border border-border/40"
+                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
                     : "text-muted-foreground hover:text-foreground font-medium"
                 }`}
               >
@@ -754,7 +744,7 @@ export default function LoginPage() {
                 {/* Submit Login Button */}
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -841,7 +831,7 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       disabled={otpLoading || !regPhone.trim()}
-                      className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2"
                     >
                       {otpLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -937,7 +927,7 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       disabled={otpLoading || regOtp.length !== 6}
-                      className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2"
                     >
                       {otpLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -998,7 +988,7 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       disabled={isSubmitting || !regFullName.trim() || regPassword.length < 6}
-                      className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                      className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-xl shadow-emerald-600/20 transition-all active:scale-[0.98] mt-2"
                     >
                       {isSubmitting ? (
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
