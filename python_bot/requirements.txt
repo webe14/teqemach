@@ -1,0 +1,2 @@
+# Optional dependencies (the bot uses Python standard library by default)
+python-dotenv>=1.0.0
