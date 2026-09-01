@@ -26,8 +26,8 @@ export async function createCustomSession(payload: CustomSessionPayload) {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: true,
+    sameSite: "none",
     path: "/",
     maxAge: 60 * 60 * 24 * 30, // 30 days
   });
@@ -63,8 +63,8 @@ export async function clearCustomSession() {
   // Set explicit logout flag to prevent auto-login loops
   cookieStore.set("teqemach_explicit_logout", "true", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: true,
+    sameSite: "none",
     path: "/",
     maxAge: 60 * 60 * 24 * 30, // 30 days
   });

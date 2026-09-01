@@ -271,11 +271,27 @@ export default function LoginPage() {
         setIsSubmitting(false);
         return;
       }
-      if (res?.role === "admin" || res?.role === "collector") {
-        localStorage.removeItem("teqemach_explicit_logout");
+
+      // If in Telegram environment, ensure Telegram profile sync
+      if (initData) {
+        try {
+          await fetch("/api/telegram/mini-app-auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData, action: "login" }),
+          });
+        } catch {
+          // Non-blocking
+        }
+      }
+
+      localStorage.removeItem("teqemach_explicit_logout");
+
+      if (res?.role === "admin") {
         window.location.href = "/dashboard/admin";
+      } else if (res?.role === "collector") {
+        window.location.href = "/dashboard/collector";
       } else {
-        localStorage.removeItem("teqemach_explicit_logout");
         window.location.href = "/dashboard/contributor";
       }
     } catch (err: any) {
