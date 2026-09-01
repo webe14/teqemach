@@ -292,10 +292,10 @@ export async function markCyclePaid(
         const contribDate = gregorianToEthiopianString(new Date(now), "am");
         const selDates = cycleDateText || "N/A";
 
-        // 1. Queue SMS text message to contributor phone SIM card
+        // 1. Queue SMS text message to contributor phone SIM card (GSM 7-bit standard for SIM delivery)
         if (details?.phone_number) {
           const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-          const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ ETB ${group.contribution_amount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
+          const smsText = `Dear ${details.full_name || "Contributor"}, your payment of ETB ${group.contribution_amount.toLocaleString()} for ${group.name} is confirmed by ${collector.full_name || "Collector"}. Date: ${contribDate} (${selDates}). Teqemach`;
           
           try {
             await supabase.from("sms_jobs").insert({
@@ -402,10 +402,10 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           const contribDate = gregorianToEthiopianString(new Date(now), "am");
           const selDates = cycleDateText || "N/A";
 
-          // 1. Queue SMS text message to contributor phone SIM card
+          // 1. Queue SMS text message to contributor phone SIM card (GSM 7-bit standard for SIM delivery)
           if (details?.phone_number) {
             const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-            const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ (${contributorContributions.length} ዙር) ETB ${totalAmount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
+            const smsText = `Dear ${details.full_name || "Contributor"}, your payment (${contributorContributions.length} cycles) of ETB ${totalAmount.toLocaleString()} for ${group.name} is confirmed by ${collector.full_name || "Collector"}. Date: ${contribDate} (${selDates}). Teqemach`;
             
             try {
               await supabase.from("sms_jobs").insert({
