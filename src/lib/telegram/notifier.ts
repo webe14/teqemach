@@ -10,18 +10,19 @@ export class TelegramNotifier {
     totalSelected: number;
     collectorName: string;
   }) {
-    const text = `✅ <b>Contribution Recorded</b>
+    const text = `✅ <b>ክፍያው ተረጋግጧል (Payment Verified)</b>
 
-ሰላም ${data.contributorName},
+ሰላም <b>${data.contributorName}</b>,
 
-ተቀማጭዎ በተሳካ ሁኔታ ተመዝግቧል
+የተቀማጭ ክፍያዎ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል (Payment Verified & Recorded)
 
-<b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
-<b>የተቀማጩ አይነት:</b> ${data.groupName}
-<b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
-<b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-<b>የቀናት ብዛት:</b> ${data.totalSelected}
-<b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
+🔹 <b>የተከፈለው ብር መጠን:</b> ETB ${data.amount}
+🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
+🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
+🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}
+🔹 <b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
+🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
 በዚህ ዘመናዊ የተቀማጭ Bot ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
 
@@ -36,18 +37,19 @@ export class TelegramNotifier {
     selectedDates: string;
     totalSelected: number;
   }) {
-    const text = `📥 <b>Collection Successful</b>
+    const text = `📥 <b>የክፍያ ማረጋገጫ (Payment Verified)</b>
 
-የመዘገቡት ተቀማጭ በተሳካ ሁኔታ ተመዝግቧል።
+የመዘገቡት ተቀማጭ ክፍያ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል።
 
-<b>ስም:</b> ${data.contributorName}
-<b>ያስቀመጡት ብር መጠን:</b> ETB ${data.amount}
-<b>የተቀማጩ አይነት:</b> ${data.groupName}
-<b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
-<b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-<b>የቀናት ብዛት:</b> ${data.totalSelected}
+🔹 <b>ስም:</b> <b>${data.contributorName}</b>
+🔹 <b>የተከፈለው ብር መጠን:</b> ETB ${data.amount}
+🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
+🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
+🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}
+🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
-አዋጭዎ መልእክቱ ይደርሰዋል።`;
+አዋጭዎ የተረጋገጠበት ማረጋገጫ መልእክት ደርሶታል።`;
 
     await telegramBot.sendMessage(chatId, text);
   }
