@@ -28,6 +28,7 @@ type GroupMeta = {
   created_at: string;
   frequency: "daily" | "weekly" | "monthly";
   total_days: number;
+  contribution_amount?: number;
 } | null;
 
 /** Compute the expected date for a cycle given the group's start date and frequency */
@@ -108,6 +109,9 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
   const paidCount = cycles.filter((c) => c.is_marked_paid).length;
   const totalCount = groupMeta?.total_days || cycles.length || 0;
   const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+  const amountPerCycle = groupMeta?.contribution_amount || 0;
+  const totalPaid = paidCount * amountPerCycle;
+  const totalTarget = totalCount * amountPerCycle;
 
   return (
     <div className="space-y-6 stagger-children max-w-4xl mx-auto">
@@ -132,24 +136,43 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {/* Progress */}
-      <Card className="border-primary/20 gradient-card">
-        <CardContent className="p-5 space-y-3">
+      {/* Progress & Total Payment */}
+      <Card className="border-primary/20 gradient-card shadow-sm">
+        <CardContent className="p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">{t("collectionProgress")}</span>
-            <span className="text-lg font-bold text-primary">{progress}%</span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {locale === "am" ? "የተከፈለ ጠቅላላ ክፍያ" : "Total Payment"}
+              </p>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="text-2xl font-extrabold text-foreground">
+                  ETB {totalPaid.toLocaleString()}
+                </span>
+                {totalTarget > 0 && (
+                  <span className="text-xs text-muted-foreground font-medium">
+                    / ETB {totalTarget.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-black text-primary">{progress}%</span>
+              <p className="text-[11px] text-muted-foreground font-medium">{t("collectionProgress")}</p>
+            </div>
           </div>
+
           <Progress
             value={progress}
-            className="h-3"
+            className="h-3 bg-muted/60"
             indicatorClassName="bg-gradient-to-r from-emerald-500 to-teal-500"
           />
-          <div className="flex gap-4 text-sm">
-            <span className="flex items-center gap-1 text-emerald-600">
-              <CheckCircle2 className="h-3.5 w-3.5" /> {paidCount} Paid
+
+          <div className="flex items-center justify-between pt-1 border-t border-border/50 text-xs">
+            <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" /> {paidCount} {locale === "am" ? "የተከፈሉ" : "Paid"}
             </span>
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Circle className="h-3.5 w-3.5" /> {totalCount - paidCount} Remaining
+            <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+              <Circle className="h-4 w-4" /> {totalCount - paidCount} {locale === "am" ? "የቀሩ" : "Remaining"}
             </span>
           </div>
         </CardContent>

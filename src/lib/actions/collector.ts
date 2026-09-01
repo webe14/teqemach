@@ -217,7 +217,7 @@ export async function getContributorCycles(
       .order("cycle_number", { ascending: true }),
     supabase
       .from("equb_groups")
-      .select("created_at, frequency, total_days")
+      .select("created_at, frequency, total_days, contribution_amount")
       .eq("id", groupId)
       .single(),
     supabase
