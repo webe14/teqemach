@@ -30,7 +30,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { signIn } from "@/lib/actions/auth";
+import { signIn, getCurrentProfile } from "@/lib/actions/auth";
 
 type EqubGroup = {
   id: string;
@@ -146,46 +146,55 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Step 1: Check immediately on mount (zero-latency if launched via direct hash or cached)
-    const instantData = getTelegramInitData();
-    if (instantData) {
-      setInitData(instantData);
-      checkTelegramLogin(instantData);
-      return;
-    }
+    let timer: NodeJS.Timeout | null = null;
+    let isCancelled = false;
 
-    // Step 2: Detect whether we are running inside Telegram
-    const isTelegramEnv =
-      typeof window !== "undefined" &&
-      (Boolean(window.Telegram?.WebApp?.initData) ||
-        Boolean(window.location.hash.includes("tgWebAppData")) ||
-        Boolean(window.sessionStorage.getItem("__telegram__initParams")));
-
-    // If NOT in Telegram (e.g. desktop browser, standard mobile browser), IMMEDIATELY open phone login
-    if (!isTelegramEnv) {
-      setStep("contributor_login");
-      return;
-    }
-
-    // Step 3: Inside Telegram, poll briefly (up to 2.5 seconds) for WebApp SDK initialization
-    let attempts = 0;
-    const maxAttempts = 25; // 25 attempts * 100ms = 2.5s max
-
-    const timer = setInterval(() => {
-      attempts++;
-      const currentData = getTelegramInitData();
-      if (currentData) {
-        clearInterval(timer);
-        setInitData(currentData);
-        checkTelegramLogin(currentData);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(timer);
-        // Fall back directly to login form without any "Access Denied" screen
-        setStep("contributor_login");
+    async function initAuth() {
+      // Step 0: Check if user already has an active session cookie
+      try {
+        const profile = await getCurrentProfile();
+        if (profile?.role && !isCancelled) {
+          window.location.href = `/dashboard/${profile.role}`;
+          return;
+        }
+      } catch {
+        // Ignore and continue checking Telegram
       }
-    }, 100);
 
-    return () => clearInterval(timer);
+      // Step 1: Check immediately for Telegram initData
+      const instantData = getTelegramInitData();
+      if (instantData && !isCancelled) {
+        setInitData(instantData);
+        checkTelegramLogin(instantData);
+        return;
+      }
+
+      // Step 2: Poll for Telegram WebApp initialization (up to 2.5 seconds)
+      let attempts = 0;
+      const maxAttempts = 30; // 30 * 80ms = 2.4s
+
+      timer = setInterval(() => {
+        if (isCancelled) return;
+        attempts++;
+        const currentData = getTelegramInitData();
+        if (currentData) {
+          if (timer) clearInterval(timer);
+          setInitData(currentData);
+          checkTelegramLogin(currentData);
+        } else if (attempts >= maxAttempts) {
+          if (timer) clearInterval(timer);
+          // Only after waiting with no Telegram initData, show login form
+          setStep("contributor_login");
+        }
+      }, 80);
+    }
+
+    initAuth();
+
+    return () => {
+      isCancelled = true;
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   async function checkTelegramLogin(data: string) {
@@ -202,8 +211,16 @@ export default function LoginPage() {
 
       if (!res.ok) throw new Error(result.error || "Auto-login failed");
 
-      if (result.explicitLogout) {
-        setStep("contributor_login");
+      if (result.linked && result.redirect) {
+        window.location.href = result.redirect;
+        return;
+      }
+
+      if (result.linked && result.multiRole) {
+        // Multiple roles — show role picker
+        setRoles(result.roles || []);
+        setAvailableNewRoles(result.availableNewRoles || []);
+        setStep("role_picker");
         return;
       }
 
@@ -212,20 +229,15 @@ export default function LoginPage() {
         setHasSharedPhone(true);
       }
 
-      if (result.linked && result.multiRole) {
-        // Multiple roles — show role picker
-        setRoles(result.roles || []);
-        setAvailableNewRoles(result.availableNewRoles || []);
-        setStep("role_picker");
-      } else if (result.linked && result.redirect) {
-        window.location.href = result.redirect;
+      if (result.needsPhone) {
+        setStep("needs_phone");
       } else {
         // Unlinked new user — show Contributor Login page
         setStep("contributor_login");
       }
     } catch (err: any) {
       isLoggingInRef.current = false;
-      // Never block the user with "Access Denied" — gracefully show login page with the message
+      // Gracefully show login page with the message
       setStep("contributor_login");
       setErrorMsg(err.message);
     }
