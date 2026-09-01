@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
 import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
+import { formatEthiopianPhone } from "@/lib/sms-otp";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -272,6 +273,7 @@ export async function markCyclePaid(
         .from("profiles")
         .select(`
           full_name,
+          phone_number,
           telegram_chat_id,
           telegram_id,
           telegram_notification_prefs (contribution_confirmations)
@@ -283,19 +285,40 @@ export async function markCyclePaid(
         console.error("[markCyclePaid] Error fetching details:", detailsError);
       }
         
-      const prefs = Array.isArray(details?.telegram_notification_prefs) 
-        ? details?.telegram_notification_prefs[0] 
-        : details?.telegram_notification_prefs;
-        
-      const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
-      if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
-        const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-        const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id, telegram_id").eq("id", updatedContribution.collector_id).single();
-        
-        if (group && collector) {
+      const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+      const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", updatedContribution.collector_id).single();
+      
+      if (group && collector) {
+        const contribDate = gregorianToEthiopianString(new Date(now), "am");
+        const selDates = cycleDateText || "N/A";
+
+        // 1. Queue SMS text message to contributor phone SIM card
+        if (details?.phone_number) {
+          const formattedPhone = formatEthiopianPhone(details.phone_number) || details.phone_number;
+          const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ ETB ${group.contribution_amount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
+          
+          try {
+            await supabase.from("sms_jobs").insert({
+              type: "payment_confirmation",
+              recipient: formattedPhone,
+              message: smsText,
+              status: "pending",
+              attempts: 0,
+              max_attempts: 3,
+            });
+            console.log(`[markCyclePaid] Queued payment SMS to SIM for ${formattedPhone}`);
+          } catch (smsErr) {
+            console.error("[markCyclePaid] Failed to queue SMS job:", smsErr);
+          }
+        }
+
+        // 2. Telegram Notification
+        const prefs = Array.isArray(details?.telegram_notification_prefs) 
+          ? details?.telegram_notification_prefs[0] 
+          : details?.telegram_notification_prefs;
+        const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+        if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
           const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-          const contribDate = gregorianToEthiopianString(new Date(now), "am");
-          const selDates = cycleDateText || "N/A";
           console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
           const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
             contributorName: details.full_name || "Contributor",
@@ -326,7 +349,7 @@ export async function markCyclePaid(
         }
       }
     } catch (e) {
-      console.error("[markCyclePaid] Failed to send telegram notification:", e);
+      console.error("[markCyclePaid] Failed to send notification:", e);
     }
   }
 
@@ -356,6 +379,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           .from("profiles")
           .select(`
             full_name,
+            phone_number,
             telegram_chat_id,
             telegram_id,
             telegram_notification_prefs (contribution_confirmations)
@@ -367,23 +391,44 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           console.error("[markMultipleCyclesPaid] Error fetching details for", contributorId, detailsError);
         }
           
-        const prefs = Array.isArray(details?.telegram_notification_prefs) 
-          ? details?.telegram_notification_prefs[0] 
-          : details?.telegram_notification_prefs;
-          
-        const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
-        if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
-          const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
-          const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
-          
-          const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
-          const { data: collector } = await supabase.from("profiles").select("full_name, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single();
-          
-          if (group && collector) {
+        const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
+        const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
+        
+        const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+        const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single();
+        
+        if (group && collector) {
+          const totalAmount = group.contribution_amount * contributorContributions.length;
+          const contribDate = gregorianToEthiopianString(new Date(now), "am");
+          const selDates = cycleDateText || "N/A";
+
+          // 1. Queue SMS text message to contributor phone SIM card
+          if (details?.phone_number) {
+            const formattedPhone = formatEthiopianPhone(details.phone_number) || details.phone_number;
+            const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ (${contributorContributions.length} ዙር) ETB ${totalAmount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
+            
+            try {
+              await supabase.from("sms_jobs").insert({
+                type: "payment_confirmation",
+                recipient: formattedPhone,
+                message: smsText,
+                status: "pending",
+                attempts: 0,
+                max_attempts: 3,
+              });
+              console.log(`[markMultipleCyclesPaid] Queued payment SMS to SIM for ${formattedPhone}`);
+            } catch (smsErr) {
+              console.error("[markMultipleCyclesPaid] Failed to queue SMS job:", smsErr);
+            }
+          }
+
+          // 2. Telegram Notification
+          const prefs = Array.isArray(details?.telegram_notification_prefs) 
+            ? details?.telegram_notification_prefs[0] 
+            : details?.telegram_notification_prefs;
+          const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+          if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
             const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-            const totalAmount = group.contribution_amount * contributorContributions.length;
-            const contribDate = gregorianToEthiopianString(new Date(now), "am");
-            const selDates = cycleDateText || "N/A";
             console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
             const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
               contributorName: details.full_name || "Contributor",
@@ -415,7 +460,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
         }
       }
     } catch (e) {
-      console.error("[markMultipleCyclesPaid] Failed to send telegram notifications for multiple cycles:", e);
+      console.error("[markMultipleCyclesPaid] Failed to send notifications for multiple cycles:", e);
     }
   }
 
