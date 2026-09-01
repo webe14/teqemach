@@ -16,6 +16,76 @@ export async function verifyRegistrationOtpAction(phone: string, code: string) {
   return await verifyRegistrationOtp({ phone, code });
 }
 
+export async function registerWithPhoneOtpAction({
+  phone,
+  fullName,
+  password,
+  role = "contributor",
+}: {
+  phone: string;
+  fullName: string;
+  password: string;
+  role?: "collector" | "contributor";
+}) {
+  const formattedPhone = formatEthiopianPhone(phone);
+  if (!formattedPhone) {
+    return { error: "Please enter a valid Ethiopian phone number." };
+  }
+
+  if (!fullName || fullName.trim().length < 2) {
+    return { error: "Please enter your full name." };
+  }
+
+  if (!password || password.length < 6) {
+    return { error: "Password must be at least 6 characters long." };
+  }
+
+  const adminClient = await createAdminClient();
+
+  // Check if phone already registered
+  const phoneVariants = getPhoneVariants(phone);
+  const conditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
+  const { data: existing } = await adminClient
+    .from("profiles")
+    .select("id")
+    .or(conditions)
+    .maybeSingle();
+
+  if (existing) {
+    return { error: "An account with this phone number already exists. Please log in." };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const syntheticEmail = `${formattedPhone.replace(/\D/g, "")}@teqemach.et`;
+
+  // Create profile
+  const { data: newProfile, error: insertError } = await adminClient
+    .from("profiles")
+    .insert({
+      full_name: fullName.trim(),
+      email: syntheticEmail,
+      phone_number: formattedPhone,
+      password: hashedPassword,
+      role: role,
+      status: "active",
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    return { error: insertError.message };
+  }
+
+  // Create 30-day session
+  await createCustomSession({
+    userId: newProfile.id,
+    role: newProfile.role as "admin" | "collector" | "contributor",
+    email: syntheticEmail,
+  });
+
+  return { success: true, profile: newProfile };
+}
+
 function getPhoneVariants(rawInput: string): string[] {
   const input = rawInput.trim();
   const digits = input.replace(/\D/g, "");

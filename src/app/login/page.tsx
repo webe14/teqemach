@@ -15,6 +15,7 @@ import {
   Loader2Icon,
   Search,
   ChevronRight,
+  ChevronLeft,
   ArrowLeft,
   CheckCircle2,
   UserCircle2,
@@ -30,7 +31,13 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { signIn, getCurrentProfile } from "@/lib/actions/auth";
+import {
+  signIn,
+  getCurrentProfile,
+  requestRegistrationOtpAction,
+  verifyRegistrationOtpAction,
+  registerWithPhoneOtpAction,
+} from "@/lib/actions/auth";
 
 type EqubGroup = {
   id: string;
@@ -70,6 +77,21 @@ type Step =
   | "contributor_success"
   | "error";
 
+function TeqemachLogo({ className = "w-20 h-20" }: { className?: string }) {
+  return (
+    <div className={`relative flex items-center justify-center ${className}`}>
+      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Navy V shape base */}
+        <path d="M16 40L50 82L84 40H68L50 62L32 40H16Z" fill="#0B1F3A" />
+        {/* Green stacked card layers */}
+        <polygon points="50,16 76,32 50,48 24,32" fill="#10B981" />
+        <polygon points="50,24 71,37 50,51 29,37" fill="#34D399" />
+        <polygon points="50,32 66,42 50,53 34,42" fill="#6EE7B7" />
+      </svg>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -86,6 +108,16 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showHowToUse, setShowHowToUse] = useState(false);
+
+  // OTP Registration state
+  const [regStep, setRegStep] = useState<"phone" | "otp" | "profile">("phone");
+  const [regPhone, setRegPhone] = useState("");
+  const [regOtp, setRegOtp] = useState("");
+  const [regFullName, setRegFullName] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regShowPassword, setRegShowPassword] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   // Link form state
   const [email, setEmail] = useState("");
@@ -253,13 +285,119 @@ export default function LoginPage() {
     }
   }
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (resendTimer > 0) {
+      timer = setTimeout(() => setResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [resendTimer]);
+
+  async function handleSendCode(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+    const digits = regPhone.replace(/\D/g, "");
+    if (!digits || digits.length < 9) {
+      setErrorMsg("Please enter a valid phone number (e.g. 0912345678 or 0712345678).");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const res = await requestRegistrationOtpAction(regPhone);
+      if (!res.success) {
+        setErrorMsg(res.error || "Failed to send verification code. Please try again.");
+        setOtpLoading(false);
+        return;
+      }
+
+      setRegStep("otp");
+      setResendTimer(45);
+      setErrorMsg(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to send verification code.");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  async function handleVerifyCode(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+    if (!regOtp || regOtp.trim().length !== 6) {
+      setErrorMsg("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const res = await verifyRegistrationOtpAction(regPhone, regOtp.trim());
+      if (!res.success) {
+        setErrorMsg(res.error || "Invalid or expired verification code.");
+        setOtpLoading(false);
+        return;
+      }
+
+      setRegStep("profile");
+      setErrorMsg(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Verification failed.");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  async function handleCompleteRegistration(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+    if (!regFullName || regFullName.trim().length < 2) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+    if (!regPassword || regPassword.length < 6) {
+      setErrorMsg("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await registerWithPhoneOtpAction({
+        phone: regPhone,
+        fullName: regFullName.trim(),
+        password: regPassword,
+        role: "contributor",
+      });
+
+      if (res?.error) {
+        setErrorMsg(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // If inside Telegram, link with telegram profile
+      if (initData) {
+        try {
+          await fetch("/api/telegram/mini-app-auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData, action: "login" }),
+          });
+        } catch {}
+      }
+
+      localStorage.removeItem("teqemach_explicit_logout");
+      window.location.href = "/dashboard/contributor";
+    } catch (err: any) {
+      setErrorMsg(err.message || "Registration failed.");
+      setIsSubmitting(false);
+    }
+  }
+
   function handleRegisterClick() {
     setErrorMsg(null);
-    if (!hasSharedPhone) {
-      setStep("needs_phone");
-    } else {
-      startContributorRegistration();
-    }
+    setRegStep("phone");
   }
 
   async function handlePhonePasswordLogin(e?: React.FormEvent) {
@@ -506,29 +644,27 @@ export default function LoginPage() {
           <div className="py-2 space-y-6">
             {/* Top Right Language Selector */}
             <div className="flex justify-end -mt-2 -mr-2 mb-2">
-              <div className="bg-muted/50 rounded-full px-1 border border-border/40">
+              <div className="bg-white dark:bg-card rounded-full px-2 py-1 shadow-sm border border-border/60">
                 <LanguageToggle />
               </div>
             </div>
 
             {/* Brand Logo & Name */}
-            <div className="flex flex-col items-center justify-center space-y-2 mb-6">
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
-                <Coins className="h-9 w-9 text-white" />
-              </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-                ተቀማጭ <span className="text-sm font-medium text-muted-foreground">(Teqemach)</span>
-              </h1>
+            <div className="flex flex-col items-center justify-center space-y-1.5 mb-6">
+              <TeqemachLogo className="w-20 h-20" />
             </div>
 
             {/* Segmented Tab Pill Toggle (Login / Register) */}
             <div className="bg-muted/80 p-1.5 rounded-2xl flex border border-border/60 shadow-inner">
               <button
                 type="button"
-                onClick={() => setAuthTab("login")}
+                onClick={() => {
+                  setAuthTab("login");
+                  setErrorMsg(null);
+                }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "login"
-                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
+                    ? "bg-white dark:bg-card text-foreground font-bold shadow-md border border-border/40"
                     : "text-muted-foreground hover:text-foreground font-medium"
                 }`}
               >
@@ -538,11 +674,12 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setAuthTab("register");
-                  handleRegisterClick();
+                  setRegStep("phone");
+                  setErrorMsg(null);
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "register"
-                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
+                    ? "bg-white dark:bg-card text-foreground font-bold shadow-md border border-border/40"
                     : "text-muted-foreground hover:text-foreground font-medium"
                 }`}
               >
@@ -551,7 +688,7 @@ export default function LoginPage() {
             </div>
 
             {errorMsg && (
-              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-left">
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-left animate-shake">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -559,14 +696,14 @@ export default function LoginPage() {
 
             {/* ── TAB 1: LOGIN VIEW ── */}
             {authTab === "login" && (
-              <form onSubmit={handlePhonePasswordLogin} className="space-y-5 animate-fadeIn">
+              <form onSubmit={handlePhonePasswordLogin} className="space-y-4 animate-fadeIn">
                 {/* Phone Number Field */}
-                <div className="space-y-2 text-left">
-                  <Label htmlFor="phone-input" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="space-y-1.5 text-left">
+                  <Label htmlFor="phone-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Phone Number
                   </Label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3.5 text-xs font-bold text-muted-foreground">
+                  <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                    <span className="pl-3.5 pr-2 text-sm font-bold text-slate-800 dark:text-slate-200 select-none border-r border-border/60">
                       +251
                     </span>
                     <Input
@@ -575,38 +712,38 @@ export default function LoginPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Enter your phone number"
-                      className="pl-14 pr-10 h-12 text-sm rounded-2xl border-border bg-card/50"
+                      className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
                     />
-                    <Phone className="absolute right-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
                 {/* Password Field */}
-                <div className="space-y-2 text-left">
-                  <Label htmlFor="pass-input" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="space-y-1.5 text-left">
+                  <Label htmlFor="pass-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Password
                   </Label>
-                  <div className="relative flex items-center">
+                  <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
                     <Input
                       id="pass-input"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="pr-10 h-12 text-sm rounded-2xl border-border bg-card/50"
+                      className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3.5 text-slate-400 hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <div className="text-right pt-1">
+                  <div className="text-right pt-0.5">
                     <button
                       type="button"
-                      onClick={() => setErrorMsg("Please contact your Equb admin to reset your password.")}
+                      onClick={() => setErrorMsg("Please contact your Equb collector to reset your password.")}
                       className="text-xs font-bold text-emerald-500 hover:underline"
                     >
                       Forgot Password?
@@ -617,11 +754,11 @@ export default function LoginPage() {
                 {/* Submit Login Button */}
                 <Button
                   type="submit"
-                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98]"
+                  className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   ) : (
                     "Login"
                   )}
@@ -634,7 +771,8 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setAuthTab("register");
-                      handleRegisterClick();
+                      setRegStep("phone");
+                      setErrorMsg(null);
                     }}
                     className="text-emerald-500 font-bold hover:underline"
                   >
@@ -642,84 +780,234 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-              </form>
-            )}
-
-            {/* ── TAB 2: REGISTER VIEW ── */}
-            {authTab === "register" && (
-              <div className="space-y-4 animate-fadeIn">
-                {!hasSharedPhone ? (
-                  <div className="space-y-4 py-2">
-                    <p className="text-xs text-muted-foreground text-center">
-                      Step 1: Verify your phone number with Telegram to start registering.
-                    </p>
-                    <Button
-                      className="w-full h-13 text-sm font-bold bg-primary hover:bg-brand-700 text-white rounded-2xl"
-                      onClick={() => {
-                        const tg = window.Telegram?.WebApp;
-                        if (tg && tg.requestContact) {
-                          tg.requestContact((shared: boolean) => {
-                            if (shared) setTimeout(checkPhoneStatus, 1500);
-                          });
-                        } else {
-                          window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
-                        }
-                      }}
-                    >
-                      <Smartphone className="h-5 w-5 mr-2" />
-                      Share Phone Number
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full h-11 text-xs rounded-2xl"
-                      onClick={checkPhoneStatus}
-                      disabled={phoneCheckLoading}
-                    >
-                      {phoneCheckLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                      I&apos;ve Shared My Number
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3 py-2">
-                    <Button
-                      className="w-full h-13 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl"
-                      onClick={() => startContributorRegistration()}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Registration"}
-                    </Button>
-                  </div>
-                )}
-
-                <div className="text-center pt-2 text-xs text-muted-foreground font-medium">
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => setAuthTab("login")}
-                    className="text-emerald-500 font-bold hover:underline"
-                  >
-                    Login
-                  </button>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-center pt-3 gap-3">
+                {/* How to Use */}
+                <div className="text-center pt-1">
                   <button
                     type="button"
                     onClick={() => setShowHowToUse(true)}
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-900 dark:text-blue-300 hover:underline"
                   >
-                    <Play className="h-3.5 w-3.5 fill-current text-blue-400" />
+                    <Play className="w-3.5 h-3.5 fill-current text-brand-900 dark:text-blue-300" />
                     How to Use
                   </button>
-                  <a
-                    href="/admin-secure"
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 px-4 py-2 rounded-full border border-slate-700/60 transition-all"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 text-violet-400" />
-                    Admin
-                  </a>
                 </div>
+
+              </form>
+            )}
+
+            {/* ── TAB 2: REGISTER VIEW (WITH OTP & MATCHING SCREENSHOT) ── */}
+            {authTab === "register" && (
+              <div className="space-y-4 animate-fadeIn text-left">
+                {/* ── STEP 1: ENTER PHONE & SEND CODE ── */}
+                {regStep === "phone" && (
+                  <form onSubmit={handleSendCode} className="space-y-4">
+                    {/* Back link */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab("login");
+                          setErrorMsg(null);
+                        }}
+                        className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-foreground transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-0.5" />
+                        Back
+                      </button>
+                    </div>
+
+                    {/* Phone Number Field */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="reg-phone-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Phone Number
+                      </Label>
+                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                        <span className="pl-3.5 pr-2 text-sm font-bold text-slate-800 dark:text-slate-200 select-none border-r border-border/60">
+                          +251
+                        </span>
+                        <Input
+                          id="reg-phone-input"
+                          type="tel"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          placeholder="Enter your phone number"
+                          className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                        />
+                        <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Send Code Button */}
+                    <Button
+                      type="submit"
+                      disabled={otpLoading || !regPhone.trim()}
+                      className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                    >
+                      {otpLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      ) : (
+                        "Send Code"
+                      )}
+                    </Button>
+
+                    {/* Footer login prompt */}
+                    <div className="text-center pt-2 text-xs text-muted-foreground font-medium">
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab("login");
+                          setErrorMsg(null);
+                        }}
+                        className="text-emerald-500 font-bold hover:underline"
+                      >
+                        Login
+                      </button>
+                    </div>
+
+                    {/* How to Use */}
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowHowToUse(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-900 dark:text-blue-300 hover:underline"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current text-brand-900 dark:text-blue-300" />
+                        How to Use
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* ── STEP 2: ENTER OTP CODE ── */}
+                {regStep === "otp" && (
+                  <form onSubmit={handleVerifyCode} className="space-y-4">
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRegStep("phone");
+                          setErrorMsg(null);
+                        }}
+                        className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-foreground transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-0.5" />
+                        Back
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold text-foreground">Verification Code</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the 6-digit code sent to <span className="font-bold text-foreground">+251 {regPhone}</span>
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                        <Input
+                          id="reg-otp-input"
+                          type="text"
+                          maxLength={6}
+                          value={regOtp}
+                          onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ""))}
+                          placeholder="6-digit code"
+                          className="px-4 h-12 text-center text-lg tracking-[0.3em] font-bold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none text-foreground placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-muted-foreground">Didn&apos;t receive code?</span>
+                      {resendTimer > 0 ? (
+                        <span className="font-semibold text-muted-foreground">Resend in {resendTimer}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendCode}
+                          disabled={otpLoading}
+                          className="font-bold text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${otpLoading ? "animate-spin" : ""}`} />
+                          Resend Code
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={otpLoading || regOtp.length !== 6}
+                      className="w-full h-12 text-base font-bold bg-slate-700 hover:bg-slate-800 dark:bg-slate-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                    >
+                      {otpLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      ) : (
+                        "Verify Code"
+                      )}
+                    </Button>
+                  </form>
+                )}
+
+                {/* ── STEP 3: COMPLETE PROFILE ── */}
+                {regStep === "profile" && (
+                  <form onSubmit={handleCompleteRegistration} className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold text-foreground">Create Your Account</h3>
+                      <p className="text-xs text-emerald-600 font-medium">✓ Phone +251 {regPhone} verified</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="reg-name" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Full Name
+                      </Label>
+                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                        <Input
+                          id="reg-name"
+                          type="text"
+                          value={regFullName}
+                          onChange={(e) => setRegFullName(e.target.value)}
+                          placeholder="Enter your full name"
+                          className="px-4 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="reg-pass" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Password
+                      </Label>
+                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                        <Input
+                          id="reg-pass"
+                          type={regShowPassword ? "text" : "password"}
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="Create a password (min 6 chars)"
+                          className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setRegShowPassword(!regShowPassword)}
+                          className="absolute right-3.5 text-slate-400 hover:text-foreground"
+                        >
+                          {regShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !regFullName.trim() || regPassword.length < 6}
+                      className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-sm transition-all active:scale-[0.98] mt-2"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      ) : (
+                        "Complete Registration"
+                      )}
+                    </Button>
+                  </form>
+                )}
               </div>
             )}
           </div>
