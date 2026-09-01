@@ -28,12 +28,10 @@ type PaymentRow = {
 
 export default function ContributorPaymentHistoryPage() {
   const { t, locale } = useLocale();
-  const todayEC = getCurrentEthiopianDate();
-  const todayECStr = `${String(todayEC.day).padStart(2, "0")}/${String(todayEC.month).padStart(2, "0")}/${todayEC.year}`;
 
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fromDate, setFromDate] = useState(todayECStr);
+  const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -63,26 +61,26 @@ export default function ContributorPaymentHistoryPage() {
     if (fromDate) {
       const parsedFrom = parseEthiopianDate(fromDate);
       if (!parsedFrom) {
-        setErrorMsg(locale === "am" ? "ልክ ያልሆነ ቀን። እባክዎ ቀን/ወር/ዓመት ይጠቀሙ།" : "Invalid date format. Use DD/MM/YYYY.");
+        setErrorMsg(locale === "am" ? "ልክ ያልሆነ ቀን። እባክዎ ቀን/ወር/ዓመት ይጠቀሙ።" : "Invalid date format. Use DD/MM/YYYY.");
         return;
       }
-      fromISO = toGregorian(parsedFrom).toISOString().split("T")[0] + "T00:00:00Z";
+      fromISO = toGregorian(parsedFrom).toISOString().split("T")[0] + "T00:00:00.000Z";
     }
 
     if (toDate) {
       const parsedTo = parseEthiopianDate(toDate);
       if (!parsedTo) {
-        setErrorMsg(locale === "am" ? "ልክ ያልሆነ ቀን። እባክዎ ቀን/ወር/ዓመት ይጠቀሙ།" : "Invalid date format. Use DD/MM/YYYY.");
+        setErrorMsg(locale === "am" ? "ልክ ያልሆነ ቀን። እባክዎ ቀን/ወር/ዓመት ይጠቀሙ።" : "Invalid date format. Use DD/MM/YYYY.");
         return;
       }
-      toISO = toGregorian(parsedTo).toISOString().split("T")[0] + "T23:59:59Z";
+      toISO = toGregorian(parsedTo).toISOString().split("T")[0] + "T23:59:59.999Z";
     }
 
     loadHistory(userId, fromISO, toISO);
   }
 
   function clearFilter() {
-    setFromDate(todayECStr);
+    setFromDate("");
     setToDate("");
     setErrorMsg("");
     if (userId) loadHistory(userId);
@@ -138,7 +136,7 @@ export default function ContributorPaymentHistoryPage() {
             {errorMsg && <p className="text-[10px] text-rose-500 font-medium">{errorMsg}</p>}
             <div className="flex gap-2 pt-1">
               <Button size="sm" onClick={applyFilter} className="flex-1 text-xs h-8">{t("apply")}</Button>
-              <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8">
+              <Button size="sm" variant="ghost" onClick={clearFilter} className="px-2 h-8" title="Clear filter">
                 <X className="h-3 w-3" />
               </Button>
             </div>

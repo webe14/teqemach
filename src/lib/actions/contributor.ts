@@ -84,6 +84,7 @@ export async function getContributorPaymentHistory(
         is_marked_paid,
         group_id,
         collector_id,
+        created_at,
         group:equb_groups!contributions_group_id_fkey (
           id,
           name,
@@ -99,14 +100,35 @@ export async function getContributorPaymentHistory(
       `)
       .eq("contributor_id", contributorId)
       .eq("is_marked_paid", true)
-      .order("contribution_date", { ascending: false });
+      .order("cycle_number", { ascending: true });
 
     if (fromDate) query = query.gte("contribution_date", fromDate);
     if (toDate) query = query.lte("contribution_date", toDate);
 
     const { data, error } = await query;
     if (error) return { error: error.message, data: [] };
-    return { data: (data as any[]) ?? [], error: null };
+
+    const formatted = ((data as any[]) ?? []).map((row) => {
+      let cDate = row.contribution_date;
+      if (!cDate && row.group?.created_at) {
+        const start = new Date(row.group.created_at);
+        const n = (row.cycle_number || 1) - 1;
+        if (row.group.frequency === "weekly") {
+          start.setUTCDate(start.getUTCDate() + n * 7);
+        } else if (row.group.frequency === "monthly") {
+          start.setUTCMonth(start.getUTCMonth() + n);
+        } else {
+          start.setUTCDate(start.getUTCDate() + n);
+        }
+        cDate = start.toISOString();
+      }
+      return {
+        ...row,
+        contribution_date: cDate,
+      };
+    });
+
+    return { data: formatted, error: null };
   } catch (err: any) {
     return { error: err.message, data: [] };
   }

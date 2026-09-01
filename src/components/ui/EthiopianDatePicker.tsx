@@ -19,15 +19,16 @@ interface EthiopianDatePickerProps {
 
 export function EthiopianDatePicker({ value, onChange, label, locale }: EthiopianDatePickerProps) {
   const [open, setOpen] = useState(false);
-  const [currentYear, setCurrentYear] = useState(2018);
-  const [currentMonth, setCurrentMonth] = useState(10);
+  const today = getCurrentEthiopianDate();
+  const [currentYear, setCurrentYear] = useState(today.year);
+  const [currentMonth, setCurrentMonth] = useState(today.month);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // Click-outside closes picker
+  // Click/Touch-outside closes picker
   useEffect(() => {
     if (!open) return;
-    function handleOutside(e: MouseEvent) {
+    function handleOutside(e: MouseEvent | TouchEvent) {
       if (
         popupRef.current && !popupRef.current.contains(e.target as Node) &&
         triggerRef.current && !triggerRef.current.contains(e.target as Node)
@@ -36,7 +37,11 @@ export function EthiopianDatePicker({ value, onChange, label, locale }: Ethiopia
       }
     }
     document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
   }, [open]);
 
   // Sync calendar to current value
@@ -46,13 +51,9 @@ export function EthiopianDatePicker({ value, onChange, label, locale }: Ethiopia
       if (parts.length === 3) {
         const m = parseInt(parts[1], 10);
         const y = parseInt(parts[2], 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) setCurrentYear(y);
+        if (!isNaN(y) && y >= 1900 && y <= 2200) setCurrentYear(y);
         if (!isNaN(m) && m >= 1 && m <= 13) setCurrentMonth(m);
       }
-    } else {
-      const today = getCurrentEthiopianDate();
-      setCurrentYear(today.year);
-      setCurrentMonth(today.month);
     }
   }, [value]);
 

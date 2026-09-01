@@ -137,7 +137,7 @@ export function isEthiopianLeapYear(year: number): boolean {
  */
 export function addDaysToEthiopian(ec: EthiopianDate, days: number): EthiopianDate {
   const gregorian = toGregorian(ec);
-  gregorian.setDate(gregorian.getDate() + days);
+  gregorian.setUTCDate(gregorian.getUTCDate() + days);
   return toEthiopian(gregorian);
 }
 
@@ -233,5 +233,5 @@ function jdnToGregorian(jdn: number): Date {
   const day = e - Math.floor((153 * m + 2) / 5) + 1;
   const month = m + 3 - 12 * Math.floor(m / 10);
   const year = 100 * b + d - 4800 + Math.floor(m / 10);
-  return new Date(year, month - 1, day);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
 }

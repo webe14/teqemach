@@ -252,12 +252,19 @@ export async function markCyclePaid(
   const supabase = await createAdminClient();
   const now = new Date().toISOString();
   
-  // 1. Mark paid
+  // 1. Fetch existing contribution to preserve scheduled cycle date
+  const { data: existingContrib } = await supabase
+    .from("contributions")
+    .select("contribution_date")
+    .eq("id", contributionId)
+    .single();
+
+  // Mark paid
   const { error, data: updatedContribution } = await supabase
     .from("contributions")
     .update({
       is_marked_paid: true,
-      contribution_date: now,
+      contribution_date: existingContrib?.contribution_date || now,
     })
     .eq("id", contributionId)
     .select("contributor_id, collector_id")
@@ -340,11 +347,17 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
   
   const { error, data: updatedContributions } = await supabase
     .from("contributions")
-    .update({ is_marked_paid: true, contribution_date: now })
+    .update({ is_marked_paid: true })
     .in("id", ids)
-    .select("contributor_id, collector_id, group_id");
+    .select("id, contributor_id, collector_id, group_id, contribution_date");
 
   if (error) return { error: error.message };
+
+  // Set contribution_date only for cycles that had none
+  const missingDateIds = (updatedContributions || []).filter((c) => !c.contribution_date).map((c) => c.id);
+  if (missingDateIds.length > 0) {
+    await supabase.from("contributions").update({ contribution_date: now }).in("id", missingDateIds);
+  }
   
   // Group by contributor to avoid spamming multiple messages if they paid multiple cycles
   if (updatedContributions && updatedContributions.length > 0) {
@@ -431,14 +444,35 @@ export async function createContributionCycles(
 ) {
   const supabase = await createAdminClient();
 
-  const cycles = Array.from({ length: totalDays }, (_, i) => ({
-    contributor_id: contributorId,
-    collector_id: collectorId,
-    group_id: groupId,
-    cycle_number: i + 1,
-    is_marked_paid: false,
-    disbursed: false,
-  }));
+  const { data: group } = await supabase
+    .from("equb_groups")
+    .select("created_at, frequency")
+    .eq("id", groupId)
+    .single();
+
+  const startDate = group?.created_at ? new Date(group.created_at) : new Date();
+  const frequency = group?.frequency || "daily";
+
+  const cycles = Array.from({ length: totalDays }, (_, i) => {
+    const cycleDate = new Date(startDate);
+    if (frequency === "weekly") {
+      cycleDate.setUTCDate(cycleDate.getUTCDate() + i * 7);
+    } else if (frequency === "monthly") {
+      cycleDate.setUTCMonth(cycleDate.getUTCMonth() + i);
+    } else {
+      cycleDate.setUTCDate(cycleDate.getUTCDate() + i);
+    }
+
+    return {
+      contributor_id: contributorId,
+      collector_id: collectorId,
+      group_id: groupId,
+      cycle_number: i + 1,
+      is_marked_paid: false,
+      disbursed: false,
+      contribution_date: cycleDate.toISOString(),
+    };
+  });
 
   const { error } = await supabase.from("contributions").insert(cycles);
   if (error) return { error: error.message };
