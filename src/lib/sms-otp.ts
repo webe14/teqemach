@@ -80,6 +80,9 @@ export async function sendRegistrationOtp({
       type: "otp",
       recipient: formattedPhone,
       message: `Your Teqemach verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
+      status: "pending",
+      attempts: 0,
+      max_attempts: 3,
     });
 
     if (smsError) {

@@ -1,4 +1,60 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/server";
+
+export async function GET(request: Request) {
+  try {
+    const adminClient = await createAdminClient();
+    const { data: jobs, error } = await adminClient
+      .from("sms_jobs")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(10);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, jobs: jobs || [] });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { jobId, status = "sent", gatewayId } = body;
+
+    if (!jobId) {
+      return NextResponse.json({ error: "jobId is required" }, { status: 400 });
+    }
+
+    const adminClient = await createAdminClient();
+    const updates: any = {
+      status,
+      gateway_id: gatewayId || "teqemach-gateway",
+    };
+    if (status === "sent") {
+      updates.sent_at = new Date().toISOString();
+    } else if (status === "failed") {
+      updates.failed_at = new Date().toISOString();
+    }
+
+    const { error } = await adminClient
+      .from("sms_jobs")
+      .update(updates)
+      .eq("id", jobId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
