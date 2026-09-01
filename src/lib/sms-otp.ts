@@ -36,6 +36,40 @@ export function toLocalEthiopianPhone(rawInput: string): string {
   return rawInput;
 }
 
+export function cleanSmsText(text: string): string {
+  if (!text) return "";
+  const amharicReplacements: [RegExp, string][] = [
+    [/መስከረም/g, "Meskerem"],
+    [/ጥቅምት/g, "Tikimt"],
+    [/ህዳር/g, "Hidar"],
+    [/ታህሳስ/g, "Tahsas"],
+    [/ጥር/g, "Tir"],
+    [/የካቲት/g, "Yekatit"],
+    [/መጋቢት/g, "Megabit"],
+    [/ሚያዚያ/g, "Miazia"],
+    [/ግንቦት/g, "Ginbot"],
+    [/ሰኔ/g, "Sene"],
+    [/ሐምሌ|ሀምሌ/g, "Hamle"],
+    [/ነሐሴ|ነሀሴ/g, "Nehase"],
+    [/ጳጉሜ/g, "Pagumen"],
+    [/ባለ\s*/g, "Bale "],
+    [/ብር/g, "ETB"],
+    [/ዕቁብ|እቁብ/g, "Equb"],
+    [/ተቀማጭ/g, "Teqemach"],
+  ];
+
+  let result = text;
+  for (const [pattern, replacement] of amharicReplacements) {
+    result = result.replace(pattern, replacement);
+  }
+
+  // Remove any remaining non-ASCII characters to guarantee single-part 7-bit GSM delivery
+  result = result.replace(/[^\x20-\x7E]/g, "");
+  result = result.replace(/\s+/g, " ").trim();
+
+  return result;
+}
+
 export async function sendRegistrationOtp({
   phone,
   email,
