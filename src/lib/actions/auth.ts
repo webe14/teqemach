@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
+import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 import bcrypt from "bcryptjs";
 
 function getPhoneVariants(rawInput: string): string[] {
@@ -526,6 +527,10 @@ export async function switchActiveRole(targetRole: "admin" | "collector" | "cont
     role: targetRole,
     email: targetEmail,
   });
+
+  if (current.telegram_id) {
+    await syncTelegramUserActiveProfile(current.telegram_id, targetUserId, targetRole);
+  }
 
   return { success: true, redirect: `/dashboard/${targetRole}` };
 }

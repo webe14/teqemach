@@ -218,7 +218,7 @@ export default function LoginPage() {
         setAvailableNewRoles(result.availableNewRoles || []);
         setStep("role_picker");
       } else if (result.linked && result.redirect) {
-        router.push(result.redirect);
+        window.location.href = result.redirect;
       } else {
         // Unlinked new user — show Contributor Login page
         setStep("contributor_login");

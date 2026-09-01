@@ -6,6 +6,35 @@ import { createCustomSession, getCustomSession } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 
+function getPhoneVariants(rawInput: string): string[] {
+  const input = rawInput.trim();
+  const digits = input.replace(/\D/g, "");
+  const variants = new Set<string>([input]);
+
+  if (digits) {
+    variants.add(digits);
+    variants.add(`+${digits}`);
+
+    if (digits.startsWith("251") && digits.length === 12) {
+      const national = digits.slice(3);
+      variants.add(`0${national}`);
+      variants.add(national);
+      variants.add(`+251${national}`);
+    } else if (digits.startsWith("09") && digits.length === 10) {
+      const national = digits.slice(1);
+      variants.add(national);
+      variants.add(`251${national}`);
+      variants.add(`+251${national}`);
+    } else if (digits.startsWith("9") && digits.length === 9) {
+      variants.add(`0${digits}`);
+      variants.add(`251${digits}`);
+      variants.add(`+251${digits}`);
+    }
+  }
+
+  return Array.from(variants);
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -38,57 +67,66 @@ export async function POST(req: Request) {
     const adminClient = await createAdminClient();
 
     // Get ALL profiles for this telegram user
-    const profiles = await getProfilesByTelegramId(telegramId);
+    let profiles = await getProfilesByTelegramId(telegramId);
 
     // ─── LOGIN ──────────────────────────────────────────────────────────
     if (action === "login") {
-      const cookieStore = await cookies();
-      if (cookieStore.get("teqemach_explicit_logout")?.value === "true") {
-        return NextResponse.json({ linked: false, explicitLogout: true });
-      }
-      
-      // If user is already logged in with an active session, preserve it!
-      const existingSession = await getCustomSession();
-      if (existingSession && existingSession.role) {
-        return NextResponse.json({
-          linked: true,
-          redirect: `/dashboard/${existingSession.role}`,
-        });
-      }
-
-      // Check if user has a verified phone number in telegram_users
+      // Check if user has a verified phone number or previous active user in telegram_users
       const { data: tgUser } = await adminClient
         .from("telegram_users")
-        .select("phone_number")
+        .select("phone_number, user_id, role")
         .eq("telegram_id", telegramId)
-        .single();
+        .maybeSingle();
 
-      const hasPhone = !!(tgUser?.phone_number);
+      // If no profiles linked by telegram_id, try phone matching
+      if (profiles.length === 0 && tgUser?.phone_number) {
+        const phoneVariants = getPhoneVariants(tgUser.phone_number);
+        const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
+        const { data: matchedProfiles } = await adminClient
+          .from("profiles")
+          .select("*")
+          .or(orConditions);
+
+        if (matchedProfiles && matchedProfiles.length > 0) {
+          const ids = matchedProfiles.map((p) => p.id);
+          await adminClient
+            .from("profiles")
+            .update({
+              telegram_id: telegramId,
+              telegram_chat_id: telegramId,
+              telegram_username: initDataObj.username || null,
+              telegram_verified: true,
+              telegram_last_seen: new Date().toISOString(),
+            })
+            .in("id", ids);
+
+          profiles = matchedProfiles;
+        }
+      }
 
       if (profiles.length === 0) {
         // Telegram user has no profile yet -> start registration flow
+        const hasPhone = !!(tgUser?.phone_number);
         if (!hasPhone) {
           return NextResponse.json({ linked: false, needsPhone: true, telegramUser: initDataObj });
         }
         return NextResponse.json({ linked: false, telegramUser: initDataObj });
       }
 
-      // If user has multiple roles (e.g. contributor + admin/collector), show role picker
-      if (profiles.length > 1) {
-        return NextResponse.json({
-          linked: true,
-          multiRole: true,
-          roles: profiles.map((p) => ({
-            id: p.id,
-            role: p.role,
-            full_name: p.full_name,
-            status: p.status,
-          })),
-        });
+      // User has one or more profiles!
+      // Pick active profile:
+      // 1. Previously selected active profile in telegram_users
+      // 2. Admin/Collector profile (if exists)
+      // 3. First profile
+      let targetProfile = tgUser?.user_id
+        ? profiles.find((p) => p.id === tgUser.user_id)
+        : null;
+
+      if (!targetProfile) {
+        targetProfile = profiles.find((p) => p.role === "admin" || p.role === "collector") || profiles[0];
       }
 
-      // Single profile: auto-login directly to their role dashboard
-      const targetProfile = profiles[0];
+      // Create persistent 30-day session
       await createCustomSession({
         userId: targetProfile.id,
         role: targetProfile.role as "admin" | "collector" | "contributor",
