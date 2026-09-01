@@ -83,10 +83,10 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+              <h3 className="text-lg font-bold text-foreground tracking-tight">
                 My Active Equbs ({activeGroups.length})
               </h3>
-              <Link href="/dashboard/contributor/teqemachs" className="text-xs font-semibold text-blue-500 hover:underline">
+              <Link href="/dashboard/contributor/teqemachs" className="text-xs font-bold text-primary hover:underline">
                 + Join Another
               </Link>
             </div>
@@ -96,7 +96,7 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
                 <Link 
                   key={g.id || idx}
                   href={`/dashboard/contributor/my-equbs/${g.id}`} 
-                  className="p-4 rounded-2xl border border-blue-500/30 bg-card hover:bg-muted/30 transition-all shadow-md shadow-blue-500/5 block group cursor-pointer"
+                  className="p-4 rounded-2xl border border-border bg-card hover:bg-muted/40 transition-all shadow-sm block group cursor-pointer"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
@@ -104,13 +104,13 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
                         <Coins className="w-6 h-6" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-base text-card-foreground leading-tight group-hover:text-blue-500 transition-colors">
+                        <h4 className="font-bold text-base text-foreground leading-tight group-hover:text-primary transition-colors">
                           {g.name}
                         </h4>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                           Collector: {g.collector?.full_name || "Assigned Collector"}
                         </p>
-                        <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-blue-400">
+                        <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-primary">
                           <span>ETB {g.contribution_amount?.toLocaleString() || 500} ({g.frequency || 'daily'})</span>
                           <span>•</span>
                           <span>{g.total_days || 30} Days</span>
@@ -118,7 +118,7 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
                       </div>
                     </div>
                     
-                    <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1.5 rounded-full text-[11px] font-bold border border-emerald-500/20 whitespace-nowrap">
+                    <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full text-[11px] font-bold border border-emerald-500/20 whitespace-nowrap">
                       Active
                     </div>
                   </div>
@@ -131,22 +131,26 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
         {/* Action List */}
         <div className="space-y-3 max-w-sm mx-auto w-full mt-4">
           <Link href="/dashboard/contributor/equb-history" className="block">
-            <div className="flex items-center justify-between bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-              <div className="flex items-center gap-3">
-                <History className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200 text-[15px]">Equb History</span>
+            <div className="flex items-center justify-between bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all active:scale-[0.98]">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
+                <span className="font-bold text-foreground text-[15px]">Equb History</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-slate-400" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
           </Link>
 
           <Link href="/dashboard/contributor/history" className="block">
-            <div className="flex items-center justify-between bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-              <div className="flex items-center gap-3">
-                <Receipt className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200 text-[15px]">Transactions</span>
+            <div className="flex items-center justify-between bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all active:scale-[0.98]">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <span className="font-bold text-foreground text-[15px]">Transactions</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-slate-400" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
           </Link>
         </div>
