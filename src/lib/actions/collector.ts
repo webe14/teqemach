@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
 import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
-import { formatEthiopianPhone } from "@/lib/sms-otp";
+import { formatEthiopianPhone, toLocalEthiopianPhone } from "@/lib/sms-otp";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -292,21 +292,21 @@ export async function markCyclePaid(
         const contribDate = gregorianToEthiopianString(new Date(now), "am");
         const selDates = cycleDateText || "N/A";
 
-        // 1. Queue SMS text message to contributor phone SIM card
+        // 1. Queue SMS text message to contributor phone SIM card (09... format for Ethio Telecom SIM)
         if (details?.phone_number) {
-          const formattedPhone = formatEthiopianPhone(details.phone_number) || details.phone_number;
+          const localPhone = toLocalEthiopianPhone(details.phone_number);
           const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ ETB ${group.contribution_amount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
           
           try {
             await supabase.from("sms_jobs").insert({
               type: "payment_confirmation",
-              recipient: formattedPhone,
+              recipient: localPhone,
               message: smsText,
               status: "pending",
               attempts: 0,
               max_attempts: 3,
             });
-            console.log(`[markCyclePaid] Queued payment SMS to SIM for ${formattedPhone}`);
+            console.log(`[markCyclePaid] Queued payment SMS to SIM for ${localPhone}`);
           } catch (smsErr) {
             console.error("[markCyclePaid] Failed to queue SMS job:", smsErr);
           }
@@ -402,21 +402,21 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           const contribDate = gregorianToEthiopianString(new Date(now), "am");
           const selDates = cycleDateText || "N/A";
 
-          // 1. Queue SMS text message to contributor phone SIM card
+          // 1. Queue SMS text message to contributor phone SIM card (09... format for Ethio Telecom SIM)
           if (details?.phone_number) {
-            const formattedPhone = formatEthiopianPhone(details.phone_number) || details.phone_number;
+            const localPhone = toLocalEthiopianPhone(details.phone_number);
             const smsText = `ሰላም ${details.full_name || "ተጠቃሚ"}፣ የ${group.name} ዕቁብ ክፍያዎ (${contributorContributions.length} ዙር) ETB ${totalAmount.toLocaleString()} በ${collector.full_name || "ሰብሳቢ"} ተመዝግቧል። ቀን: ${contribDate} (${selDates})። ተቀማጭ (Teqemach)`;
             
             try {
               await supabase.from("sms_jobs").insert({
                 type: "payment_confirmation",
-                recipient: formattedPhone,
+                recipient: localPhone,
                 message: smsText,
                 status: "pending",
                 attempts: 0,
                 max_attempts: 3,
               });
-              console.log(`[markMultipleCyclesPaid] Queued payment SMS to SIM for ${formattedPhone}`);
+              console.log(`[markMultipleCyclesPaid] Queued payment SMS to SIM for ${localPhone}`);
             } catch (smsErr) {
               console.error("[markMultipleCyclesPaid] Failed to queue SMS job:", smsErr);
             }

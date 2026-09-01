@@ -21,6 +21,21 @@ export function formatEthiopianPhone(rawInput: string): string | null {
   return null;
 }
 
+export function toLocalEthiopianPhone(rawInput: string): string {
+  if (!rawInput) return "";
+  const digits = rawInput.replace(/\D/g, "");
+  
+  if (digits.startsWith("251") && digits.length === 12) {
+    return `0${digits.slice(3)}`;
+  } else if (digits.startsWith("0") && digits.length === 10) {
+    return digits;
+  } else if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
+    return `0${digits}`;
+  }
+  
+  return rawInput;
+}
+
 export async function sendRegistrationOtp({
   phone,
   email,
@@ -75,10 +90,11 @@ export async function sendRegistrationOtp({
       is_verified: false,
     });
 
-    // Queue SMS job in sms_jobs for the phone gateway to send
+    // Queue SMS job in sms_jobs for the local phone gateway (09... format for Ethio Telecom SIM)
+    const localPhone = toLocalEthiopianPhone(formattedPhone);
     const { error: smsError } = await adminClient.from("sms_jobs").insert({
       type: "otp",
-      recipient: formattedPhone,
+      recipient: localPhone,
       message: `Your Teqemach verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
       status: "pending",
       attempts: 0,
