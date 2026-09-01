@@ -144,7 +144,12 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse, isAdmin }
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => signOut()}
+                onClick={async () => {
+                  try {
+                    localStorage.setItem("teqemach_explicit_logout", "true");
+                  } catch {}
+                  await signOut();
+                }}
                 className="text-xs h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-1 rounded-lg"
                 title="Logout"
               >
@@ -182,7 +187,12 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse, isAdmin }
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => signOut()}
+                onClick={async () => {
+                  try {
+                    localStorage.setItem("teqemach_explicit_logout", "true");
+                  } catch {}
+                  await signOut();
+                }}
                 className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
                 title="Logout"
               >

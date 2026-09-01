@@ -221,7 +221,12 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
             <div className="pt-4 pb-4 border-t border-slate-800/80">
               <Button
                 variant="ghost"
-                onClick={() => signOut()}
+                onClick={async () => {
+                  try {
+                    localStorage.setItem("teqemach_explicit_logout", "true");
+                  } catch {}
+                  await signOut();
+                }}
                 className="w-full h-12 justify-center text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-2xl font-bold transition-all"
               >
                 <LogOut className="h-4 w-4 mr-2" />

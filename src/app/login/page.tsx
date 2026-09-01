@@ -150,7 +150,17 @@ export default function LoginPage() {
     let isCancelled = false;
 
     async function initAuth() {
-      // Step 0: Check if user already has an active session cookie
+      // Step 0: If user explicitly signed out, stay on the login page
+      const urlParams = new URLSearchParams(window.location.search);
+      const isLoggedOutUrl = urlParams.get("logged_out") === "true";
+      const isLoggedOutLocal = localStorage.getItem("teqemach_explicit_logout") === "true";
+
+      if (isLoggedOutUrl || isLoggedOutLocal) {
+        setStep("contributor_login");
+        return;
+      }
+
+      // Step 1: Check if user already has an active session cookie
       try {
         const profile = await getCurrentProfile();
         if (profile?.role && !isCancelled) {
@@ -161,7 +171,7 @@ export default function LoginPage() {
         // Ignore and continue checking Telegram
       }
 
-      // Step 1: Check immediately for Telegram initData
+      // Step 2: Check immediately for Telegram initData
       const instantData = getTelegramInitData();
       if (instantData && !isCancelled) {
         setInitData(instantData);
@@ -169,7 +179,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Step 2: Poll for Telegram WebApp initialization (up to 2.5 seconds)
+      // Step 3: Poll for Telegram WebApp initialization (up to 2.5 seconds)
       let attempts = 0;
       const maxAttempts = 30; // 30 * 80ms = 2.4s
 

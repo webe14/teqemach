@@ -6,6 +6,15 @@ import { redirect } from "next/navigation";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
 import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 import bcrypt from "bcryptjs";
+import { sendRegistrationOtp, verifyRegistrationOtp, formatEthiopianPhone } from "@/lib/sms-otp";
+
+export async function requestRegistrationOtpAction(phone: string, email?: string) {
+  return await sendRegistrationOtp({ phone, email });
+}
+
+export async function verifyRegistrationOtpAction(phone: string, code: string) {
+  return await verifyRegistrationOtp({ phone, code });
+}
 
 function getPhoneVariants(rawInput: string): string[] {
   const input = rawInput.trim();
@@ -195,7 +204,7 @@ export async function signUp(formData: {
       full_name: formData.fullName,
       email: formData.email,
       password: hashedPassword,
-      phone_number: formData.phone,
+      phone_number: formatEthiopianPhone(formData.phone) || formData.phone,
       role: formData.role,
       status,
       collector_id: formData.collectorId || null,
