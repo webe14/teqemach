@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Cycle = {
   id: string;
@@ -116,23 +117,35 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
   return (
     <div className="space-y-6 stagger-children max-w-4xl mx-auto">
       {/* Back + header */}
-      <div className="flex items-start gap-4">
-        <Link href="/dashboard/contributor/my-equbs">
-          <Button variant="ghost" size="icon" className="mt-1 bg-card hover:bg-muted border border-border">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">
-            My Contribution Cycle
-          </h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {totalCount} total cycles
-            {groupMeta && (
-              <span className="ml-2 capitalize text-primary/70">· {groupMeta.frequency}</span>
-            )}
-          </p>
-          <div className="ethiopian-divider mt-3 w-24" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Link href="/dashboard/contributor/my-equbs">
+            <Button variant="ghost" size="icon" className="mt-1 bg-card hover:bg-muted border border-border">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-foreground">
+              My Contribution Cycle
+            </h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {totalCount} total cycles
+              {groupMeta && (
+                <span className="ml-2 capitalize text-primary/70">· {groupMeta.frequency}</span>
+              )}
+            </p>
+            <div className="ethiopian-divider mt-3 w-24" />
+          </div>
+        </div>
+
+        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-md shadow-blue-600/10 shrink-0 overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt="Equb"
+            width={48}
+            height={48}
+            className="w-full h-full object-contain"
+          />
         </div>
       </div>
 

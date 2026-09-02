@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { User, Users, History, Receipt, ChevronRight, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -13,7 +14,7 @@ interface MyEqubsClientProps {
 }
 
 export default function MyEqubsClient({ userName = "Webshet W.", group, groups = [] }: MyEqubsClientProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   const activeGroups = groups && groups.length > 0 ? groups : (group ? [group] : []);
 
@@ -38,8 +39,10 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
             </div>
           </div>
 
-          <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-            <LanguageToggle />
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
+              <LanguageToggle />
+            </div>
           </div>
         </div>
 
@@ -49,34 +52,30 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
             {t("virtualEqub")}
           </span>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-snug">
-            {t("heroTitle1")} <br className="hidden sm:inline" />
-            <span className="text-blue-400 font-extrabold"> {t("heroTitle2")}</span>
+            {locale === "am" ? "የእኔ ንቁ እቁቦች" : "My Active Equbs"}
           </h1>
           <div className="ethiopian-divider mt-2 w-24" />
         </div>
       </div>
 
-      {/* ─── 2. MAIN CONTAINER ────────────────────────────────────────────── */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 relative z-20 space-y-4">
-        
-        {/* Conditionally render Joined Equbs or Empty State */}
+      {/* ─── 2. MAIN CONTENT AREA ─────────────────────────────────────────── */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
+
+        {/* Active Equbs List */}
         {activeGroups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
-            <div className="text-slate-500/80 dark:text-slate-600 mb-2">
-              <Users className="w-20 h-20" />
+          <div className="p-8 text-center bg-card border border-border rounded-3xl shadow-sm space-y-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+              <Users className="w-8 h-8" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-xl font-medium text-slate-500 dark:text-slate-400">
-                No joined equbs yet
-              </h3>
-              <p className="text-sm text-slate-400 dark:text-slate-500">
-                Join below to get started
+            <div>
+              <h3 className="text-base font-bold text-foreground">No Active Equbs Found</h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                You haven&apos;t joined any Equb groups yet. Browse available groups to start saving.
               </p>
             </div>
-            
-            <Link href="/dashboard/contributor/teqemachs" className="w-full max-w-sm mt-4">
-              <Button className="w-full h-14 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-md shadow-green-600/20 transition-all">
-                Join Equb
+            <Link href="/dashboard/contributor/teqemachs" className="inline-block">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl px-6 h-11 text-xs shadow-md">
+                Explore Available Equbs
               </Button>
             </Link>
           </div>
@@ -100,8 +99,14 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
-                        <Coins className="w-6 h-6" />
+                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-md shadow-blue-600/10 shrink-0 overflow-hidden">
+                        <Image
+                          src="/logo.png"
+                          alt="Equb"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-contain"
+                        />
                       </div>
                       <div>
                         <h4 className="font-bold text-base text-foreground leading-tight group-hover:text-primary transition-colors">

@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronLeft, CheckCircle2, PlayCircle, Coins } from "lucide-react";
+import { ChevronLeft, CheckCircle2, PlayCircle } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 export default function EqubHistoryClient({ 
@@ -38,8 +39,14 @@ export default function EqubHistoryClient({
               <Link href={`/dashboard/contributor/my-equbs/${eq.id}`} key={i} className="p-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/40 transition-all group block cursor-pointer">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
-                      <Coins className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-md shadow-blue-600/10 shrink-0 overflow-hidden">
+                      <Image
+                        src="/logo.png"
+                        alt="Equb"
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                     <div>
                       <h4 className="font-bold text-base text-foreground leading-tight group-hover:text-primary transition-colors">{eq.name}</h4>
@@ -76,8 +83,14 @@ export default function EqubHistoryClient({
               <div key={i} className="p-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-muted text-muted-foreground flex items-center justify-center font-bold text-sm shrink-0">
-                      <Coins className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-sm shrink-0 overflow-hidden opacity-75">
+                      <Image
+                        src="/logo.png"
+                        alt="Equb"
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-contain grayscale"
+                      />
                     </div>
                     <div>
                       <h4 className="font-bold text-base text-foreground leading-tight">{eq.name}</h4>
