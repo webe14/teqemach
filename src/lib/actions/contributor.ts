@@ -6,16 +6,7 @@ export async function getContributorStats(contributorId: string) {
   try {
     const supabase = await createAdminClient();
 
-    const [paidRes, totalRes, membershipsRes, paidContributionsRes] = await Promise.all([
-      supabase
-        .from("contributions")
-        .select("id", { count: "exact" })
-        .eq("contributor_id", contributorId)
-        .eq("is_marked_paid", true),
-      supabase
-        .from("contributions")
-        .select("id", { count: "exact" })
-        .eq("contributor_id", contributorId),
+    const [membershipsRes, contributionsRes] = await Promise.all([
       supabase
         .from("group_memberships")
         .select(`
@@ -36,37 +27,65 @@ export async function getContributorStats(contributorId: string) {
         .eq("contributor_id", contributorId),
       supabase
         .from("contributions")
-        .select("id, group_id, equb_groups:group_id(contribution_amount)")
-        .eq("contributor_id", contributorId)
-        .eq("is_marked_paid", true),
+        .select("id, group_id, is_marked_paid, equb_groups:group_id(contribution_amount)")
+        .eq("contributor_id", contributorId),
     ]);
 
-    const paidCount = paidRes?.count ?? 0;
-    const totalCount = totalRes?.count ?? 0;
-    
-    const groups: any[] = (membershipsRes?.data as any[])
+    const allContributions = contributionsRes?.data || [];
+    const totalCount = allContributions.length;
+
+    // Aggregate counts per group
+    const paidByGroup: Record<string, number> = {};
+    const totalByGroup: Record<string, number> = {};
+    const amountByGroup: Record<string, number> = {};
+
+    let totalPaidGlobal = 0;
+    let totalAmountSavedGlobal = 0;
+
+    for (const item of allContributions as any[]) {
+      const gid = item.group_id;
+      if (gid) {
+        totalByGroup[gid] = (totalByGroup[gid] || 0) + 1;
+      }
+      if (item.is_marked_paid) {
+        totalPaidGlobal++;
+        const amt = Number(item.equb_groups?.contribution_amount || 0);
+        totalAmountSavedGlobal += amt;
+        if (gid) {
+          paidByGroup[gid] = (paidByGroup[gid] || 0) + 1;
+          amountByGroup[gid] = (amountByGroup[gid] || 0) + amt;
+        }
+      }
+    }
+
+    const rawGroups: any[] = (membershipsRes?.data as any[])
       ?.map((m) => m.equb_groups)
       .filter(Boolean) ?? [];
 
+    const groups = rawGroups.map((g) => {
+      const gPaid = paidByGroup[g.id] ?? 0;
+      const gTotal = g.total_days || totalByGroup[g.id] || 30;
+      const gAmount = amountByGroup[g.id] ?? (gPaid * (g.contribution_amount || 0));
+      const gRemaining = Math.max(0, gTotal - gPaid);
+
+      return {
+        ...g,
+        paidCycles: gPaid,
+        totalCycles: gTotal,
+        amountSaved: gAmount,
+        daysRemaining: gRemaining,
+      };
+    });
+
     const primaryGroup = groups[0] || null;
-
-    let totalAmountSaved = 0;
-    if (paidContributionsRes?.data && paidContributionsRes.data.length > 0) {
-      for (const item of paidContributionsRes.data as any[]) {
-        const amt = Number(item.equb_groups?.contribution_amount || 0);
-        totalAmountSaved += amt;
-      }
-    } else if (primaryGroup?.contribution_amount) {
-      totalAmountSaved = paidCount * (primaryGroup.contribution_amount ?? 0);
-    }
-
-    const amountSaved = totalAmountSaved;
-    const daysRemaining = Math.max(0, (primaryGroup?.total_days ?? 0) - paidCount);
+    const primaryPaid = primaryGroup?.paidCycles ?? totalPaidGlobal;
+    const primaryRemaining = primaryGroup?.daysRemaining ?? 0;
+    const primaryAmount = primaryGroup?.amountSaved ?? totalAmountSavedGlobal;
 
     return {
-      amountSaved,
-      daysRemaining,
-      paidCycles: paidCount,
+      amountSaved: totalAmountSavedGlobal,
+      daysRemaining: primaryRemaining,
+      paidCycles: primaryPaid,
       totalCycles: totalCount,
       group: primaryGroup,
       groups,

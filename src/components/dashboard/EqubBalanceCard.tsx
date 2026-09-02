@@ -18,6 +18,9 @@ interface EqubBalanceCardProps {
       contribution_amount?: number;
       total_days?: number;
       frequency?: string;
+      paidCycles?: number;
+      amountSaved?: number;
+      daysRemaining?: number;
     } | null;
     groups?: Array<{
       id?: string;
@@ -25,6 +28,9 @@ interface EqubBalanceCardProps {
       contribution_amount?: number;
       total_days?: number;
       frequency?: string;
+      paidCycles?: number;
+      amountSaved?: number;
+      daysRemaining?: number;
     }>;
   };
   todayStr?: string;
@@ -61,19 +67,24 @@ export default function EqubBalanceCard({
   // Current selected group
   const currentGroup = hasActiveEqub ? (activeGroups[activeCardIndex] || activeGroups[0]) : null;
 
-  // Paid and Remaining Days calculations for current group
-  const paidCount = stats?.paidCycles ?? 0;
-  const remainingDays = hasActiveEqub 
-    ? (stats?.daysRemaining ?? Math.max(0, (currentGroup?.total_days || 0) - paidCount))
-    : 0;
+  // Paid and Remaining Days calculations for current group (per-group accurate)
+  const paidCount = typeof currentGroup?.paidCycles === "number"
+    ? currentGroup.paidCycles
+    : (stats?.paidCycles ?? 0);
+
+  const remainingDays = typeof currentGroup?.daysRemaining === "number"
+    ? currentGroup.daysRemaining
+    : (hasActiveEqub ? Math.max(0, (currentGroup?.total_days || 0) - paidCount) : 0);
 
   const paidDisplay = showBalance ? `${paidCount}` : "**";
   const remainingDisplay = showBalance ? `${remainingDays} ${t("days")}` : `** ${t("days")}`;
 
   // Calculate contribution amount for current active group
-  const currentAmount = currentGroup?.contribution_amount 
-    ? (stats?.paidCycles || 0) * (currentGroup.contribution_amount || 0)
-    : (stats?.amountSaved || 0);
+  const currentAmount = typeof currentGroup?.amountSaved === "number"
+    ? currentGroup.amountSaved
+    : (currentGroup?.contribution_amount 
+      ? paidCount * (currentGroup.contribution_amount || 0)
+      : (stats?.amountSaved || 0));
 
   const formattedAmount = currentAmount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
