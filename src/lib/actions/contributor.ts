@@ -289,88 +289,43 @@ export async function submitContributorPayment({
       return { success: false, error: "Invalid payment details. Please check all fields." };
     }
 
-    const cleanTxnRef = txnRef.trim().toUpperCase();
+    const cleanTxnRef = txnRef.trim();
     const cleanRawSms = rawSms.trim();
 
     // 1.4 STRICT DATABASE CHECK: MUST EXIST IN TELEBIRR_SMS TABLE
-    let telebirrMatch: any = null;
-    try {
-      // 1. First attempt: search via column filters
-      const { data: directMatch } = await supabase
-        .from("telebirr_sms")
-        .select("*")
-        .or(`transaction_id.ilike.%${cleanTxnRef}%,txn_id.ilike.%${cleanTxnRef}%,txn_ref.ilike.%${cleanTxnRef}%,message.ilike.%${cleanTxnRef}%,sms.ilike.%${cleanTxnRef}%`)
-        .limit(1)
-        .maybeSingle();
+    const { data: smsMatches, error: queryErr } = await supabase
+      .from("telebirr_sms")
+      .select("id, transaction_ref, message_text, received_at")
+      .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
+      .limit(1);
 
-      if (directMatch) {
-        telebirrMatch = directMatch;
-      } else {
-        // 2. Fallback: inspect recent records in telebirr_sms
-        const { data: recentRows } = await supabase
-          .from("telebirr_sms")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(150);
+    const telebirrMatch = smsMatches && smsMatches.length > 0 ? smsMatches[0] : null;
 
-        if (recentRows && recentRows.length > 0) {
-          telebirrMatch = recentRows.find((r: any) => {
-            const rawStr = JSON.stringify(r).toUpperCase();
-            return rawStr.includes(cleanTxnRef);
-          });
-        }
-      }
-    } catch (telebirrQueryErr) {
-      console.warn("telebirr_sms check warning:", telebirrQueryErr);
-    }
-
-    // STRICT BLOCK: If transaction ID does not exist in telebirr_sms, BLOCK IT!
     if (!telebirrMatch) {
       return {
         success: false,
-        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (telebirr_sms) ውስጥ አልተገኘም! እባክዎ ክፍያውን ለሰብሳቢው አካውንት በትክክል መላክዎን ያረጋግጡ። (Transaction ID "${cleanTxnRef}" was not found in the bank SMS database. Please ensure your transfer has been sent to the collector.)`,
+        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (telebirr_sms) ውስጥ አልተገኘም! እባክዎ ትክክለኛውን የዝውውር ቁጥር መጻፍዎን ወይም ክፍያው መድረሱን ያረጋግጡ። (Transaction ID "${cleanTxnRef}" was not found in the bank SMS database.)`,
       };
     }
 
-    // Check if already claimed / used
-    if (
-      telebirrMatch.is_used === true ||
-      telebirrMatch.status === "claimed" ||
-      telebirrMatch.status === "used" ||
-      telebirrMatch.claimed === true
-    ) {
-      return {
-        success: false,
-        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) ከዚህ በፊት በቴሌብር/ባንክ ኤስኤምኤስ ተረጋግጦ ጥቅም ላይ ውሏል! (This Transaction ID in telebirr_sms has already been claimed/used.)`,
-      };
-    }
+    const matchedRef = (telebirrMatch.transaction_ref || cleanTxnRef).trim();
 
-    // Check amount if present in row
-    const rowAmount = Number(telebirrMatch.amount || 0);
-    if (rowAmount > 0 && rowAmount < totalAmount) {
-      return {
-        success: false,
-        error: `በቴሌብር/ባንክ የተገኘው የኤስኤምኤስ መጠን (ETB ${rowAmount.toLocaleString()}) ከሚፈለገው መጠን (ETB ${totalAmount.toLocaleString()}) ያነሰ ነው። (Received SMS amount is less than required.)`,
-      };
-    }
-
-    // 1.5 CHECK IF TRANSACTION ID OR SMS RECEIPT ALREADY EXISTS IN PAYMENT_TRANSACTIONS
+    // 1.5 CHECK IF ALREADY CLAIMED IN CLAIMED_TRANSACTIONS TABLE
     try {
-      const { data: existingTxn } = await supabase
-        .from("payment_transactions")
-        .select("id, txn_ref, created_at")
-        .eq("txn_ref", cleanTxnRef)
-        .limit(1)
-        .maybeSingle();
+      const { data: claimedMatches } = await supabase
+        .from("claimed_transactions")
+        .select("transaction_ref, claimed_at")
+        .or(`transaction_ref.ilike.%${cleanTxnRef}%,transaction_ref.ilike.%${matchedRef}%`)
+        .limit(1);
 
-      if (existingTxn) {
+      if (claimedMatches && claimedMatches.length > 0) {
         return {
           success: false,
-          error: "ይህ የዝውውር ቁጥር (Txn ID) ከዚህ በፊት በሲስተሙ ውስጥ ተመዝግቧል! (This Transaction ID has already been used and recorded in the database.)",
+          error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) ከዚህ በፊት ጥቅም ላይ ውሏል! (This Transaction reference has already been claimed and used.)`,
         };
       }
-    } catch {
-      // Table might not exist yet; proceed
+    } catch (claimedErr) {
+      console.warn("claimed_transactions check warning:", claimedErr);
     }
 
     try {
@@ -502,19 +457,16 @@ export async function submitContributorPayment({
       console.warn("payment_transactions insert warning (falling back to notifications):", txnInsertErr);
     }
 
-    // 5.2 Mark telebirr_sms record as used/claimed
-    if (telebirrMatch?.id) {
-      try {
-        await supabase
-          .from("telebirr_sms")
-          .update({
-            is_used: true,
-            status: "claimed",
-          })
-          .eq("id", telebirrMatch.id);
-      } catch (updateErr) {
-        console.warn("telebirr_sms update note:", updateErr);
-      }
+    // 5.2 Record in claimed_transactions table so it cannot be claimed again
+    try {
+      await supabase.from("claimed_transactions").insert({
+        transaction_ref: matchedRef,
+        profile_id: contributorId,
+        group_id: groupId,
+        claimed_at: nowIso,
+      });
+    } catch (claimInsertErr) {
+      console.warn("claimed_transactions insert note:", claimInsertErr);
     }
 
     // 5.5 Send in-app notification to collector
