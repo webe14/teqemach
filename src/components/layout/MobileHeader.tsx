@@ -1,6 +1,6 @@
 "use client";
 
-import { Coins } from "lucide-react";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -18,21 +18,10 @@ export function MobileHeader({ role, pageName, userId }: MobileHeaderProps) {
   // Hide mobile header for contributor view to allow native mini app full-screen header
   if (role === "contributor") return null;
 
-  const roleGradients = {
-
-    admin: "from-violet-600 to-indigo-600",
-    collector: "from-indigo-600 to-blue-600",
-    contributor: "from-blue-600 to-cyan-600",
-  };
-
   return (
-    <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-card/80  px-4">
+    <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4">
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div
-          className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${roleGradients[role]} shrink-0`}
-        >
-          <Coins className="h-3.5 w-3.5 text-white" />
-        </div>
+        <AppLogo size="sm" rounded="lg" />
         <div className="min-w-0">
           <p className="text-sm font-bold text-foreground truncate">
             {pageName ?? t("appName")}

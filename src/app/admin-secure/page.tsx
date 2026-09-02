@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { ShieldCheck, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function AdminLoginPage() {
@@ -56,10 +57,10 @@ export default function AdminLoginPage() {
         {/* Shield badge */}
         <div className="flex justify-center mb-8">
           <div className="relative">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-2xl shadow-violet-600/30 pulse-glow">
-              <ShieldCheck className="h-10 w-10 text-white" />
+            <AppLogo size="2xl" rounded="3xl" className="shadow-2xl border-2 border-violet-500/30 pulse-glow" priority />
+            <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 border-2 border-background shadow-lg">
+              <ShieldCheck className="h-4 w-4 text-white" />
             </div>
-            <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-background" />
           </div>
         </div>
 

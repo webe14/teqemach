@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { EditProfileModal } from "./EditProfileModal";
 import { signOut } from "@/lib/actions/auth";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 interface MobileBottomNavProps {
   role: "admin" | "collector" | "contributor";
@@ -135,7 +136,10 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
           <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 ">
             <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-5" />
             <SheetHeader className="text-left px-2">
-              <SheetTitle className="text-xl text-white">Menu</SheetTitle>
+              <div className="flex items-center gap-3 mb-1">
+                <AppLogo size="sm" rounded="lg" />
+                <SheetTitle className="text-xl text-white">Menu</SheetTitle>
+              </div>
               {userName && (
                 <p className="text-xs text-slate-400">Signed in as <span className="font-semibold text-white">{userName}</span></p>
               )}

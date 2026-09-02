@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Coins, ShieldCheck, Users, TrendingUp, ChevronRight, Compass, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
 import { getCollectors } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 export default function GuestPage() {
   const [featuredCollectors, setFeaturedCollectors] = useState<{id: string, full_name: string | null}[]>([]);
@@ -36,10 +37,8 @@ export default function GuestPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80  border-b border-border">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Coins className="h-5 w-5 text-primary-foreground" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <AppLogo size="sm" rounded="lg" />
             <span className="font-bold text-xl tracking-tight">Teqemach</span>
           </div>
           <div className="flex items-center gap-4">

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Eye, EyeOff, ShieldCheck, Coins } from "lucide-react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
+import Image from "next/image";
+
 interface EqubBalanceCardProps {
   stats: {
     amountSaved?: number;
@@ -112,8 +114,8 @@ export default function EqubBalanceCard({
           <div className="flex items-center gap-3">
             {/* Golden Teqemach Circular Coin Emblem */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-600 via-amber-400 to-yellow-200 p-[1.5px] shadow-lg shadow-amber-900/40 shrink-0">
-              <div className="w-full h-full rounded-full bg-[#0d1422] flex items-center justify-center border border-amber-300/30">
-                <Coins className="w-5 h-5 text-amber-300" />
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                <Image src="/logo.png" alt="Teqemach Logo" width={32} height={32} className="w-7 h-7 object-contain" />
               </div>
             </div>
 

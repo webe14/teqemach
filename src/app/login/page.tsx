@@ -31,6 +31,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AppLogo } from "@/components/ui/AppLogo";
 import {
   signIn,
   getCurrentProfile,
@@ -636,9 +637,7 @@ export default function LoginPage() {
 
             {/* Brand Logo & Name */}
             <div className="flex flex-col items-center justify-center space-y-2 mb-6">
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
-                <Coins className="h-9 w-9 text-white" />
-              </div>
+              <AppLogo size="xl" rounded="2xl" className="shadow-xl border-slate-200" priority />
               <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
                 ተቀማጭ <span className="text-sm font-medium text-muted-foreground">(Teqemach)</span>
               </h1>

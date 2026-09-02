@@ -14,6 +14,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://teqemach.com"),
   title: "Teqemach",
   description:
     "A modern, enterprise-grade platform for managing Ethiopian traditional Equb (Teqemach) savings groups. Track contributions, manage collectors, and disburse funds securely.",
@@ -23,6 +24,12 @@ export const metadata: Metadata = {
     title: "Teqemach — Ethiopian Equb Management",
     description: "Manage Ethiopian traditional Equb savings groups digitally.",
     type: "website",
+    images: ["/logo.png"],
+  },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png",
   },
 };
 

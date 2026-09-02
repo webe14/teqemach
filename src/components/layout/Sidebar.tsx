@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   Home,
 } from "lucide-react";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 interface SidebarProps {
   role: "admin" | "collector" | "contributor";
@@ -61,14 +62,7 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse, isAdmin }
         )}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={cn(
-              "flex items-center justify-center rounded-xl bg-gradient-to-br h-9 w-9 shrink-0 shadow-md transition-all duration-300 group-hover:scale-105",
-              roleColors[role]
-            )}
-          >
-            <Coins className="h-5 w-5 text-white" />
-          </div>
+          <AppLogo size="md" rounded="xl" className="shadow-md" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm text-foreground tracking-tight truncate">
