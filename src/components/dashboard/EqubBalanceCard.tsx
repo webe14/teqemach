@@ -40,7 +40,7 @@ export default function EqubBalanceCard({
   userId = "usr_8657",
 }: EqubBalanceCardProps) {
   const { t } = useLocale();
-  const [showBalance, setShowBalance] = useState<boolean>(true);
+  const [showBalance, setShowBalance] = useState<boolean>(false);
   const [activeCardIndex, setActiveCardIndex] = useState<number>(0);
 
   // Determine active groups
@@ -110,11 +110,9 @@ export default function EqubBalanceCard({
         {/* ─── CARD HEADER: LOGO & APP TITLE ─────────────────────────────── */}
         <div className="relative z-10 flex items-start justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            {/* Teqemach Circular Coin Emblem with Logo */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 via-blue-500 to-indigo-300 p-[1.5px] shadow-lg shadow-blue-900/50 shrink-0">
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                <Image src="/logo.png" alt="Teqemach Logo" width={32} height={32} className="w-7 h-7 object-contain" />
-              </div>
+            {/* Teqemach Circular Emblem with Official Logo */}
+            <div className="w-10 h-10 rounded-full bg-white p-1 shadow-lg shadow-blue-900/40 border border-blue-300/40 flex items-center justify-center overflow-hidden shrink-0">
+              <Image src="/logo.png" alt="Teqemach Logo" width={36} height={36} className="w-full h-full object-contain" />
             </div>
 
             <div>

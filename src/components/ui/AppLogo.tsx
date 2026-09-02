@@ -52,7 +52,7 @@ export function AppLogo({
   return (
     <div
       className={cn(
-        "relative shrink-0 overflow-hidden flex items-center justify-center bg-white shadow-sm border border-white/20",
+        "relative shrink-0 overflow-hidden flex items-center justify-center bg-white shadow-sm border border-slate-200/40",
         pixelClasses[size],
         roundedClasses[rounded],
         className
@@ -63,7 +63,7 @@ export function AppLogo({
         alt={alt}
         width={dimension * 2}
         height={dimension * 2}
-        className="w-full h-full object-contain p-1"
+        className="w-full h-full object-contain p-0.5"
         priority={priority}
       />
     </div>
