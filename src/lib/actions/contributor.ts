@@ -367,7 +367,7 @@ export async function submitContributorPayment({
         .single(),
       supabase
         .from("profiles")
-        .select("id, full_name, phone_number, email")
+        .select("id, full_name, phone_number, email, telegram_id")
         .eq("id", contributorId)
         .single(),
     ]);
@@ -489,18 +489,49 @@ export async function submitContributorPayment({
       console.warn("Notification insert warning:", notifErr);
     }
 
-    // 6. If contributor has a registered phone, queue payment confirmation SMS
-    if (contributor?.phone_number) {
+    // 6. Find contributor phone number (from profile, linked profiles, or telegram_users)
+    let contributorPhone = contributor?.phone_number;
+    if (!contributorPhone && contributor?.telegram_id) {
+      try {
+        const { data: tgUser } = await supabase
+          .from("telegram_users")
+          .select("phone_number")
+          .eq("telegram_id", contributor.telegram_id)
+          .maybeSingle();
+        if (tgUser?.phone_number) contributorPhone = tgUser.phone_number;
+      } catch {}
+    }
+
+    if (!contributorPhone && contributor?.telegram_id) {
+      try {
+        const { data: linkedProf } = await supabase
+          .from("profiles")
+          .select("phone_number")
+          .eq("telegram_id", contributor.telegram_id)
+          .not("phone_number", "is", null)
+          .limit(1)
+          .maybeSingle();
+        if (linkedProf?.phone_number) contributorPhone = linkedProf.phone_number;
+      } catch {}
+    }
+
+    if (contributorPhone) {
       try {
         const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
         const { buildPaymentConfirmationSms, formatEthiopianPhone } = await import("@/lib/sms-otp");
         const ethDate = gregorianToEthiopianString(new Date(), "am");
-        const datesStr = cyclesToPay.length > 0
-          ? cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ")
-          : `${cyclesToPay.length} ቀናት`;
+        
+        let datesStr = `${cyclesToPay.length} ቀናት`;
+        if (cyclesToPay.length === 1) {
+          datesStr = `ቀን ${cyclesToPay[0]}`;
+        } else if (cyclesToPay.length <= 4) {
+          datesStr = cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ");
+        } else {
+          datesStr = `ቀን ${cyclesToPay[0]} - ${cyclesToPay[cyclesToPay.length - 1]} (${cyclesToPay.length} ቀናት)`;
+        }
 
         const smsMsg = buildPaymentConfirmationSms({
-          contributorName: contributor.full_name || "ውድ ደንበኛ",
+          contributorName: contributor?.full_name || "ውድ ደንበኛ",
           totalAmount: totalAmount,
           ratePerCycle: rate,
           groupName: group.name,
@@ -510,7 +541,12 @@ export async function submitContributorPayment({
           collectorName: group.collector?.full_name || "webshet worku",
         });
 
-        const formattedPhone = formatEthiopianPhone(contributor.phone_number) || contributor.phone_number;
+        const digits = contributorPhone.replace(/\D/g, "");
+        const formattedPhone = digits.startsWith("251")
+          ? `+${digits}`
+          : digits.startsWith("0")
+          ? `+251${digits.slice(1)}`
+          : `+251${digits}`;
         
         await supabase.from("sms_jobs").insert({
           type: "payment_confirmation",
