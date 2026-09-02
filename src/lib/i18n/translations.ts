@@ -270,6 +270,13 @@ export const translations = {
     everyWeek: "Every Week",
     everyMonth: "Every Month",
     custom: "Custom",
+    totalContribution: "Total Contribution",
+    noActiveEqub: "No Active Equb",
+    noActiveEqubDesc: "You don't have an active equb. Join above to start!",
+    equbSlogan: "The equb you can always rely on!",
+    equbAc: "Equb Ac",
+    balance: "Balance",
+    etb: "ETB",
   },
 
   am: {
@@ -541,6 +548,13 @@ export const translations = {
     everyWeek: "በየሳምንቱ",
     everyMonth: "በየወሩ",
     custom: "ብጁ",
+    totalContribution: "ጠቅላላ መዋጮ",
+    noActiveEqub: "ምንም ንቁ ዕቁብ የለም",
+    noActiveEqubDesc: "ንቁ ዕቁብ የለዎትም። ለመጀመር ከላይ ካሉት ይምረጡ!",
+    equbSlogan: "የሚተማመኑበት አስተማማኝ የዕቁብ ቁጠባ!",
+    equbAc: "የዕቁብ መለያ",
+    balance: "ቀሪ ሂሳብ",
+    etb: "ብር",
   },
 } as const;
 

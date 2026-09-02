@@ -25,6 +25,7 @@ import {
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import EqubBalanceCard from "@/components/dashboard/EqubBalanceCard";
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 
@@ -214,6 +215,15 @@ export default function ContributorDashboardClient({
 
           </div>
         </div>
+
+        {/* ─── 4. CBE-INSPIRED BLACK TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
+        <EqubBalanceCard 
+          stats={stats}
+          todayStr={todayStr}
+          nextCycleStr={nextCycleStr}
+          userName={userName}
+          userId={userId}
+        />
 
       </div>
     </div>

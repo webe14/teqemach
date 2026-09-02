@@ -6,7 +6,7 @@ export async function getContributorStats(contributorId: string) {
   try {
     const supabase = await createAdminClient();
 
-    const [paidRes, totalRes, membershipsRes] = await Promise.all([
+    const [paidRes, totalRes, membershipsRes, paidContributionsRes] = await Promise.all([
       supabase
         .from("contributions")
         .select("id", { count: "exact" })
@@ -34,6 +34,11 @@ export async function getContributorStats(contributorId: string) {
           )
         `)
         .eq("contributor_id", contributorId),
+      supabase
+        .from("contributions")
+        .select("id, group_id, equb_groups:group_id(contribution_amount)")
+        .eq("contributor_id", contributorId)
+        .eq("is_marked_paid", true),
     ]);
 
     const paidCount = paidRes?.count ?? 0;
@@ -45,7 +50,17 @@ export async function getContributorStats(contributorId: string) {
 
     const primaryGroup = groups[0] || null;
 
-    const amountSaved = paidCount * (primaryGroup?.contribution_amount ?? 0);
+    let totalAmountSaved = 0;
+    if (paidContributionsRes?.data && paidContributionsRes.data.length > 0) {
+      for (const item of paidContributionsRes.data as any[]) {
+        const amt = Number(item.equb_groups?.contribution_amount || 0);
+        totalAmountSaved += amt;
+      }
+    } else if (primaryGroup?.contribution_amount) {
+      totalAmountSaved = paidCount * (primaryGroup.contribution_amount ?? 0);
+    }
+
+    const amountSaved = totalAmountSaved;
     const daysRemaining = Math.max(0, (primaryGroup?.total_days ?? 0) - paidCount);
 
     return {
