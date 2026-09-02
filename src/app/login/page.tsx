@@ -81,7 +81,7 @@ type Step =
 export default function LoginPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>("init");
+  const [step, setStep] = useState<Step>("contributor_login");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
 
@@ -644,7 +644,7 @@ export default function LoginPage() {
             </div>
 
             {/* Segmented Tab Pill Toggle (Login / Register) */}
-            <div className="bg-muted/80 p-1.5 rounded-2xl flex border border-border/60 shadow-inner">
+            <div className="bg-slate-100 p-1.5 rounded-2xl flex border border-slate-200 shadow-inner">
               <button
                 type="button"
                 onClick={() => {
@@ -653,8 +653,8 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "login"
-                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
-                    : "text-muted-foreground hover:text-foreground font-medium"
+                    ? "bg-primary text-white font-bold shadow-md shadow-primary/20"
+                    : "text-slate-600 hover:text-slate-900 font-semibold"
                 }`}
               >
                 Login
@@ -668,8 +668,8 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "register"
-                    ? "bg-card text-foreground font-bold shadow-md border border-border/40"
-                    : "text-muted-foreground hover:text-foreground font-medium"
+                    ? "bg-primary text-white font-bold shadow-md shadow-primary/20"
+                    : "text-slate-600 hover:text-slate-900 font-semibold"
                 }`}
               >
                 Register
@@ -688,11 +688,11 @@ export default function LoginPage() {
               <form onSubmit={handlePhonePasswordLogin} className="space-y-4 animate-fadeIn">
                 {/* Phone Number Field */}
                 <div className="space-y-1.5 text-left">
-                  <Label htmlFor="phone-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Label htmlFor="phone-input" className="text-xs font-bold text-slate-900">
                     Phone Number
                   </Label>
-                  <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
-                    <span className="pl-3.5 pr-2 text-sm font-bold text-slate-800 dark:text-slate-200 select-none border-r border-border/60">
+                  <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                    <span className="pl-3.5 pr-2 text-sm font-bold text-slate-900 select-none border-r border-slate-200">
                       +251
                     </span>
                     <Input
@@ -701,7 +701,7 @@ export default function LoginPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Enter your phone number"
-                      className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                      className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
                     />
                     <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
@@ -709,22 +709,22 @@ export default function LoginPage() {
 
                 {/* Password Field */}
                 <div className="space-y-1.5 text-left">
-                  <Label htmlFor="pass-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Label htmlFor="pass-input" className="text-xs font-bold text-slate-900">
                     Password
                   </Label>
-                  <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                  <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
                     <Input
                       id="pass-input"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                      className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-slate-400 hover:text-foreground"
+                      className="absolute right-3.5 text-slate-400 hover:text-slate-900"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -733,7 +733,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setErrorMsg("Please contact your Equb collector to reset your password.")}
-                      className="text-xs font-bold text-emerald-500 hover:underline"
+                      className="text-xs font-bold text-emerald-600 hover:underline"
                     >
                       Forgot Password?
                     </button>
@@ -798,7 +798,7 @@ export default function LoginPage() {
                           setAuthTab("login");
                           setErrorMsg(null);
                         }}
-                        className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-foreground transition-colors"
+                        className="inline-flex items-center text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4 mr-0.5" />
                         Back
@@ -807,11 +807,11 @@ export default function LoginPage() {
 
                     {/* Phone Number Field */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-phone-input" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Label htmlFor="reg-phone-input" className="text-xs font-bold text-slate-900">
                         Phone Number
                       </Label>
-                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
-                        <span className="pl-3.5 pr-2 text-sm font-bold text-slate-800 dark:text-slate-200 select-none border-r border-border/60">
+                      <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                        <span className="pl-3.5 pr-2 text-sm font-bold text-slate-900 select-none border-r border-slate-200">
                           +251
                         </span>
                         <Input
@@ -820,7 +820,7 @@ export default function LoginPage() {
                           value={regPhone}
                           onChange={(e) => setRegPhone(e.target.value)}
                           placeholder="Enter your phone number"
-                          className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                          className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
                         />
                         <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
@@ -840,7 +840,7 @@ export default function LoginPage() {
                     </Button>
 
                     {/* Footer login prompt */}
-                    <div className="text-center pt-2 text-xs text-muted-foreground font-medium">
+                    <div className="text-center pt-2 text-xs text-slate-600 font-medium">
                       Already have an account?{" "}
                       <button
                         type="button"
@@ -848,7 +848,7 @@ export default function LoginPage() {
                           setAuthTab("login");
                           setErrorMsg(null);
                         }}
-                        className="text-emerald-500 font-bold hover:underline"
+                        className="text-emerald-600 font-bold hover:underline"
                       >
                         Login
                       </button>
@@ -859,9 +859,9 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowHowToUse(true)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-900 dark:text-blue-300 hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current text-brand-900 dark:text-blue-300" />
+                        <Play className="w-3.5 h-3.5 fill-current text-primary" />
                         How to Use
                       </button>
                     </div>
@@ -878,7 +878,7 @@ export default function LoginPage() {
                           setRegStep("phone");
                           setErrorMsg(null);
                         }}
-                        className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-foreground transition-colors"
+                        className="inline-flex items-center text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4 mr-0.5" />
                         Back
@@ -886,14 +886,14 @@ export default function LoginPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-foreground">Verification Code</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Enter the 6-digit code sent to <span className="font-bold text-foreground">+251 {regPhone}</span>
+                      <h3 className="text-base font-bold text-slate-900">Verification Code</h3>
+                      <p className="text-xs text-slate-600">
+                        Enter the 6-digit code sent to <span className="font-bold text-slate-900">+251 {regPhone}</span>
                       </p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                      <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
                         <Input
                           id="reg-otp-input"
                           type="text"
@@ -901,15 +901,15 @@ export default function LoginPage() {
                           value={regOtp}
                           onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ""))}
                           placeholder="6-digit code"
-                          className="px-4 h-12 text-center text-lg tracking-[0.3em] font-bold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none text-foreground placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-400"
+                          className="px-4 h-12 text-center text-lg tracking-[0.3em] font-bold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none text-slate-900 placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-400"
                         />
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-muted-foreground">Didn&apos;t receive code?</span>
+                      <span className="text-slate-600">Didn&apos;t receive code?</span>
                       {resendTimer > 0 ? (
-                        <span className="font-semibold text-muted-foreground">Resend in {resendTimer}s</span>
+                        <span className="font-semibold text-slate-600">Resend in {resendTimer}s</span>
                       ) : (
                         <button
                           type="button"
@@ -941,43 +941,43 @@ export default function LoginPage() {
                 {regStep === "profile" && (
                   <form onSubmit={handleCompleteRegistration} className="space-y-4">
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-foreground">Create Your Account</h3>
+                      <h3 className="text-base font-bold text-slate-900">Create Your Account</h3>
                       <p className="text-xs text-emerald-600 font-medium">✓ Phone +251 {regPhone} verified</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-name" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Label htmlFor="reg-name" className="text-xs font-bold text-slate-900">
                         Full Name
                       </Label>
-                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                      <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
                         <Input
                           id="reg-name"
                           type="text"
                           value={regFullName}
                           onChange={(e) => setRegFullName(e.target.value)}
                           placeholder="Enter your full name"
-                          className="px-4 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                          className="px-4 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-pass" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Label htmlFor="reg-pass" className="text-xs font-bold text-slate-900">
                         Password
                       </Label>
-                      <div className="relative flex items-center bg-white dark:bg-card border border-border/80 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
+                      <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary overflow-hidden">
                         <Input
                           id="reg-pass"
                           type={regShowPassword ? "text" : "password"}
                           value={regPassword}
                           onChange={(e) => setRegPassword(e.target.value)}
                           placeholder="Create a password (min 6 chars)"
-                          className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-medium text-foreground placeholder:text-slate-400"
+                          className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
                         />
                         <button
                           type="button"
                           onClick={() => setRegShowPassword(!regShowPassword)}
-                          className="absolute right-3.5 text-slate-400 hover:text-foreground"
+                          className="absolute right-3.5 text-slate-400 hover:text-slate-900"
                         >
                           {regShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
