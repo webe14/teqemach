@@ -159,7 +159,7 @@ def send_telegram_message(chat_id: int | str, text: str, reply_markup: Optional[
         print(f"[Telegram Send Error] {e}")
         return False
 
-def open_mini_app_keyboard(button_text: str = "ተቀማጭ ይክፈቱ (Open Teqemach)") -> Dict:
+def open_mini_app_keyboard(button_text: str = "ውብ ዲጂታል እቁብ ይክፈቱ (Open Wub Digital Equb)") -> Dict:
     return {
         "inline_keyboard": [
             [
@@ -222,7 +222,7 @@ def handle_start(chat_id: int, from_user: Dict, args: list):
 
         success_text = (
             "✅ <b>መለያዎ በተሳካ ሁኔታ ተገናኝቷል! (Account Linked)</b>\n\n"
-            "እንኳን ወደ <b>ተቀማጭ (Teqemach)</b> በደህና መጡ 👋\n"
+            "እንኳን ወደ <b>ውብ ዲጂታል እቁብ (Wub Digital Equb)</b> በደህና መጡ 👋\n"
             "የዕቁብ ተቀማጭዎን እና ክፍያዎችዎን ለመከታተል ከታች ያለውን ቁልፍ ይጫኑ!"
         )
         send_telegram_message(chat_id, success_text, reply_markup=open_mini_app_keyboard())
@@ -239,7 +239,7 @@ def handle_start(chat_id: int, from_user: Dict, args: list):
 
     # Default Welcome Message
     welcome_text = (
-        "👋 <b>እንኳን ወደ ተቀማጭ (Teqemach) Bot በደህና መጡ!</b>\n\n"
+        "👋 <b>እንኳን ወደ ውብ ዲጂታል እቁብ (Wub Digital Equb) Bot በደህና መጡ!</b>\n\n"
         "ይህ የዘመናዊ ዕቁብ መከታተያ እና የክፍያ ማረጋገጫ Bot ነው።\n\n"
         "🔹 የዕቁብ ተቀማጭዎን ይመልከቱ\n"
         "🔹 የተረጋገጡ የክፍያ ደረሰኞችን ይቀበሉ (Verified Receipts)\n"

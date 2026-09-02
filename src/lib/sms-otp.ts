@@ -36,6 +36,46 @@ export function toLocalEthiopianPhone(rawInput: string): string {
   return rawInput;
 }
 
+export interface PaymentSmsDetails {
+  contributorName: string;
+  totalAmount: number;
+  ratePerCycle?: number;
+  groupName?: string;
+  ethiopianDateStr: string;
+  selectedDatesStr?: string;
+  daysCount: number;
+  collectorName?: string;
+}
+
+export function buildPaymentConfirmationSms({
+  contributorName,
+  totalAmount,
+  ratePerCycle,
+  groupName,
+  ethiopianDateStr,
+  selectedDatesStr,
+  daysCount,
+  collectorName,
+}: PaymentSmsDetails): string {
+  const typeText = ratePerCycle ? `ባለ ${ratePerCycle}` : (groupName || "እቁብ");
+  const datesText = selectedDatesStr || `ቀን ${daysCount > 1 ? `1 - ${daysCount}` : "1"}`;
+  const collector = collectorName || "ሰብሳቢዎ";
+
+  return `ሰላም ${contributorName || "ውድ ደንበኛ"},
+
+የተቀማጭ ክፍያዎ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል (Payment Verified & Recorded)
+
+🔹 የተከፈለው ብር መጠን: ETB ${totalAmount.toLocaleString()}
+🔹 የተቀማጩ አይነት: ${typeText}
+🔹 የተመዘገበበት ቀን: ${ethiopianDateStr}
+🔹 የተመረጡ ቀናት: ${datesText}
+🔹 የቀናት ብዛት: ${daysCount}
+🔹 ተቀማጭ ሰብሳቢዎ: ${collector}
+🔹 የክፍያ ሁኔታ: ✅ ተረጋግጧል (Verified)
+
+በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
+}
+
 export function cleanSmsText(text: string): string {
   if (!text) return "";
   const amharicReplacements: [RegExp, string][] = [

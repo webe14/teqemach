@@ -493,12 +493,28 @@ export async function submitContributorPayment({
     if (contributor?.phone_number) {
       try {
         const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
-        const ethDate = gregorianToEthiopianString(new Date(), "en");
-        const smsMsg = `Dear ${contributor.full_name || "Contributor"}, your payment of ETB ${totalAmount.toLocaleString()} (${cyclesToPay.length} days) for ${group.name} is confirmed. Ref: ${cleanTxnRef}. Date: ${ethDate}. Wub Digital Equb`;
+        const { buildPaymentConfirmationSms, formatEthiopianPhone } = await import("@/lib/sms-otp");
+        const ethDate = gregorianToEthiopianString(new Date(), "am");
+        const datesStr = cyclesToPay.length > 0
+          ? cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ")
+          : `${cyclesToPay.length} ቀናት`;
+
+        const smsMsg = buildPaymentConfirmationSms({
+          contributorName: contributor.full_name || "ውድ ደንበኛ",
+          totalAmount: totalAmount,
+          ratePerCycle: rate,
+          groupName: group.name,
+          ethiopianDateStr: ethDate,
+          selectedDatesStr: datesStr,
+          daysCount: cyclesToPay.length,
+          collectorName: group.collector?.full_name || "webshet worku",
+        });
+
+        const formattedPhone = formatEthiopianPhone(contributor.phone_number) || contributor.phone_number;
         
         await supabase.from("sms_jobs").insert({
           type: "payment_confirmation",
-          recipient: contributor.phone_number,
+          recipient: formattedPhone,
           message: smsMsg,
           status: "pending",
           attempts: 0,

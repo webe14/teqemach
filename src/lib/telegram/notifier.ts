@@ -24,7 +24,7 @@ export class TelegramNotifier {
 🔹 <b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
 🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
-በዚህ ዘመናዊ የተቀማጭ Bot ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
+በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
 
     await telegramBot.sendMessage(chatId, text);
   }

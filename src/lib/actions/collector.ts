@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
 import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
-import { formatEthiopianPhone, toLocalEthiopianPhone, cleanSmsText } from "@/lib/sms-otp";
+import { formatEthiopianPhone, toLocalEthiopianPhone, cleanSmsText, buildPaymentConfirmationSms } from "@/lib/sms-otp";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -290,14 +290,21 @@ export async function markCyclePaid(
       
       if (group && collector) {
         const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-        const contribDateSms = gregorianToEthiopianString(new Date(now), "en");
-        const selDates = cycleDateText || "N/A";
+        const selDates = cycleDateText || "ቀን 1";
 
-        // 1. Queue SMS text message to contributor phone SIM card (Pure ASCII GSM 7-bit standard for SIM delivery)
+        // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
         if (details?.phone_number) {
           const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-          const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment of ETB ${group.contribution_amount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Wub Digital Equb`;
-          const smsText = cleanSmsText(rawSmsText);
+          const smsText = buildPaymentConfirmationSms({
+            contributorName: details.full_name || "ውድ ደንበኛ",
+            totalAmount: group.contribution_amount,
+            ratePerCycle: group.contribution_amount,
+            groupName: group.name,
+            ethiopianDateStr: contribDateTg,
+            selectedDatesStr: selDates,
+            daysCount: 1,
+            collectorName: collector.full_name || "ሰብሳቢዎ",
+          });
           
           try {
             await supabase.from("sms_jobs").insert({
@@ -402,14 +409,21 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
         if (group && collector) {
           const totalAmount = group.contribution_amount * contributorContributions.length;
           const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-          const contribDateSms = gregorianToEthiopianString(new Date(now), "en");
-          const selDates = cycleDateText || "N/A";
+          const selDates = cycleDateText || `${contributorContributions.length} ቀናት`;
 
-          // 1. Queue SMS text message to contributor phone SIM card (Pure ASCII GSM 7-bit standard for SIM delivery)
+          // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
           if (details?.phone_number) {
             const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-            const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment (${contributorContributions.length} cycles) of ETB ${totalAmount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Wub Digital Equb`;
-            const smsText = cleanSmsText(rawSmsText);
+            const smsText = buildPaymentConfirmationSms({
+              contributorName: details.full_name || "ውድ ደንበኛ",
+              totalAmount: totalAmount,
+              ratePerCycle: group.contribution_amount,
+              groupName: group.name,
+              ethiopianDateStr: contribDateTg,
+              selectedDatesStr: selDates,
+              daysCount: contributorContributions.length,
+              collectorName: collector.full_name || "ሰብሳቢዎ",
+            });
             
             try {
               await supabase.from("sms_jobs").insert({
