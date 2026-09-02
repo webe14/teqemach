@@ -12,6 +12,24 @@ export async function requestRegistrationOtpAction(phone: string, email?: string
   return await sendRegistrationOtp({ phone, email });
 }
 
+export async function checkPhoneRegisteredAction(phone: string) {
+  const formattedPhone = formatEthiopianPhone(phone);
+  if (!formattedPhone) {
+    return { error: "Please enter a valid Ethiopian phone number." };
+  }
+
+  const adminClient = await createAdminClient();
+  const phoneVariants = getPhoneVariants(phone);
+  const conditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
+  const { data: existing } = await adminClient
+    .from("profiles")
+    .select("id, role")
+    .or(conditions)
+    .maybeSingle();
+
+  return { exists: !!existing, profile: existing || null };
+}
+
 export async function verifyRegistrationOtpAction(phone: string, code: string) {
   return await verifyRegistrationOtp({ phone, code });
 }
@@ -20,11 +38,13 @@ export async function registerWithPhoneOtpAction({
   phone,
   fullName,
   password,
+  email,
   role = "contributor",
 }: {
   phone: string;
   fullName: string;
   password: string;
+  email?: string;
   role?: "collector" | "contributor";
 }) {
   const formattedPhone = formatEthiopianPhone(phone);
@@ -55,15 +75,28 @@ export async function registerWithPhoneOtpAction({
     return { error: "An account with this phone number already exists. Please log in." };
   }
 
+  let userEmail = `${formattedPhone.replace(/\D/g, "")}@teqemach.et`;
+  if (email && email.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+    const { data: existingEmail } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("email", cleanEmail)
+      .maybeSingle();
+    if (existingEmail) {
+      return { error: "An account with this email address already exists." };
+    }
+    userEmail = cleanEmail;
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10);
-  const syntheticEmail = `${formattedPhone.replace(/\D/g, "")}@teqemach.et`;
 
   // Create profile
   const { data: newProfile, error: insertError } = await adminClient
     .from("profiles")
     .insert({
       full_name: fullName.trim(),
-      email: syntheticEmail,
+      email: userEmail,
       phone_number: formattedPhone,
       password: hashedPassword,
       role: role,
@@ -80,7 +113,7 @@ export async function registerWithPhoneOtpAction({
   await createCustomSession({
     userId: newProfile.id,
     role: newProfile.role as "admin" | "collector" | "contributor",
-    email: syntheticEmail,
+    email: userEmail,
   });
 
   return { success: true, profile: newProfile };
