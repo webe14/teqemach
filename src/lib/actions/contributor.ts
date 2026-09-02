@@ -292,45 +292,69 @@ export async function submitContributorPayment({
     const cleanTxnRef = txnRef.trim().toUpperCase();
     const cleanRawSms = rawSms.trim();
 
-    // 1.4 CHECK EXISTING TELEBIRR_SMS TABLE (FROM ANDROID SMS FORWARDER)
-    let telebirrRecordId: any = null;
+    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN TELEBIRR_SMS TABLE
+    let telebirrMatch: any = null;
     try {
-      const { data: telebirrMatch } = await supabase
+      // 1. First attempt: search via column filters
+      const { data: directMatch } = await supabase
         .from("telebirr_sms")
         .select("*")
-        .or(`transaction_id.eq.${cleanTxnRef},txn_id.eq.${cleanTxnRef},txn_ref.eq.${cleanTxnRef},message.ilike.%${cleanTxnRef}%,sms.ilike.%${cleanTxnRef}%`)
+        .or(`transaction_id.ilike.%${cleanTxnRef}%,txn_id.ilike.%${cleanTxnRef}%,txn_ref.ilike.%${cleanTxnRef}%,message.ilike.%${cleanTxnRef}%,sms.ilike.%${cleanTxnRef}%`)
         .limit(1)
         .maybeSingle();
 
-      if (telebirrMatch) {
-        telebirrRecordId = telebirrMatch.id;
+      if (directMatch) {
+        telebirrMatch = directMatch;
+      } else {
+        // 2. Fallback: inspect recent records in telebirr_sms
+        const { data: recentRows } = await supabase
+          .from("telebirr_sms")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(150);
 
-        // Check if already claimed / used
-        if (
-          telebirrMatch.is_used === true ||
-          telebirrMatch.status === "claimed" ||
-          telebirrMatch.status === "used" ||
-          telebirrMatch.claimed === true
-        ) {
-          return {
-            success: false,
-            error: "ይህ የዝውውር ቁጥር (Txn ID) ከዚህ በፊት በቴሌብር/ባንክ ኤስኤምኤስ ተረጋግጦ ጥቅም ላይ ውሏል! (This Transaction ID in telebirr_sms has already been claimed/used.)",
-          };
-        }
-
-        // Check amount if present in row
-        if (telebirrMatch.amount && Number(telebirrMatch.amount) < totalAmount) {
-          return {
-            success: false,
-            error: `በቴሌብር/ባንክ የተገኘው የኤስኤምኤስ መጠን (ETB ${Number(telebirrMatch.amount).toLocaleString()}) ከሚፈለገው መጠን (ETB ${totalAmount.toLocaleString()}) ያነሰ ነው። (Received SMS amount is less than required.)`,
-          };
+        if (recentRows && recentRows.length > 0) {
+          telebirrMatch = recentRows.find((r: any) => {
+            const rawStr = JSON.stringify(r).toUpperCase();
+            return rawStr.includes(cleanTxnRef);
+          });
         }
       }
     } catch (telebirrQueryErr) {
       console.warn("telebirr_sms check warning:", telebirrQueryErr);
     }
 
-    // 1.5 CHECK IF TRANSACTION ID OR SMS RECEIPT ALREADY EXISTS IN DATABASE
+    // STRICT BLOCK: If transaction ID does not exist in telebirr_sms, BLOCK IT!
+    if (!telebirrMatch) {
+      return {
+        success: false,
+        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (telebirr_sms) ውስጥ አልተገኘም! እባክዎ ክፍያውን ለሰብሳቢው አካውንት በትክክል መላክዎን ያረጋግጡ። (Transaction ID "${cleanTxnRef}" was not found in the bank SMS database. Please ensure your transfer has been sent to the collector.)`,
+      };
+    }
+
+    // Check if already claimed / used
+    if (
+      telebirrMatch.is_used === true ||
+      telebirrMatch.status === "claimed" ||
+      telebirrMatch.status === "used" ||
+      telebirrMatch.claimed === true
+    ) {
+      return {
+        success: false,
+        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) ከዚህ በፊት በቴሌብር/ባንክ ኤስኤምኤስ ተረጋግጦ ጥቅም ላይ ውሏል! (This Transaction ID in telebirr_sms has already been claimed/used.)`,
+      };
+    }
+
+    // Check amount if present in row
+    const rowAmount = Number(telebirrMatch.amount || 0);
+    if (rowAmount > 0 && rowAmount < totalAmount) {
+      return {
+        success: false,
+        error: `በቴሌብር/ባንክ የተገኘው የኤስኤምኤስ መጠን (ETB ${rowAmount.toLocaleString()}) ከሚፈለገው መጠን (ETB ${totalAmount.toLocaleString()}) ያነሰ ነው። (Received SMS amount is less than required.)`,
+      };
+    }
+
+    // 1.5 CHECK IF TRANSACTION ID OR SMS RECEIPT ALREADY EXISTS IN PAYMENT_TRANSACTIONS
     try {
       const { data: existingTxn } = await supabase
         .from("payment_transactions")
@@ -346,7 +370,7 @@ export async function submitContributorPayment({
         };
       }
     } catch {
-      // Table might not exist yet; proceed to notifications check
+      // Table might not exist yet; proceed
     }
 
     try {
@@ -479,7 +503,7 @@ export async function submitContributorPayment({
     }
 
     // 5.2 Mark telebirr_sms record as used/claimed
-    if (telebirrRecordId) {
+    if (telebirrMatch?.id) {
       try {
         await supabase
           .from("telebirr_sms")
@@ -487,7 +511,7 @@ export async function submitContributorPayment({
             is_used: true,
             status: "claimed",
           })
-          .eq("id", telebirrRecordId);
+          .eq("id", telebirrMatch.id);
       } catch (updateErr) {
         console.warn("telebirr_sms update note:", updateErr);
       }
@@ -541,6 +565,7 @@ export async function submitContributorPayment({
         amount: totalAmount,
         cyclesPaid: cyclesToPay.length,
         cycleNumbers: cyclesToPay,
+        groupId: groupId,
         groupName: group.name,
         contributorName: contributor?.full_name || "Contributor",
         contributorPhone: contributor?.phone_number || "",

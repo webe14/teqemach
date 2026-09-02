@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +30,12 @@ import EqubBalanceCard from "@/components/dashboard/EqubBalanceCard";
 import { PaymentActionBar } from "@/components/dashboard/PaymentActionBar";
 import { PayEqubModal } from "@/components/dashboard/PayEqubModal";
 import { TransactionsModal } from "@/components/dashboard/TransactionsModal";
+import { getContributorStats } from "@/lib/actions/contributor";
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 
 export default function ContributorDashboardClient({ 
-  stats, 
+  stats: initialStats, 
   todayStr, 
   nextCycleStr, 
   group,
@@ -50,9 +52,72 @@ export default function ContributorDashboardClient({
   allGroups?: any[];
 }) {
   const { t } = useLocale();
+  const router = useRouter();
+  const [stats, setStats] = useState(initialStats);
   const [selectedType, setSelectedType] = useState<EqubTypeCategory>("daily");
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+
+  // Sync if initialStats prop updates
+  useEffect(() => {
+    if (initialStats) {
+      setStats(initialStats);
+    }
+  }, [initialStats]);
+
+  // Live instantaneous update when payment succeeds
+  function handlePaymentSuccess(receipt: any) {
+    const addedAmount = Number(receipt.amount || 0);
+    const addedCycles = Number(receipt.cyclesPaid || 1);
+
+    setStats((prev: any) => {
+      if (!prev) return prev;
+      const newPaidCycles = (prev.paidCycles || 0) + addedCycles;
+      const newAmountSaved = (prev.amountSaved || 0) + addedAmount;
+      const newDaysRemaining = Math.max(0, (prev.daysRemaining || 0) - addedCycles);
+
+      const updatedGroups = (prev.groups || []).map((g: any) => {
+        if (g.name === receipt.groupName || g.id === receipt.groupId) {
+          const gPaid = (g.paidCycles || 0) + addedCycles;
+          const gRemaining = Math.max(0, (g.daysRemaining ?? g.totalCycles ?? 30) - addedCycles);
+          const gAmount = (g.amountSaved || 0) + addedAmount;
+          return {
+            ...g,
+            paidCycles: gPaid,
+            amountSaved: gAmount,
+            daysRemaining: gRemaining,
+          };
+        }
+        return g;
+      });
+
+      const updatedGroup = prev.group ? {
+        ...prev.group,
+        paidCycles: (prev.group.paidCycles || 0) + addedCycles,
+        amountSaved: (prev.group.amountSaved || 0) + addedAmount,
+        daysRemaining: Math.max(0, (prev.group.daysRemaining || 0) - addedCycles),
+      } : null;
+
+      return {
+        ...prev,
+        amountSaved: newAmountSaved,
+        paidCycles: newPaidCycles,
+        daysRemaining: newDaysRemaining,
+        group: updatedGroup,
+        groups: updatedGroups,
+      };
+    });
+
+    // Also fetch fresh server stats asynchronously and refresh router
+    if (userId) {
+      getContributorStats(userId).then((freshStats) => {
+        if (freshStats && (freshStats.paidCycles || freshStats.amountSaved)) {
+          setStats(freshStats);
+        }
+      }).catch(console.error);
+    }
+    router.refresh();
+  }
 
   const completionPct = stats.totalCycles > 0
     ? Math.round((stats.paidCycles / stats.totalCycles) * 100)
@@ -247,6 +312,7 @@ export default function ContributorDashboardClient({
         contributorName={userName}
         contributorPhone={stats?.group?.collector?.phone_number || ""}
         activeGroups={stats?.groups?.length ? stats.groups : (stats?.group ? [stats.group] : allGroups)}
+        onPaymentSuccess={handlePaymentSuccess}
         onOpenTransactions={() => setIsTransactionsModalOpen(true)}
       />
 
