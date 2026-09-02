@@ -290,6 +290,44 @@ export async function submitContributorPayment({
     }
 
     const cleanTxnRef = txnRef.trim().toUpperCase();
+    const cleanRawSms = rawSms.trim();
+
+    // 1.5 CHECK IF TRANSACTION ID OR SMS RECEIPT ALREADY EXISTS IN DATABASE
+    try {
+      const { data: existingTxn } = await supabase
+        .from("payment_transactions")
+        .select("id, txn_ref, created_at")
+        .eq("txn_ref", cleanTxnRef)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingTxn) {
+        return {
+          success: false,
+          error: "ይህ የዝውውር ቁጥር (Txn ID) ከዚህ በፊት በሲስተሙ ውስጥ ተመዝግቧል! (This Transaction ID has already been used and recorded in the database.)",
+        };
+      }
+    } catch {
+      // Table might not exist yet; proceed to notifications check
+    }
+
+    try {
+      const { data: duplicateNotif } = await supabase
+        .from("notifications")
+        .select("id, message, data")
+        .or(`data->>txn_ref.eq.${cleanTxnRef},message.ilike.%${cleanTxnRef}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (duplicateNotif) {
+        return {
+          success: false,
+          error: "ይህ የዝውውር ቁጥር (Txn ID) ከዚህ በፊት በሲስተሙ ውስጥ ተመዝግቧል! (This Transaction ID has already been recorded in the database.)",
+        };
+      }
+    } catch (checkErr) {
+      console.warn("Duplicate check warning:", checkErr);
+    }
 
     // 1. Fetch group details and verify membership
     const [groupRes, contributorRes] = await Promise.all([
@@ -382,7 +420,27 @@ export async function submitContributorPayment({
       }
     }
 
-    // 5. Send in-app notification to collector
+    // 5. Record in payment_transactions table
+    try {
+      await supabase.from("payment_transactions").insert({
+        contributor_id: contributorId,
+        collector_id: group.collector_id,
+        group_id: groupId,
+        txn_ref: cleanTxnRef,
+        amount: totalAmount,
+        cycles_paid: cyclesToPay.length,
+        cycle_numbers: cyclesToPay,
+        payment_method: "CBE_TRANSFER",
+        bank_type: bankType,
+        raw_sms: cleanRawSms,
+        status: "confirmed",
+        created_at: nowIso,
+      });
+    } catch (txnInsertErr) {
+      console.warn("payment_transactions insert warning (falling back to notifications):", txnInsertErr);
+    }
+
+    // 5.5 Send in-app notification to collector
     try {
       await supabase.from("notifications").insert({
         user_id: group.collector_id,
@@ -391,6 +449,7 @@ export async function submitContributorPayment({
         message: `${contributor?.full_name || "A contributor"} paid ETB ${totalAmount.toLocaleString()} for ${cyclesToPay.length} day(s) in "${group.name}". Txn ID: ${cleanTxnRef}`,
         data: {
           txn_ref: cleanTxnRef,
+          raw_sms: cleanRawSms,
           group_id: groupId,
           contributor_id: contributorId,
           cycles: cyclesToPay,

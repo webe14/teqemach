@@ -221,20 +221,20 @@ export default function ContributorDashboardClient({
           </div>
         </div>
 
-        {/* ─── 4. CBE-STYLE ACTION BAR (PAY EQUB & TRANSACTIONS) ──────── */}
-        <PaymentActionBar 
-          onPayEqub={() => setIsPayModalOpen(true)}
-          onTransactions={() => setIsTransactionsModalOpen(true)}
-          hasActiveEqub={Boolean(stats?.group || stats?.groups?.length)}
-        />
-
-        {/* ─── 5. CBE-INSPIRED TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
+        {/* ─── 4. CBE-INSPIRED TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
         <EqubBalanceCard 
           stats={stats}
           todayStr={todayStr}
           nextCycleStr={nextCycleStr}
           userName={userName}
           userId={userId}
+        />
+
+        {/* ─── 5. CBE-STYLE ACTION BAR (PAY EQUB & TRANSACTIONS) ──────── */}
+        <PaymentActionBar 
+          onPayEqub={() => setIsPayModalOpen(true)}
+          onTransactions={() => setIsTransactionsModalOpen(true)}
+          hasActiveEqub={Boolean(stats?.group || stats?.groups?.length)}
         />
 
       </div>

@@ -109,9 +109,10 @@ export function PayEqubModal({
     }
   }
 
+  const COLLECTOR_CBE_ACCOUNT = "1000307058247";
+
   function handleCopyCollectorAccount() {
-    const accNumber = currentGroup?.collector?.phone_number || "1000458921478";
-    navigator.clipboard.writeText(accNumber);
+    navigator.clipboard.writeText(COLLECTOR_CBE_ACCOUNT);
     setCopiedAccount(true);
     setTimeout(() => setCopiedAccount(false), 2500);
   }
@@ -456,10 +457,10 @@ export function PayEqubModal({
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-border/80 shadow-sm">
                     <div>
                       <p className="font-mono font-black text-sm text-foreground select-all">
-                        {currentGroup?.collector?.phone_number ? `1000${currentGroup.collector.phone_number.replace(/\D/g, "").slice(-8)}` : "1000489271452"}
+                        {COLLECTOR_CBE_ACCOUNT}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        Account Name: {currentGroup?.collector?.full_name || "Wub Digital Equb Collector"}
+                        Account Name: {currentGroup?.collector?.full_name || "Wub Digital Equb"}
                       </p>
                     </div>
 
