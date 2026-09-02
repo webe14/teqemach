@@ -59,6 +59,15 @@ export default function EqubBalanceCard({
   // Current selected group if multiple
   const currentGroup = hasActiveEqub ? (activeGroups[activeCardIndex] || activeGroups[0]) : null;
 
+  // Paid and Remaining Days calculations
+  const paidCount = stats?.paidCycles ?? 0;
+  const remainingDays = hasActiveEqub 
+    ? (stats?.daysRemaining ?? Math.max(0, (currentGroup?.total_days || 0) - paidCount))
+    : 0;
+
+  const paidDisplay = showBalance ? `${paidCount}` : "**";
+  const remainingDisplay = showBalance ? `${remainingDays} ${t("days")}` : `** ${t("days")}`;
+
   // Calculate total or specific group contribution
   const totalAmount = typeof stats?.amountSaved === "number" ? stats.amountSaved : 0;
   const currentAmount = currentGroup?.contribution_amount 
@@ -183,16 +192,19 @@ export default function EqubBalanceCard({
           )}
         </div>
 
-        {/* ─── CARD FOOTER: ACCOUNT NUMBER / TYPE & DATE ─────────────────── */}
+        {/* ─── CARD FOOTER: PAID & REMAINING DATES (MASKED WHEN BALANCE IS HIDDEN) & DATE ─── */}
         <div className="relative z-10 pt-4 mt-4 border-t border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono">
-          {/* Account Label & Masked Number */}
-          <div className="flex items-center gap-2 text-blue-200 font-medium">
-            <span className="text-blue-300/80">
-              {t("equbAc")} - {currentGroup?.frequency ? currentGroup.frequency.toUpperCase() : "STAFF"}
-            </span>
-            <span className="text-white font-bold tracking-wider">
-              {maskedAccountId}
-            </span>
+          {/* Paid & Remaining Dates */}
+          <div className="flex items-center gap-2.5 text-blue-200 font-medium">
+            <div className="flex items-center gap-1.5">
+              <span className="text-blue-300/80 capitalize">{t("paid")}:</span>
+              <span className="text-white font-bold tracking-wider">{paidDisplay}</span>
+            </div>
+            <span className="text-blue-400/40">•</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-blue-300/80 capitalize">{t("remaining")}:</span>
+              <span className="text-white font-bold tracking-wider">{remainingDisplay}</span>
+            </div>
           </div>
 
           {/* Formatted Date & Time */}
