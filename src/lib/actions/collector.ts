@@ -97,6 +97,36 @@ export async function inviteContributor(formData: {
 
 export async function getCollectorContributors(collectorId: string) {
   const supabase = await createAdminClient();
+
+  // Find all related collector/admin profile IDs for this user
+  let collectorIds = [collectorId];
+  try {
+    const { data: currentProf } = await supabase
+      .from("profiles")
+      .select("phone_number, telegram_id, email, role")
+      .eq("id", collectorId)
+      .single();
+
+    if (currentProf) {
+      const orCond: string[] = [];
+      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
+      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
+      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
+
+      if (orCond.length > 0) {
+        const { data: matched } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(orCond.join(","));
+        if (matched && matched.length > 0) {
+          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("getCollectorContributors profile resolution note:", err);
+  }
+
   const { data, error } = await supabase
     .from("group_memberships")
     .select(
@@ -109,7 +139,7 @@ export async function getCollectorContributors(collectorId: string) {
       group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
     `
     )
-    .eq("collector_id", collectorId);
+    .in("collector_id", collectorIds);
 
   if (error) return { error: error.message, data: [] };
   // Only return contributors whose profile status is active
@@ -119,10 +149,39 @@ export async function getCollectorContributors(collectorId: string) {
 
 export async function getPendingContributors(collectorId: string) {
   const supabase = await createAdminClient();
+
+  let collectorIds = [collectorId];
+  try {
+    const { data: currentProf } = await supabase
+      .from("profiles")
+      .select("phone_number, telegram_id, email")
+      .eq("id", collectorId)
+      .single();
+
+    if (currentProf) {
+      const orCond: string[] = [];
+      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
+      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
+      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
+
+      if (orCond.length > 0) {
+        const { data: matched } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(orCond.join(","));
+        if (matched && matched.length > 0) {
+          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("getPendingContributors profile resolution note:", err);
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, phone_number, telegram_username, created_at")
-    .eq("collector_id", collectorId)
+    .in("collector_id", collectorIds)
     .eq("status", "pending")
     .eq("role", "contributor")
     .order("created_at", { ascending: false });
@@ -564,6 +623,35 @@ export async function getCollectorReports(
   toDate?: string
 ) {
   const supabase = await createAdminClient();
+
+  let collectorIds = [collectorId];
+  try {
+    const { data: currentProf } = await supabase
+      .from("profiles")
+      .select("phone_number, telegram_id, email")
+      .eq("id", collectorId)
+      .single();
+
+    if (currentProf) {
+      const orCond: string[] = [];
+      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
+      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
+      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
+
+      if (orCond.length > 0) {
+        const { data: matched } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(orCond.join(","));
+        if (matched && matched.length > 0) {
+          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("getCollectorReports profile resolution note:", err);
+  }
+
   let query = supabase
     .from("contributions")
     .select(
@@ -576,7 +664,7 @@ export async function getCollectorReports(
       group:equb_groups!contributions_group_id_fkey(name, contribution_amount)
     `
     )
-    .eq("collector_id", collectorId)
+    .in("collector_id", collectorIds)
     .eq("is_marked_paid", true)
     .order("contribution_date", { ascending: false });
 
@@ -590,10 +678,39 @@ export async function getCollectorReports(
 
 export async function getCollectorGroups(collectorId: string) {
   const supabase = await createAdminClient();
+
+  let collectorIds = [collectorId];
+  try {
+    const { data: currentProf } = await supabase
+      .from("profiles")
+      .select("phone_number, telegram_id, email")
+      .eq("id", collectorId)
+      .single();
+
+    if (currentProf) {
+      const orCond: string[] = [];
+      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
+      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
+      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
+
+      if (orCond.length > 0) {
+        const { data: matched } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(orCond.join(","));
+        if (matched && matched.length > 0) {
+          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("getCollectorGroups profile resolution note:", err);
+  }
+
   const { data, error } = await supabase
     .from("equb_groups")
     .select("*, group_memberships(id)")
-    .eq("collector_id", collectorId)
+    .in("collector_id", collectorIds)
     .order("contribution_amount", { ascending: false });
   if (error) return { error: error.message, data: [] };
   

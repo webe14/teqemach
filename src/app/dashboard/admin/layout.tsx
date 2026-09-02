@@ -6,8 +6,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await getCurrentProfile();
   if (!profile) redirect("/admin-secure");
 
-  if (!profile.isAdmin && profile.role !== "admin" && profile.role !== "collector") {
-    redirect("/login");
+  const isAuthorized = Boolean(profile.isAdmin || profile.role === "admin" || profile.role === "collector");
+  if (!isAuthorized) {
+    redirect("/dashboard/contributor");
   }
 
   return (

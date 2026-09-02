@@ -99,14 +99,14 @@ export async function middleware(request: NextRequest) {
     }
 
     // 3. Check profile permissions
-    // Admins and Collectors can freely visit BOTH /dashboard/admin and /dashboard/contributor
+    // Admins and Collectors can freely visit BOTH /dashboard/admin, /dashboard/collector, and /dashboard/contributor
     if (userRole === "admin" || userRole === "collector") {
       return supabaseResponse;
     }
 
-    // If session role is contributor, check if they are trying to access admin panel
+    // If session role is contributor, check if they are trying to access admin or collector panels
     if (userRole === "contributor") {
-      if (pathname.startsWith("/dashboard/admin")) {
+      if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/collector")) {
         const adminClient = createServerClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -137,7 +137,7 @@ export async function middleware(request: NextRequest) {
           if (conditions.length > 0) {
             const { data: adminMatches } = await adminClient
               .from("profiles")
-              .select("id")
+              .select("id, role")
               .in("role", ["admin", "collector"])
               .or(conditions.join(","))
               .limit(1);
