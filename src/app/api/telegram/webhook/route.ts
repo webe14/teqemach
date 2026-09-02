@@ -141,7 +141,7 @@ async function handleMessage(message: any) {
       if (args.length > 0 && args[0] === "share_phone") {
         await sendRequestContactButton(
           chatId,
-          "📱 Please tap the button below to share your verified phone number with Teqemach."
+          "📱 Please tap the button below to share your verified phone number with Wub Digital Equb (ውብ ዲጂታል እቁብ)."
         );
         break;
       }
@@ -180,10 +180,10 @@ async function handleMessage(message: any) {
           user_id: profileIdToLink
         }).eq("telegram_id", telegramId);
         
-        const successText = `✅ Account successfully linked!\n\nWelcome to Teqemach 👋\nManage your equb contributions easily. Click below to open the Mini App!`;
+        const successText = `✅ Account successfully linked!\n\nWelcome to Wub Digital Equb (ውብ ዲጂታል እቁብ) 👋\nManage your equb contributions easily. Click below to open the Mini App!`;
         const replyMarkup = {
           inline_keyboard: [
-            [openMiniAppButton("Open Teqemach", APP_URL)]
+            [openMiniAppButton("Open Wub Digital Equb", APP_URL)]
           ]
         };
         await sendTelegramMessage(chatId, successText, { reply_markup: replyMarkup });
@@ -191,10 +191,10 @@ async function handleMessage(message: any) {
       }
 
       // Default start text
-      const welcomeText = `Welcome to Teqemach 👋\n\nManage your equb contributions easily. Click below to open the Mini App!`;
+      const welcomeText = `Welcome to Wub Digital Equb (ውብ ዲጂታል እቁብ) 👋\n\nManage your equb contributions easily. Click below to open the Mini App!`;
       const replyMarkup = {
         inline_keyboard: [
-          [openMiniAppButton("Open Teqemach", APP_URL)]
+          [openMiniAppButton("Open Wub Digital Equb", APP_URL)]
         ]
       };
       
@@ -214,7 +214,7 @@ async function handleMessage(message: any) {
     }
 
     case "/profile": {
-      let profileText = "You are not linked to a Teqemach account yet. Please /start and open the Mini App.";
+      let profileText = "You are not linked to a Wub Digital Equb account yet. Please /start and open the Mini App.";
       
       if (tgUser && tgUser.user_id) {
         const { data: profile } = await supabase

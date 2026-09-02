@@ -39,7 +39,7 @@ export default function GuestPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AppLogo size="sm" rounded="lg" />
-            <span className="font-bold text-xl tracking-tight">Teqemach</span>
+            <span className="font-bold text-xl tracking-tight">Wub Digital Equb</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">Log in</Link>
@@ -58,14 +58,14 @@ export default function GuestPage() {
           <motion.div initial="hidden" animate="visible" variants={fadeIn}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 text-sm font-medium">
               <Compass className="w-4 h-4" />
-              <span>Explore Teqemach</span>
+              <span>Explore Wub Digital Equb</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
               Modernizing <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Traditional Savings</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Discover trusted savings groups, explore collectors, and experience how Teqemach makes managing your Equb safe, transparent, and digital.
+              Discover trusted savings groups, explore collectors, and experience how Wub Digital Equb makes managing your Equb safe, transparent, and digital.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -95,7 +95,7 @@ export default function GuestPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl font-bold mb-4">Featured Collectors</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">Join reputable collectors who are already managing successful savings groups on Teqemach.</p>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Join reputable collectors who are already managing successful savings groups on Wub Digital Equb.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -148,7 +148,7 @@ export default function GuestPage() {
             variants={fadeIn}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl font-bold mb-4">Why choose Teqemach?</h2>
+            <h2 className="text-3xl font-bold mb-4">Why choose Wub Digital Equb?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">We bring the traditional Ethiopian Equb system into the digital age with modern security and transparency.</p>
           </motion.div>
 
@@ -236,7 +236,7 @@ export default function GuestPage() {
           >
             <h2 className="text-4xl font-bold mb-6">Ready to start saving?</h2>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Join thousands of users who have modernized their traditional savings with Teqemach.
+              Join thousands of users who have modernized their traditional savings with Wub Digital Equb.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="rounded-full w-full sm:w-auto h-14 px-8 text-base shadow-lg shadow-primary/25">
@@ -249,7 +249,7 @@ export default function GuestPage() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border">
-        <p>© {new Date().getFullYear()} Teqemach. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Wub Digital Equb (ውብ ዲጂታል እቁብ). All rights reserved.</p>
       </footer>
     </div>
   );

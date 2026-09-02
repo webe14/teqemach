@@ -3,7 +3,7 @@ import { getCurrentProfile } from "@/lib/actions/auth";
 import { getPublicEqubGroups } from "@/lib/actions/contributor";
 import TeqemachsClient from "./TeqemachsClient";
 
-export const metadata = { title: "Explore Teqemachs — Teqemach" };
+export const metadata = { title: "Explore Equbs — Wub Digital Equb" };
 
 export default async function TeqemachsPage() {
   const currentProfile = await getCurrentProfile() as any;
@@ -17,7 +17,7 @@ export default async function TeqemachsPage() {
   const groupsRes = await getPublicEqubGroups();
 
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Teqemachs...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Equbs...</div>}>
       <TeqemachsClient 
         userName={profile?.full_name || profile?.email?.split('@')[0] || "Webshet W."}
         userId={profile?.id}

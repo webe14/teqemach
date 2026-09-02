@@ -296,7 +296,7 @@ export async function markCyclePaid(
         // 1. Queue SMS text message to contributor phone SIM card (Pure ASCII GSM 7-bit standard for SIM delivery)
         if (details?.phone_number) {
           const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-          const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment of ETB ${group.contribution_amount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Teqemach`;
+          const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment of ETB ${group.contribution_amount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Wub Digital Equb`;
           const smsText = cleanSmsText(rawSmsText);
           
           try {
@@ -408,7 +408,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           // 1. Queue SMS text message to contributor phone SIM card (Pure ASCII GSM 7-bit standard for SIM delivery)
           if (details?.phone_number) {
             const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
-            const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment (${contributorContributions.length} cycles) of ETB ${totalAmount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Teqemach`;
+            const rawSmsText = `Dear ${details.full_name || "Contributor"}, your payment (${contributorContributions.length} cycles) of ETB ${totalAmount.toLocaleString()} for ${group.name} is verified & recorded by ${collector.full_name || "Collector"}. Date: ${contribDateSms} (${selDates}). Wub Digital Equb`;
             const smsText = cleanSmsText(rawSmsText);
             
             try {

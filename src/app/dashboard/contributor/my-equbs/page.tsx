@@ -5,7 +5,7 @@ import { getCurrentProfile } from "@/lib/actions/auth";
 import { getContributorStats } from "@/lib/actions/contributor";
 
 export const metadata = {
-  title: "My Equb | Teqemach",
+  title: "My Equb | Wub Digital Equb",
 };
 
 export default async function MyEqubsPage() {

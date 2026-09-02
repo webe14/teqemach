@@ -55,7 +55,8 @@ export function cleanSmsText(text: string): string {
     [/ባለ\s*/g, "Bale "],
     [/ብር/g, "ETB"],
     [/ዕቁብ|እቁብ/g, "Equb"],
-    [/ተቀማጭ/g, "Teqemach"],
+    [/ተቀማጭ/g, "Wub Digital Equb"],
+    [/ውብ ዲጂታል እቁብ/g, "Wub Digital Equb"],
   ];
 
   let result = text;
@@ -163,7 +164,7 @@ export async function sendRegistrationOtp({
     const { error: smsError } = await adminClient.from("sms_jobs").insert({
       type: "otp",
       recipient: formattedPhone,
-      message: `Your Teqemach verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
+      message: `Your Wub Digital Equb verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
       status: "pending",
       attempts: 0,
       max_attempts: 3,

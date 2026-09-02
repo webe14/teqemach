@@ -3,7 +3,7 @@ import { getContributorStats, getPublicEqubGroups } from "@/lib/actions/contribu
 import { getCurrentEthiopianDate, addDaysToEthiopian, formatEthiopianDate } from "@/lib/ethiopian-calendar";
 import ContributorDashboardClient from "./ContributorDashboardClient";
 
-export const metadata = { title: "My Dashboard — Teqemach" };
+export const metadata = { title: "My Dashboard — Wub Digital Equb" };
 export const revalidate = 30; // Cache page data for 30 seconds
 
 export default async function ContributorDashboardPage() {

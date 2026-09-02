@@ -28,11 +28,11 @@ import { requestJoinGroup } from "@/lib/actions/contributor";
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 
-const TERMS_OF_SERVICE = `የተጠቃሚዎች መተዳደሪያ ደንብ እና የውል ስምምነት (Terms of Service & User Agreement)
+const TERMS_OF_SERVICE = `የተጠቃሚዎች መተዳደሪያ ደንብ እና የውል ስምምነት - ውብ ዲጂታል እቁብ (Wub Digital Equb)
 
 አንቀጽ 1፡ ጠቅላላ ድንጋጌዎች
 
-ይህ መተዳደሪያ ደንብ በተጠቃሚው እና በዲጂታል ተቀማጭ አገልግሎት ሰጪው መካከል ያለውን የሕግ፣ የመብት እና የግብዴታ ግንኙነት ይገዛል።
+ይህ መተዳደሪያ ደንብ በተጠቃሚው እና በውብ ዲጂታል እቁብ (Wub Digital Equb) አገልግሎት ሰጪው መካከል ያለውን የሕግ፣ የመብት እና የግብዴታ ግንኙነት ይገዛል።
 
 ማንኛውም ተጠቃሚ መተግበሪያውን ማውረድ እና መጠቀም ሲጀምር እነዚህን ውሎች እና ሁኔታዎች ሙሉ በሙሉ እንደተቀበለ ይቆጠራል።
 
@@ -42,15 +42,15 @@ const TERMS_OF_SERVICE = `የተጠቃሚዎች መተዳደሪያ ደንብ እ
 
 ምዝገባው እና የገንዘብ ዝውውሮች የሚረጋገጡት በስልክ በሚላክ የአንድ ጊዜ ሚስጥር ቁጥር (OTP) አማካኝነት ነው።
 
-አንቀጽ 3፡ የተቀማጭ እና የቁጠባ አሠራር
+አንቀጽ 3፡ የእቁብ እና የቁጠባ አሠራር
 
-ተጠቃሚው ከተፈቀደ የባንክ ሂሳብ፣ ከቴሌብር ወይም ከሌሎች ዲጂታል የክፍያ አማራጮች በቀጥታ ወደ ተቀማጭ ሂሳቡ ገንዘብ ገቢ ማድረግ ይችላል።
+ተጠቃሚው ከተፈቀደ የባንክ ሂሳብ፣ ከቴሌብር ወይም ከሌሎች ዲጂታል የክፍያ አማራጮች በቀጥታ ወደ እቁብ ሂሳቡ ገንዘብ ገቢ ማድረግ ይችላል።
 
-እያንዳንዱ የተቀማጭ ገንዘብ ዝውውር በኤስኤምኤስ (SMS) ወይም በመተግበሪያው ማሳወቂያ ወዲያውኑ ለተጠቃሚው ይደርሳል።
+እያንዳንዱ የእቁብ ገንዘብ ዝውውር በኤስኤምኤስ (SMS) ወይም በመተግበሪያው ማሳወቂያ ወዲያውኑ ለተጠቃሚው ይደርሳል።
 
 አንቀጽ 4፡ ገንዘብ ወጪ የማድረግ የጊዜ ገደብ (Lock-in Period & Withdrawal)
 
-ዝቅተኛው የማቆያ ጊዜ፦ ተጠቃሚው ያስቀመጠውን ሙሉ ተቀማጭ ገንዘብ ወጪ ለማድረግ የሚችለው ቁጠባው ከተጀመረበት ቀን ጀምሮ አንድ ወር ከአስራ አምስት (15) ቀናት (45 ቀናት) ሲሞላው ብቻ ነው።
+ዝቅተኛው የማቆያ ጊዜ፦ ተጠቃሚው ያስቀመጠውን ሙሉ እቁብ ገንዘብ ወጪ ለማድረግ የሚችለው ቁጠባው ከተጀመረበት ቀን ጀምሮ አንድ ወር ከአስራ አምስት (15) ቀናት (45 ቀናት) ሲሞላው ብቻ ነው።
 
 የገንዘብ ጥያቄ አፈጻጸም፦ የተጠቀሰው የ45 ቀናት ጊዜ እንደተጠናቀቀ፣ ተጠቃሚው በመተግበሪያው በኩል የክፍያ ጥያቄ (Withdrawal Request) ማቅረብ ይችላል፤ ጥያቄው በቀረበ በ24 የሥራ ሰዓታት ውስጥ ገንዘቡ ወደ ተጠቃሚው የባንክ ሂሳብ ወይም ዲጂታል ቦርሳ ይተላለፋል።
 
@@ -115,10 +115,10 @@ export default function TeqemachsClient({
   });
 
   const categories: { id: EqubTypeCategory; label: string; icon: any }[] = [
-    { id: "daily", label: "Daily Teqemachs", icon: Clock },
-    { id: "weekly", label: "Weekly Teqemachs", icon: Calendar },
-    { id: "monthly", label: "Monthly Teqemachs", icon: Layers },
-    { id: "corporate", label: "Corporate Teqemachs", icon: Building2 },
+    { id: "daily", label: "Daily Equbs", icon: Clock },
+    { id: "weekly", label: "Weekly Equbs", icon: Calendar },
+    { id: "monthly", label: "Monthly Equbs", icon: Layers },
+    { id: "corporate", label: "Corporate Equbs", icon: Building2 },
   ];
 
   function openGroupSheet(group: any) {
@@ -213,10 +213,12 @@ export default function TeqemachsClient({
         {/* Banner Tagline & Title */}
         <div className="relative z-10 space-y-1">
           <span className="text-xs font-medium text-blue-300 uppercase tracking-wider block">
-            Active Teqemach Groups
+            {locale === "am" ? "ንቁ የእቁብ ቡድኖች" : "Active Equb Groups"}
           </span>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-snug">
-            Available <span className="text-blue-400 font-extrabold">{selectedType.toUpperCase()}</span> Teqemachs
+            {locale === "am" ? "ያሉ " : "Available "}
+            <span className="text-blue-400 font-extrabold">{selectedType.toUpperCase()}</span>
+            {locale === "am" ? " እቁቦች" : " Equbs"}
           </h1>
           <div className="ethiopian-divider mt-2 w-24" />
         </div>
@@ -247,23 +249,23 @@ export default function TeqemachsClient({
           })}
         </div>
 
-        {/* ─── DYNAMIC TEQEMACHS LIST SECTION ──── */}
+        {/* ─── DYNAMIC EQUBS LIST SECTION ──── */}
         <div className="bg-card border border-border rounded-3xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-card-foreground flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-400" />
-                {selectedType === "daily" && "Daily Teqemachs"}
-                {selectedType === "weekly" && "Weekly Teqemachs"}
-                {selectedType === "monthly" && "Monthly Teqemachs"}
-                {selectedType === "corporate" && "Corporate Teqemachs"}
+                {selectedType === "daily" && (locale === "am" ? "ዕለታዊ እቁቦች" : "Daily Equbs")}
+                {selectedType === "weekly" && (locale === "am" ? "ሳምንታዊ እቁቦች" : "Weekly Equbs")}
+                {selectedType === "monthly" && (locale === "am" ? "ወርሃዊ እቁቦች" : "Monthly Equbs")}
+                {selectedType === "corporate" && (locale === "am" ? "የድርጅት እቁቦች" : "Corporate Equbs")}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Active {selectedType} savings groups available for quick join
+                {locale === "am" ? `ለመቀላቀል የተዘጋጁ ንቁ የ${selectedType} እቁቦች` : `Active ${selectedType} savings groups available for quick join`}
               </p>
             </div>
             <Badge className="rounded-full text-xs font-semibold px-3 py-1 bg-blue-600 text-white">
-              {filteredGroups.length} Active
+              {filteredGroups.length} {locale === "am" ? "ንቁ" : "Active"}
             </Badge>
           </div>
 
@@ -271,7 +273,9 @@ export default function TeqemachsClient({
           {filteredGroups.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl">
               <Layers className="w-10 h-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
-              <p className="text-sm font-medium">No active {selectedType} Teqemachs available at the moment.</p>
+              <p className="text-sm font-medium">
+                {locale === "am" ? `በአሁኑ ሰዓት ምንም ንቁ የ${selectedType} እቁብ አልተገኘም።` : `No active ${selectedType} Equbs available at the moment.`}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">

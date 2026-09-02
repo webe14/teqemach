@@ -306,7 +306,7 @@ export default function LoginPage() {
         return;
       }
       if (checkRes.exists) {
-        setErrorMsg("This phone number is already registered in Teqemach. Please log in with your account.");
+        setErrorMsg("This phone number is already registered in Wub Digital Equb. Please log in with your account.");
         setOtpLoading(false);
         return;
       }
@@ -371,7 +371,7 @@ export default function LoginPage() {
       return;
     }
     if (!regAgreedToTerms) {
-      setErrorMsg("Please accept the Teqemach terms and rules to continue.");
+      setErrorMsg("Please accept the Wub Digital Equb terms and rules to continue.");
       return;
     }
 
@@ -667,8 +667,8 @@ export default function LoginPage() {
             {/* Brand Logo & Name */}
             <div className="flex flex-col items-center justify-center space-y-2 mb-6">
               <AppLogo size="xl" rounded="2xl" className="shadow-xl border-slate-200" priority />
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-                ተቀማጭ <span className="text-sm font-medium text-muted-foreground">(Teqemach)</span>
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground text-center">
+                ውብ ዲጂታል እቁብ <span className="text-sm font-medium text-muted-foreground block sm:inline">(Wub Digital Equb)</span>
               </h1>
             </div>
 
@@ -1061,7 +1061,7 @@ export default function LoginPage() {
                         className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
                       />
                       <span>
-                        I agree to Teqemach <span className="font-semibold text-primary underline">Equb Rules & Community Terms</span>
+                        I agree to Wub Digital Equb <span className="font-semibold text-primary underline">Equb Rules & Community Terms</span>
                       </span>
                     </label>
 
@@ -1151,7 +1151,7 @@ export default function LoginPage() {
         {/* ─── OPTIONS (new user, not linked) ─────────────────────── */}
         {step === "options" && (
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Welcome to Teqemach 👋</h2>
+            <h2 className="text-2xl font-bold mb-2">Welcome to Wub Digital Equb 👋</h2>
             <p className="text-muted-foreground mb-8">Your Telegram account is connected.</p>
 
             <div className="space-y-4">
@@ -1582,7 +1582,7 @@ export default function LoginPage() {
             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto">
               <Play className="h-6 w-6 fill-current" />
             </div>
-            <h3 className="text-xl font-bold text-foreground">How to Use Teqemach</h3>
+            <h3 className="text-xl font-bold text-foreground">How to Use Wub Digital Equb</h3>
             <div className="text-xs text-muted-foreground space-y-2 text-left bg-muted/40 p-4 rounded-2xl border border-border/50">
               <p>1. <strong>Register / Share Phone</strong>: Connect your Telegram phone number to create your profile.</p>
               <p>2. <strong>Join Equb Group</strong>: Select your preferred Equb Collector and choose a Daily, Weekly, or Monthly group.</p>

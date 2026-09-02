@@ -3,7 +3,7 @@ export type Locale = "en" | "am";
 export const translations = {
   en: {
     // Common
-    appName: "Teqemach",
+    appName: "Wub Digital Equb",
     save: "Save",
     cancel: "Cancel",
     search: "Search",
@@ -38,7 +38,7 @@ export const translations = {
     signIn: "Sign In",
     adminLogin: "Admin Login",
     loginTitle: "Welcome Back",
-    loginSubtitle: "Sign in to your Teqemach account",
+    loginSubtitle: "Sign in to your Wub Digital Equb account",
     adminLoginSubtitle: "Administrator Access Portal",
     continueWithGoogle: "Continue with Google",
     or: "or",
@@ -116,9 +116,9 @@ export const translations = {
 
     // SMS
     smsContributionMessage:
-      "Hello, {contributorName}, Your contribution by {collectorName} payment has been successfully recorded at {date}. Thank you for contributing to the teqemach",
+      "Hello, {contributorName}, Your contribution by {collectorName} payment has been successfully recorded at {date}. Thank you for contributing to Wub Digital Equb",
     smsDisburseMessage:
-      "Your teqemach has been successfully processed and handed over. Thank you for participating",
+      "Your Wub Digital Equb payout has been successfully processed and handed over. Thank you for participating",
 
     // Reports
     filterByDate: "Filter by Date",
@@ -141,7 +141,7 @@ export const translations = {
     administration: "Administration",
     manageUsers: "Manage Users",
     help: "Help",
-    aboutTeqemach: "About Teqemach",
+    aboutTeqemach: "About Wub Digital Equb",
     editProfileTitle: "Edit Profile",
     passwordsDoNotMatch: "Passwords do not match",
     profileUpdated: "Profile updated successfully!",
@@ -169,7 +169,7 @@ export const translations = {
     myEqubGroupDetails: "My Equb Group Details",
     days: "days",
     systemOverview: "System Overview",
-    systemOverviewDesc: "Monitor all Teqemach operations at a glance",
+    systemOverviewDesc: "Monitor all Wub Digital Equb operations at a glance",
     acrossActiveEqubs: "Across all active Equb groups",
     activeEqubManagers: "Active Equb managers",
     runningSavingsGroups: "Running savings groups",
@@ -255,7 +255,7 @@ export const translations = {
     hello: "Hello,",
     virtualEqub: "Digital Equb",
     heroTitle1: "Let's make our dreams come true with",
-    heroTitle2: "Teqemach",
+    heroTitle2: "Wub Digital Equb",
     selectType: "Select type",
     selectTypeDesc: "Select your preferred type",
     fourCategories: "4 Categories",
@@ -281,7 +281,7 @@ export const translations = {
 
   am: {
     // Common
-    appName: "ተቀማጭ",
+    appName: "ውብ ዲጂታል እቁብ",
     save: "አስቀምጥ",
     cancel: "ሰርዝ",
     search: "ፈልግ",
@@ -316,7 +316,7 @@ export const translations = {
     signIn: "ግባ",
     adminLogin: "አስተዳዳሪ መግቢያ",
     loginTitle: "እንኳን ደህና መጡ",
-    loginSubtitle: "ወደ ተቀማጭ አካውንትዎ ይግቡ",
+    loginSubtitle: "ወደ ውብ ዲጂታል እቁብ አካውንትዎ ይግቡ",
     adminLoginSubtitle: "የአስተዳዳሪ መዳረሻ ፖርታል",
     continueWithGoogle: "በGoogle ይቀጥሉ",
     or: "ወይም",
@@ -394,9 +394,9 @@ export const translations = {
 
     // SMS
     smsContributionMessage:
-      "ሰላም {contributorName}፣ ይህ በ{collectorName} የሚሰበሰብ ተቀማጭ ሲሆን በቀን {date} ላይ ያስቀመጡት ብር በተሳካ ሁኔታ ተመዝግቧል። መመዝገቡን ለማረጋገጥ ወደ መተግበሪያው ይግቡ። በዚህ ዘመናዊ የተቀማጭ ስርዐት ተሳታፊ ስለሆኑ እናመሰግናለን",
+      "ሰላም {contributorName}፣ ይህ በ{collectorName} የሚሰበሰብ እቁብ ሲሆን በቀን {date} ላይ ያስቀመጡት ብር በተሳካ ሁኔታ ተመዝግቧል። መመዝገቡን ለማረጋገጥ ወደ መተግበሪያው ይግቡ። በዚህ በውብ ዲጂታል እቁብ ስርዐት ተሳታፊ ስለሆኑ እናመሰግናለን",
     smsDisburseMessage:
-      "እንኳን ደስ አልዎት🎉🎉🎉። ተቀማጭዎ በተሳካ ሁኔታ ተሰብስቦ ተረክቧል። በዚህ ዘመናዊ የተቀማጭ ስርዐት ተሳታፊ ስለሆኑ እናመሰግናለን",
+      "እንኳን ደስ አልዎት🎉🎉🎉። የውብ ዲጂታል እቁብዎ በተሳካ ሁኔታ ተሰብስቦ ተረክቧል። በውብ ዲጂታል እቁብ ተሳታፊ ስለሆኑ እናመሰግናለን",
 
     // Reports
     filterByDate: "በቀን አጣር",
@@ -419,7 +419,7 @@ export const translations = {
     administration: "አስተዳደር",
     manageUsers: "ተጠቃሚዎችን ያስተዳድሩ",
     help: "እርዳታ",
-    aboutTeqemach: "ስለ ተቀማጭ",
+    aboutTeqemach: "ስለ ውብ ዲጂታል እቁብ",
     editProfileTitle: "መገለጫ ያርትዑ",
     passwordsDoNotMatch: "የይለፍ ቃላት አይጣጣሙም",
     profileUpdated: "መገለጫ በተሳካ ሁኔታ ተዘምኗል!",
@@ -533,7 +533,7 @@ export const translations = {
     hello: "ሰላም፣",
     virtualEqub: "ዲጂታል እቁብ",
     heroTitle1: "ህልሞቻችንን እውን እናድርግ በ",
-    heroTitle2: "ተቀማጭ",
+    heroTitle2: "ውብ ዲጂታል እቁብ",
     selectType: "የእቁብ ዓይነት ይምረጡ",
     selectTypeDesc: "የሚፈልጉትን እቁብ ዓይነት ይምረጡ",
     fourCategories: "4 ምድቦች",

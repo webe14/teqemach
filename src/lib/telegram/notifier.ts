@@ -55,7 +55,7 @@ export class TelegramNotifier {
   }
 
   static async sendOTP(chatId: string | number, otpCode: string, expiryMinutes = 10) {
-    const text = `🔐 <b>Teqemach Verification Code</b>
+    const text = `🔐 <b>Wub Digital Equb (ውብ ዲጂታል እቁብ) Verification Code</b>
 
 Your verification code is: <b>${otpCode}</b>
 

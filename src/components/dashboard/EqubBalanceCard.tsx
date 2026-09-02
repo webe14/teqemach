@@ -228,7 +228,7 @@ export default function EqubBalanceCard({
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="text-sm sm:text-base font-extrabold tracking-wide bg-gradient-to-r from-blue-200 via-white to-blue-300 bg-clip-text text-transparent">
-                      {hasActiveEqub && currentGroup?.name ? currentGroup.name : `${t("appName")} ${t("virtualEqub")}`}
+                      {hasActiveEqub && currentGroup?.name ? currentGroup.name : t("appName")}
                     </h3>
                   </div>
                   <p className="text-[10.5px] sm:text-[11px] text-blue-200/85 font-medium tracking-tight">

@@ -2,7 +2,7 @@ import { getCurrentProfile } from "@/lib/actions/auth";
 import { getContributorRules } from "@/lib/actions/contributor";
 import ContributorRulesClient from "./ContributorRulesClient";
 
-export const metadata = { title: "System Rules — Teqemach" };
+export const metadata = { title: "System Rules — Wub Digital Equb" };
 
 export default async function ContributorRulesPage() {
   const profile = await getCurrentProfile();

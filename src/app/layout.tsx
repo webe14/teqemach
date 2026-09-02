@@ -15,14 +15,14 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://teqemach.com"),
-  title: "Teqemach",
+  title: "Wub Digital Equb — ውብ ዲጂታል እቁብ",
   description:
-    "A modern, enterprise-grade platform for managing Ethiopian traditional Equb (Teqemach) savings groups. Track contributions, manage collectors, and disburse funds securely.",
-  keywords: ["Equb", "Teqemach", "Ethiopian savings", "Iqub", "finance"],
-  authors: [{ name: "Teqemach Team" }],
+    "A modern, enterprise-grade platform for managing Ethiopian traditional Equb savings groups with Wub Digital Equb (ውብ ዲጂታል እቁብ). Track contributions, manage collectors, and disburse funds securely.",
+  keywords: ["Equb", "Wub Digital Equb", "ውብ ዲጂታል እቁብ", "Ethiopian savings", "Iqub", "finance"],
+  authors: [{ name: "Wub Digital Equb Team" }],
   openGraph: {
-    title: "Teqemach — Ethiopian Equb Management",
-    description: "Manage Ethiopian traditional Equb savings groups digitally.",
+    title: "Wub Digital Equb — ውብ ዲጂታል እቁብ",
+    description: "Manage Ethiopian traditional Equb savings groups digitally with Wub Digital Equb (ውብ ዲጂታል እቁብ).",
     type: "website",
     images: ["/logo.png"],
   },

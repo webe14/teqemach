@@ -1,7 +1,7 @@
 import { getAdminStats, getAllProfiles } from "@/lib/actions/admin";
 import AdminDashboardClient from "./AdminDashboardClient";
 
-export const metadata = { title: "Admin Overview — Teqemach" };
+export const metadata = { title: "Admin Overview — Wub Digital Equb" };
 
 export default async function AdminOverviewPage() {
   const stats = await getAdminStats();

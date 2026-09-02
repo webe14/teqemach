@@ -222,7 +222,7 @@ export default function CollectorReportsPage() {
     if (generatedDoc) {
       const now = new Date();
       const generatedDate = now.toLocaleDateString("en-GB").replace(/\//g, "-");
-      generatedDoc.save(`Teqemach_Report_${generatedDate}.pdf`);
+      generatedDoc.save(`Wub_Digital_Equb_Report_${generatedDate}.pdf`);
       setPdfSuccess(true);
       setTimeout(() => setPdfSuccess(false), 3000);
       setIsPreviewOpen(false);
