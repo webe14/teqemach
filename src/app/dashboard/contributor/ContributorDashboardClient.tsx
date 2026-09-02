@@ -114,7 +114,16 @@ export default function ContributorDashboardClient({
       {/* ─── 2. MAIN CONTAINER ────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 relative z-20 space-y-6">
 
-        {/* ─── 3. EQUB / TEQEMACH TYPE SELECTION GRID (WITH DISTINCT BLUE RECTANGLES) ─── */}
+        {/* ─── 3. CBE-INSPIRED TOTAL CONTRIBUTION / BALANCE CARD (PLACED FIRST) ──────── */}
+        <EqubBalanceCard 
+          stats={stats}
+          todayStr={todayStr}
+          nextCycleStr={nextCycleStr}
+          userName={userName}
+          userId={userId}
+        />
+
+        {/* ─── 4. EQUB / TEQEMACH TYPE SELECTION GRID (WITH DISTINCT BLUE RECTANGLES) ─── */}
         <div className="bg-card border border-border rounded-3xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -215,15 +224,6 @@ export default function ContributorDashboardClient({
 
           </div>
         </div>
-
-        {/* ─── 4. CBE-INSPIRED BLACK TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
-        <EqubBalanceCard 
-          stats={stats}
-          todayStr={todayStr}
-          nextCycleStr={nextCycleStr}
-          userName={userName}
-          userId={userId}
-        />
 
       </div>
     </div>
