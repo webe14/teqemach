@@ -668,10 +668,10 @@ export default function LoginPage() {
             <div className="flex flex-col items-center justify-center space-y-2 mb-6">
               <AppLogo size="xl" rounded="2xl" className="shadow-xl border-slate-200" priority />
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-center">
-                <span className="bg-gradient-to-r from-blue-500 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                <span className="text-[#18244f] dark:text-[#9db3ed]">
                   ውብ ዲጂታል እቁብ
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-blue-400 block mt-1">
+                <span className="text-xs sm:text-sm font-bold text-[#18244f]/80 dark:text-[#9db3ed]/80 block mt-1">
                   (Wub Digital Equb)
                 </span>
               </h1>
