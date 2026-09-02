@@ -70,6 +70,46 @@ export function cleanSmsText(text: string): string {
   return result;
 }
 
+export async function findProfileByPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits || digits.length < 9) return null;
+  const suffix = digits.slice(-9);
+
+  const adminClient = await createAdminClient();
+
+  const variants = [
+    `+251${suffix}`,
+    `251${suffix}`,
+    `0${suffix}`,
+    suffix,
+  ];
+  const conditions = variants.map((v) => `phone_number.eq.${v}`).join(",");
+  const { data: exactMatches } = await adminClient
+    .from("profiles")
+    .select("id, phone_number, full_name, role, email")
+    .or(conditions);
+
+  if (exactMatches && exactMatches.length > 0) {
+    return exactMatches[0];
+  }
+
+  // Fallback for numbers formatted with spaces
+  const { data: allProfiles } = await adminClient
+    .from("profiles")
+    .select("id, phone_number, full_name, role, email")
+    .not("phone_number", "is", null);
+
+  if (allProfiles) {
+    const matched = allProfiles.find((p) => {
+      const pDigits = (p.phone_number || "").replace(/\D/g, "");
+      return pDigits.endsWith(suffix) || (pDigits.length >= 9 && suffix.endsWith(pDigits));
+    });
+    if (matched) return matched;
+  }
+
+  return null;
+}
+
 export async function sendRegistrationOtp({
   phone,
   email,
@@ -101,15 +141,10 @@ export async function sendRegistrationOtp({
       }
     }
 
-    // Check if phone already registered
-    const { data: existingPhone } = await adminClient
-      .from("profiles")
-      .select("id")
-      .eq("phone_number", formattedPhone)
-      .maybeSingle();
-
+    // Check if phone already registered across all formats
+    const existingPhone = await findProfileByPhone(phone);
     if (existingPhone) {
-      return { success: false, error: "An account with this phone number already exists." };
+      return { success: false, error: "An account with this phone number already exists. Please log in." };
     }
 
     // Generate secure 6-digit OTP code

@@ -6,7 +6,12 @@ import { redirect } from "next/navigation";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
 import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 import bcrypt from "bcryptjs";
-import { sendRegistrationOtp, verifyRegistrationOtp, formatEthiopianPhone } from "@/lib/sms-otp";
+import {
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
+  formatEthiopianPhone,
+  findProfileByPhone,
+} from "@/lib/sms-otp";
 
 export async function requestRegistrationOtpAction(phone: string, email?: string) {
   return await sendRegistrationOtp({ phone, email });
@@ -18,16 +23,8 @@ export async function checkPhoneRegisteredAction(phone: string) {
     return { error: "Please enter a valid Ethiopian phone number." };
   }
 
-  const adminClient = await createAdminClient();
-  const phoneVariants = getPhoneVariants(phone);
-  const conditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
-  const { data: existing } = await adminClient
-    .from("profiles")
-    .select("id, role")
-    .or(conditions)
-    .maybeSingle();
-
-  return { exists: !!existing, profile: existing || null };
+  const existingProfile = await findProfileByPhone(phone);
+  return { exists: !!existingProfile, profile: existingProfile || null };
 }
 
 export async function verifyRegistrationOtpAction(phone: string, code: string) {
@@ -62,15 +59,8 @@ export async function registerWithPhoneOtpAction({
 
   const adminClient = await createAdminClient();
 
-  // Check if phone already registered
-  const phoneVariants = getPhoneVariants(phone);
-  const conditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
-  const { data: existing } = await adminClient
-    .from("profiles")
-    .select("id")
-    .or(conditions)
-    .maybeSingle();
-
+  // Check if phone already registered across all formats
+  const existing = await findProfileByPhone(phone);
   if (existing) {
     return { error: "An account with this phone number already exists. Please log in." };
   }
