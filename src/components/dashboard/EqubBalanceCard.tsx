@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { useState, useRef } from "react";
+import { Eye, EyeOff, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import Image from "next/image";
 
@@ -42,6 +43,12 @@ export default function EqubBalanceCard({
   const { t } = useLocale();
   const [showBalance, setShowBalance] = useState<boolean>(false);
   const [activeCardIndex, setActiveCardIndex] = useState<number>(0);
+  const [direction, setDirection] = useState<number>(0);
+
+  // Touch swipe handling
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 40;
 
   // Determine active groups
   const activeGroups = stats?.groups && stats.groups.length > 0
@@ -49,17 +56,12 @@ export default function EqubBalanceCard({
     : (stats?.group ? [stats.group] : []);
 
   const hasActiveEqub = activeGroups.length > 0;
+  const totalSlides = hasActiveEqub ? activeGroups.length : 1;
 
-  // Format Account number / Member ID (like 1*********8657 in CBE card)
-  const cleanId = userId ? userId.replace(/[^a-zA-Z0-9]/g, "") : "8657";
-  const firstChar = cleanId.charAt(0) || "1";
-  const lastFour = cleanId.slice(-4) || "8657";
-  const maskedAccountId = `${firstChar}*********${lastFour}`;
-
-  // Current selected group if multiple
+  // Current selected group
   const currentGroup = hasActiveEqub ? (activeGroups[activeCardIndex] || activeGroups[0]) : null;
 
-  // Paid and Remaining Days calculations
+  // Paid and Remaining Days calculations for current group
   const paidCount = stats?.paidCycles ?? 0;
   const remainingDays = hasActiveEqub 
     ? (stats?.daysRemaining ?? Math.max(0, (currentGroup?.total_days || 0) - paidCount))
@@ -68,17 +70,12 @@ export default function EqubBalanceCard({
   const paidDisplay = showBalance ? `${paidCount}` : "**";
   const remainingDisplay = showBalance ? `${remainingDays} ${t("days")}` : `** ${t("days")}`;
 
-  // Calculate total or specific group contribution
-  const totalAmount = typeof stats?.amountSaved === "number" ? stats.amountSaved : 0;
+  // Calculate contribution amount for current active group
   const currentAmount = currentGroup?.contribution_amount 
     ? (stats?.paidCycles || 0) * (currentGroup.contribution_amount || 0)
-    : totalAmount;
+    : (stats?.amountSaved || 0);
 
-  const displayAmount = (activeCardIndex === 0 && activeGroups.length > 1) 
-    ? totalAmount 
-    : (currentAmount || totalAmount);
-
-  const formattedAmount = displayAmount.toLocaleString("en-US", {
+  const formattedAmount = currentAmount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -92,13 +89,68 @@ export default function EqubBalanceCard({
   });
   const dateFormatted = todayStr ? `${todayStr} ${timeFormatted}` : `${currentDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${timeFormatted}`;
 
-  // Slides count for dots indicator
-  const totalSlides = hasActiveEqub ? Math.max(1, activeGroups.length) : 1;
+  // Navigation handlers
+  const goToSlide = (newIndex: number) => {
+    if (newIndex < 0 || newIndex >= totalSlides) return;
+    setDirection(newIndex > activeCardIndex ? 1 : -1);
+    setActiveCardIndex(newIndex);
+  };
+
+  const handlePrev = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (activeCardIndex > 0) {
+      goToSlide(activeCardIndex - 1);
+    }
+  };
+
+  const handleNext = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (activeCardIndex < totalSlides - 1) {
+      goToSlide(activeCardIndex + 1);
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    if (distance > minSwipeDistance && activeCardIndex < totalSlides - 1) {
+      handleNext();
+    } else if (distance < -minSwipeDistance && activeCardIndex > 0) {
+      handlePrev();
+    }
+  };
+
+  const slideVariants = {
+    enter: (dir: number) => ({
+      x: dir > 0 ? 60 : -60,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (dir: number) => ({
+      x: dir > 0 ? -60 : 60,
+      opacity: 0,
+    }),
+  };
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-3 select-none">
       {/* ─── 1. MINI APP BLUE BANKING CARD CONTAINER ─────────────────────── */}
       <div 
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         className="relative w-full rounded-[1.75rem] p-5 sm:p-6 text-white shadow-2xl overflow-hidden transition-all duration-300 border-2 border-blue-500/80 bg-gradient-to-br from-brand-900 via-[#0a2756] to-brand-900"
         style={{
           boxShadow: "0 20px 45px -10px rgba(11, 31, 58, 0.7), 0 0 25px rgba(20, 110, 245, 0.2), 0 0 0 1px rgba(96, 165, 250, 0.25) inset"
@@ -116,118 +168,163 @@ export default function EqubBalanceCard({
         <div className="absolute top-0 right-6 w-52 h-28 bg-blue-500/25 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-6 w-52 h-28 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        {/* ─── CARD HEADER: LOGO & APP TITLE ─────────────────────────────── */}
-        <div className="relative z-10 flex items-start justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            {/* Teqemach Circular Emblem with Official Logo */}
-            <div className="w-10 h-10 rounded-full bg-white p-1 shadow-lg shadow-blue-900/40 border border-blue-300/40 flex items-center justify-center overflow-hidden shrink-0">
-              <Image src="/logo.png" alt="Teqemach Logo" width={36} height={36} className="w-full h-full object-contain" />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-sm sm:text-base font-extrabold tracking-wide bg-gradient-to-r from-blue-200 via-white to-blue-300 bg-clip-text text-transparent">
-                  {hasActiveEqub && currentGroup?.name ? currentGroup.name : `${t("appName")} ${t("virtualEqub")}`}
-                </h3>
-              </div>
-              <p className="text-[10.5px] sm:text-[11px] text-blue-200/85 font-medium tracking-tight">
-                {t("equbSlogan")}
-              </p>
-            </div>
-          </div>
-
-          {/* Active / Inactive Status Badge */}
-          <div className="flex items-center gap-2 text-blue-200">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-950/70 border border-blue-400/40 text-[10px] font-semibold text-blue-200 backdrop-blur-sm shadow-sm">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>{hasActiveEqub ? t("active") : t("inactive")}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── CARD CENTER: BALANCE & TOTAL CONTRIBUTION ─────────────────── */}
-        <div className="relative z-10 my-4 text-center space-y-1.5 py-1">
-          <p className="text-xs sm:text-sm font-bold tracking-wider text-blue-200/90 uppercase">
-            {t("totalContribution")}
-          </p>
-
-          {hasActiveEqub ? (
-            /* Active Equb Total Balance Display with Show/Hide Eye Toggle */
-            <div className="flex items-center justify-center gap-2.5">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
-                {showBalance ? formattedAmount : "******"}
-              </span>
-              <span className="text-lg sm:text-xl font-extrabold text-blue-400">
-                {t("etb")}
-              </span>
+        {/* Next / Prev Navigation Chevrons when multiple active equbs exist */}
+        {totalSlides > 1 && (
+          <>
+            {activeCardIndex > 0 && (
               <button
                 type="button"
-                onClick={() => setShowBalance(!showBalance)}
-                className="p-1.5 rounded-full hover:bg-blue-600/30 active:scale-95 text-blue-300 hover:text-white transition-all cursor-pointer"
-                title={showBalance ? "Hide Balance" : "Show Balance"}
-                aria-label="Toggle contribution balance visibility"
+                onClick={handlePrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer shadow-lg"
+                aria-label="Previous Equb Card"
               >
-                {showBalance ? (
-                  <Eye className="w-5 h-5 text-blue-300 hover:text-white transition-colors" />
-                ) : (
-                  <EyeOff className="w-5 h-5 text-blue-400 hover:text-white transition-colors" />
-                )}
+                <ChevronLeft className="w-4 h-4" />
               </button>
+            )}
+            {activeCardIndex < totalSlides - 1 && (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer shadow-lg"
+                aria-label="Next Equb Card"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Animated Slide Content Container */}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={activeCardIndex}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="w-full"
+          >
+            {/* ─── CARD HEADER: LOGO & APP TITLE ─────────────────────────────── */}
+            <div className="relative z-10 flex items-start justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                {/* Teqemach Circular Emblem with Official Logo */}
+                <div className="w-10 h-10 rounded-full bg-white p-1 shadow-lg shadow-blue-900/40 border border-blue-300/40 flex items-center justify-center overflow-hidden shrink-0">
+                  <Image src="/logo.png" alt="Teqemach Logo" width={36} height={36} className="w-full h-full object-contain" />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm sm:text-base font-extrabold tracking-wide bg-gradient-to-r from-blue-200 via-white to-blue-300 bg-clip-text text-transparent">
+                      {hasActiveEqub && currentGroup?.name ? currentGroup.name : `${t("appName")} ${t("virtualEqub")}`}
+                    </h3>
+                  </div>
+                  <p className="text-[10.5px] sm:text-[11px] text-blue-200/85 font-medium tracking-tight">
+                    {t("equbSlogan")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status & Slide Indicator Badge */}
+              <div className="flex items-center gap-2 text-blue-200">
+                {totalSlides > 1 && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/30 border border-blue-300/30 text-[10px] font-bold text-white shadow-sm">
+                    {activeCardIndex + 1}/{totalSlides}
+                  </span>
+                )}
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-950/70 border border-blue-400/40 text-[10px] font-semibold text-blue-200 backdrop-blur-sm shadow-sm">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>{hasActiveEqub ? t("active") : t("inactive")}</span>
+                </div>
+              </div>
             </div>
-          ) : (
-            /* NO ACTIVE EQUB STATE (As requested by user) */
-            <div className="space-y-2 py-1">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-bold shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                {t("noActiveEqub")}
-              </div>
-              <div className="flex items-center justify-center gap-2 text-blue-200">
-                <span className="text-xl sm:text-2xl font-bold text-white">0.00</span>
-                <span className="text-sm font-semibold text-blue-400">{t("etb")}</span>
-              </div>
-              <p className="text-[11.5px] text-blue-200/80 max-w-xs mx-auto">
-                {t("noActiveEqubDesc")}
+
+            {/* ─── CARD CENTER: BALANCE & TOTAL CONTRIBUTION ─────────────────── */}
+            <div className="relative z-10 my-4 text-center space-y-1.5 py-1">
+              <p className="text-xs sm:text-sm font-bold tracking-wider text-blue-200/90 uppercase">
+                {t("totalContribution")}
               </p>
-            </div>
-          )}
-        </div>
 
-        {/* ─── CARD FOOTER: PAID & REMAINING DATES (MASKED WHEN BALANCE IS HIDDEN) & DATE ─── */}
-        <div className="relative z-10 pt-4 mt-4 border-t border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono">
-          {/* Paid & Remaining Dates */}
-          <div className="flex items-center gap-2.5 text-blue-200 font-medium">
-            <div className="flex items-center gap-1.5">
-              <span className="text-blue-300/80 capitalize">{t("paid")}:</span>
-              <span className="text-white font-bold tracking-wider">{paidDisplay}</span>
+              {hasActiveEqub ? (
+                /* Active Equb Total Balance Display with Show/Hide Eye Toggle */
+                <div className="flex items-center justify-center gap-2.5">
+                  <span className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
+                    {showBalance ? formattedAmount : "******"}
+                  </span>
+                  <span className="text-lg sm:text-xl font-extrabold text-blue-400">
+                    {t("etb")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowBalance(!showBalance)}
+                    className="p-1.5 rounded-full hover:bg-blue-600/30 active:scale-95 text-blue-300 hover:text-white transition-all cursor-pointer"
+                    title={showBalance ? "Hide Balance" : "Show Balance"}
+                    aria-label="Toggle contribution balance visibility"
+                  >
+                    {showBalance ? (
+                      <Eye className="w-5 h-5 text-blue-300 hover:text-white transition-colors" />
+                    ) : (
+                      <EyeOff className="w-5 h-5 text-blue-400 hover:text-white transition-colors" />
+                    )}
+                  </button>
+                </div>
+              ) : (
+                /* NO ACTIVE EQUB STATE (As requested by user) */
+                <div className="space-y-2 py-1">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-bold shadow-inner">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    {t("noActiveEqub")}
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-blue-200">
+                    <span className="text-xl sm:text-2xl font-bold text-white">0.00</span>
+                    <span className="text-sm font-semibold text-blue-400">{t("etb")}</span>
+                  </div>
+                  <p className="text-[11.5px] text-blue-200/80 max-w-xs mx-auto">
+                    {t("noActiveEqubDesc")}
+                  </p>
+                </div>
+              )}
             </div>
-            <span className="text-blue-400/40">•</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-blue-300/80 capitalize">{t("remaining")}:</span>
-              <span className="text-white font-bold tracking-wider">{remainingDisplay}</span>
-            </div>
-          </div>
 
-          {/* Formatted Date & Time */}
-          <div className="text-blue-300/80 text-[11px] sm:text-xs tracking-tight">
-            {dateFormatted}
-          </div>
-        </div>
+            {/* ─── CARD FOOTER: PAID & REMAINING DATES (MASKED WHEN BALANCE IS HIDDEN) & DATE ─── */}
+            <div className="relative z-10 pt-4 mt-4 border-t border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono">
+              {/* Paid & Remaining Dates */}
+              <div className="flex items-center gap-2.5 text-blue-200 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-blue-300/80 capitalize">{t("paid")}:</span>
+                  <span className="text-white font-bold tracking-wider">{paidDisplay}</span>
+                </div>
+                <span className="text-blue-400/40">•</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-blue-300/80 capitalize">{t("remaining")}:</span>
+                  <span className="text-white font-bold tracking-wider">{remainingDisplay}</span>
+                </div>
+              </div>
+
+              {/* Formatted Date & Time */}
+              <div className="text-blue-300/80 text-[11px] sm:text-xs tracking-tight">
+                {dateFormatted}
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* ─── 2. CAROUSEL PAGINATION DOTS (MATCHING APP BLUE THEME) ───────── */}
+      {/* ─── 2. CAROUSEL PAGINATION DOTS (INTERACTIVE CLICK & SWIPE INDICATORS) ── */}
       <div className="flex items-center justify-center gap-2 py-1">
         {totalSlides > 1 ? (
           Array.from({ length: totalSlides }).map((_, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => setActiveCardIndex(idx)}
+              onClick={() => goToSlide(idx)}
               className={`transition-all duration-300 rounded-full cursor-pointer ${
                 activeCardIndex === idx
-                  ? "w-6 h-2 bg-blue-500 shadow-md shadow-blue-500/40"
-                  : "w-2 h-2 bg-blue-950 border border-blue-800/80 hover:bg-blue-900"
+                  ? "w-7 h-2.5 bg-blue-400 shadow-md shadow-blue-500/50"
+                  : "w-2.5 h-2.5 bg-blue-950 border border-blue-800/80 hover:bg-blue-900"
               }`}
-              aria-label={`Go to slide ${idx + 1}`}
+              aria-label={`Go to Equb ${idx + 1}`}
             />
           ))
         ) : (
