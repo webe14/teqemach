@@ -39,7 +39,7 @@ export default function EqubHistoryClient({
               <Link href={`/dashboard/contributor/my-equbs/${eq.id}`} key={i} className="p-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/40 transition-all group block cursor-pointer">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-md shadow-blue-600/10 shrink-0 overflow-hidden">
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 p-1.5 flex items-center justify-center shadow-md shadow-blue-900/10 shrink-0 overflow-hidden">
                       <Image
                         src="/logo.png"
                         alt="Equb"
@@ -83,7 +83,7 @@ export default function EqubHistoryClient({
               <div key={i} className="p-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-sm shrink-0 overflow-hidden opacity-75">
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 p-1.5 flex items-center justify-center shadow-sm shrink-0 overflow-hidden opacity-85">
                       <Image
                         src="/logo.png"
                         alt="Equb"

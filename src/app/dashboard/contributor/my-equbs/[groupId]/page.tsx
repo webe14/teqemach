@@ -138,7 +138,7 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shadow-md shadow-blue-600/10 shrink-0 overflow-hidden">
+        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 p-1.5 flex items-center justify-center shadow-md shadow-blue-900/10 shrink-0 overflow-hidden">
           <Image
             src="/logo.png"
             alt="Equb"
