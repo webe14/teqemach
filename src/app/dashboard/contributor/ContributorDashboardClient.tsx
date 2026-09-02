@@ -26,6 +26,9 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import EqubBalanceCard from "@/components/dashboard/EqubBalanceCard";
+import { PaymentActionBar } from "@/components/dashboard/PaymentActionBar";
+import { PayEqubModal } from "@/components/dashboard/PayEqubModal";
+import { TransactionsModal } from "@/components/dashboard/TransactionsModal";
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 
@@ -48,6 +51,8 @@ export default function ContributorDashboardClient({
 }) {
   const { t } = useLocale();
   const [selectedType, setSelectedType] = useState<EqubTypeCategory>("daily");
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
 
   const completionPct = stats.totalCycles > 0
     ? Math.round((stats.paidCycles / stats.totalCycles) * 100)
@@ -216,7 +221,14 @@ export default function ContributorDashboardClient({
           </div>
         </div>
 
-        {/* ─── 4. CBE-INSPIRED BLACK TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
+        {/* ─── 4. CBE-STYLE ACTION BAR (PAY EQUB & TRANSACTIONS) ──────── */}
+        <PaymentActionBar 
+          onPayEqub={() => setIsPayModalOpen(true)}
+          onTransactions={() => setIsTransactionsModalOpen(true)}
+          hasActiveEqub={Boolean(stats?.group || stats?.groups?.length)}
+        />
+
+        {/* ─── 5. CBE-INSPIRED TOTAL CONTRIBUTION / BALANCE CARD ──────── */}
         <EqubBalanceCard 
           stats={stats}
           todayStr={todayStr}
@@ -226,6 +238,25 @@ export default function ContributorDashboardClient({
         />
 
       </div>
+
+      {/* ─── 6. INTERACTIVE MODALS ────────────────────────────────────────── */}
+      <PayEqubModal
+        isOpen={isPayModalOpen}
+        onClose={() => setIsPayModalOpen(false)}
+        contributorId={userId || ""}
+        contributorName={userName}
+        contributorPhone={stats?.group?.collector?.phone_number || ""}
+        activeGroups={stats?.groups?.length ? stats.groups : (stats?.group ? [stats.group] : allGroups)}
+        onOpenTransactions={() => setIsTransactionsModalOpen(true)}
+      />
+
+      <TransactionsModal
+        isOpen={isTransactionsModalOpen}
+        onClose={() => setIsTransactionsModalOpen(false)}
+        contributorId={userId || ""}
+        contributorName={userName}
+        onPayEqub={() => setIsPayModalOpen(true)}
+      />
     </div>
   );
 }

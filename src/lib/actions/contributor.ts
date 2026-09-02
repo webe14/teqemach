@@ -262,3 +262,265 @@ export async function requestJoinGroup(contributorId: string, groupId: string, s
     return { error: err.message, success: false };
   }
 }
+
+export interface PaymentSubmissionParams {
+  contributorId: string;
+  groupId: string;
+  numberOfDays: number;
+  totalAmount: number;
+  txnRef: string;
+  rawSms?: string;
+  bankType?: string;
+}
+
+export async function submitContributorPayment({
+  contributorId,
+  groupId,
+  numberOfDays,
+  totalAmount,
+  txnRef,
+  rawSms = "",
+  bankType = "CBE",
+}: PaymentSubmissionParams) {
+  try {
+    const supabase = await createAdminClient();
+
+    if (!contributorId || !groupId || numberOfDays <= 0 || totalAmount <= 0 || !txnRef?.trim()) {
+      return { success: false, error: "Invalid payment details. Please check all fields." };
+    }
+
+    const cleanTxnRef = txnRef.trim().toUpperCase();
+
+    // 1. Fetch group details and verify membership
+    const [groupRes, contributorRes] = await Promise.all([
+      supabase
+        .from("equb_groups")
+        .select(`
+          id,
+          name,
+          contribution_amount,
+          total_days,
+          frequency,
+          collector_id,
+          collector:profiles!collector_id (
+            id,
+            full_name,
+            phone_number
+          )
+        `)
+        .eq("id", groupId)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone_number, email")
+        .eq("id", contributorId)
+        .single(),
+    ]);
+
+    if (!groupRes.data) {
+      return { success: false, error: "Equb group not found." };
+    }
+
+    const group = groupRes.data as any;
+    const contributor = contributorRes.data as any;
+    const rate = Number(group.contribution_amount || 0);
+
+    // 2. Fetch all existing contributions for this contributor in this group
+    const { data: existingContribs } = await supabase
+      .from("contributions")
+      .select("id, cycle_number, is_marked_paid")
+      .eq("contributor_id", contributorId)
+      .eq("group_id", groupId);
+
+    const paidCycles = new Set<number>();
+    const existingMap = new Map<number, any>();
+
+    (existingContribs || []).forEach((c: any) => {
+      existingMap.set(c.cycle_number, c);
+      if (c.is_marked_paid) {
+        paidCycles.add(c.cycle_number);
+      }
+    });
+
+    // 3. Determine the next N unpaid cycles
+    const cyclesToPay: number[] = [];
+    const maxDays = group.total_days || 365;
+
+    for (let c = 1; c <= maxDays && cyclesToPay.length < numberOfDays; c++) {
+      if (!paidCycles.has(c)) {
+        cyclesToPay.push(c);
+      }
+    }
+
+    if (cyclesToPay.length === 0) {
+      return { success: false, error: "All cycles for this Equb group have already been completed!" };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    // 4. Mark or Insert each cycle as paid
+    for (const cycleNum of cyclesToPay) {
+      const existing = existingMap.get(cycleNum);
+      if (existing) {
+        await supabase
+          .from("contributions")
+          .update({
+            is_marked_paid: true,
+            contribution_date: nowIso,
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("contributions").insert({
+          group_id: groupId,
+          contributor_id: contributorId,
+          collector_id: group.collector_id,
+          cycle_number: cycleNum,
+          is_marked_paid: true,
+          disbursed: false,
+          contribution_date: nowIso,
+        });
+      }
+    }
+
+    // 5. Send in-app notification to collector
+    try {
+      await supabase.from("notifications").insert({
+        user_id: group.collector_id,
+        type: "approved",
+        title: "New Equb Payment Received",
+        message: `${contributor?.full_name || "A contributor"} paid ETB ${totalAmount.toLocaleString()} for ${cyclesToPay.length} day(s) in "${group.name}". Txn ID: ${cleanTxnRef}`,
+        data: {
+          txn_ref: cleanTxnRef,
+          group_id: groupId,
+          contributor_id: contributorId,
+          cycles: cyclesToPay,
+          amount: totalAmount,
+        },
+      });
+    } catch (notifErr) {
+      console.warn("Notification insert warning:", notifErr);
+    }
+
+    // 6. If contributor has a registered phone, queue payment confirmation SMS
+    if (contributor?.phone_number) {
+      try {
+        const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
+        const ethDate = gregorianToEthiopianString(new Date(), "en");
+        const smsMsg = `Dear ${contributor.full_name || "Contributor"}, your payment of ETB ${totalAmount.toLocaleString()} (${cyclesToPay.length} days) for ${group.name} is confirmed. Ref: ${cleanTxnRef}. Date: ${ethDate}. Wub Digital Equb`;
+        
+        await supabase.from("sms_jobs").insert({
+          type: "payment_confirmation",
+          recipient: contributor.phone_number,
+          message: smsMsg,
+          status: "pending",
+          attempts: 0,
+          max_attempts: 3,
+        });
+      } catch (smsErr) {
+        console.warn("SMS queue warning:", smsErr);
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+      receipt: {
+        txnRef: cleanTxnRef,
+        amount: totalAmount,
+        cyclesPaid: cyclesToPay.length,
+        cycleNumbers: cyclesToPay,
+        groupName: group.name,
+        contributorName: contributor?.full_name || "Contributor",
+        contributorPhone: contributor?.phone_number || "",
+        collectorName: group.collector?.full_name || "Collector",
+        collectorPhone: group.collector?.phone_number || "",
+        dateIso: nowIso,
+        bankType,
+      },
+    };
+  } catch (err: any) {
+    console.error("submitContributorPayment error:", err);
+    return { success: false, error: err.message || "Failed to submit payment." };
+  }
+}
+
+export async function getContributorTransactions(contributorId: string) {
+  try {
+    const supabase = await createAdminClient();
+
+    const { data: contributions, error } = await supabase
+      .from("contributions")
+      .select(`
+        id,
+        cycle_number,
+        contribution_date,
+        created_at,
+        is_marked_paid,
+        group_id,
+        equb_groups:group_id (
+          id,
+          name,
+          contribution_amount,
+          total_days,
+          frequency,
+          collector:profiles!collector_id (
+            id,
+            full_name,
+            phone_number
+          )
+        )
+      `)
+      .eq("contributor_id", contributorId)
+      .eq("is_marked_paid", true)
+      .order("contribution_date", { ascending: false });
+
+    if (error) {
+      return { data: [], error: error.message };
+    }
+
+    // Group individual cycles paid on the same date/timestamp into consolidated transactions
+    const txMap = new Map<string, any>();
+
+    (contributions || []).forEach((c: any) => {
+      const g = c.equb_groups;
+      if (!g) return;
+
+      const dateKey = (c.contribution_date || c.created_at || "").slice(0, 16); // group by minute
+      const key = `${c.group_id}_${dateKey}`;
+      const amount = Number(g.contribution_amount || 0);
+
+      if (!txMap.has(key)) {
+        txMap.set(key, {
+          id: c.id,
+          groupId: c.group_id,
+          groupName: g.name,
+          frequency: g.frequency,
+          collectorName: g.collector?.full_name || "Collector",
+          collectorPhone: g.collector?.phone_number || "",
+          rate: amount,
+          totalAmount: amount,
+          cycleNumbers: [c.cycle_number],
+          cyclesCount: 1,
+          dateIso: c.contribution_date || c.created_at,
+          status: "confirmed",
+          txnRef: `TXN-${c.id.slice(0, 8).toUpperCase()}`,
+        });
+      } else {
+        const item = txMap.get(key);
+        item.totalAmount += amount;
+        item.cycleNumbers.push(c.cycle_number);
+        item.cyclesCount += 1;
+      }
+    });
+
+    const transactions = Array.from(txMap.values()).map((t) => ({
+      ...t,
+      cycleNumbers: t.cycleNumbers.sort((a: number, b: number) => a - b),
+    }));
+
+    return { data: transactions, error: null };
+  } catch (err: any) {
+    console.error("getContributorTransactions error:", err);
+    return { data: [], error: err.message || "Failed to fetch transactions." };
+  }
+}

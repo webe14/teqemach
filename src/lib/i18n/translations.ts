@@ -277,6 +277,26 @@ export const translations = {
     equbAc: "Equb Ac",
     balance: "Balance",
     etb: "ETB",
+
+    // Payment Action Bar & Pay Modal
+    payEqub: "Pay Equb",
+    payEqubSubtitle: "CBE / Telebirr SMS",
+    transactionsSubtitle: "History & Receipts",
+    selectEqubToPay: "Select Equb to Pay",
+    daysToPay: "Days / Cycles to Pay",
+    totalPayable: "Total Payable",
+    copyAccount: "Copy Account",
+    accountCopied: "Account number copied!",
+    transferInstruction: "1. Transfer the exact amount to the collector account below.\n2. Paste the bank confirmation SMS message to automatically verify.",
+    pasteSmsPlaceholder: "Paste your bank transfer confirmation SMS here (e.g. CBE or Telebirr SMS)...",
+    parsedAmount: "Parsed Amount",
+    txnId: "Transaction ID",
+    verifyAndConfirmPayment: "Confirm & Record Payment",
+    paymentSuccessTitle: "Payment Confirmed!",
+    receiptTitle: "Official Digital Payment Receipt",
+    noTransactions: "No transactions recorded yet.",
+    viewReceipt: "View Receipt",
+    collectorAccount: "Collector Account",
   },
 
   am: {
@@ -555,6 +575,26 @@ export const translations = {
     equbAc: "የዕቁብ መለያ",
     balance: "ቀሪ ሂሳብ",
     etb: "ብር",
+
+    // Payment Action Bar & Pay Modal
+    payEqub: "እቁብ ክፈል",
+    payEqubSubtitle: "በCBE / ቴሌብር ኤስኤምኤስ",
+    transactionsSubtitle: "የክፍያ ታሪክ እና ደረሰኞች",
+    selectEqubToPay: "የሚከፍሉትን እቁብ ይምረጡ",
+    daysToPay: "የሚከፈሉ ቀናት/ዑደቶች",
+    totalPayable: "ጠቅላላ የሚከፈል",
+    copyAccount: "ሂሳብ ቁጥር ቅዳ",
+    accountCopied: "የሂሳብ ቁጥሩ ተቀድቷል!",
+    transferInstruction: "1. ትክክለኛውን መጠን ከታች ወዳለው የሰብሳቢው ሂሳብ በCBE ወይም በቴሌብር ይላኩ።\n2. ከባንኩ የደረሰዎትን የማረጋገጫ SMS ከታች ይለጥፉ።",
+    pasteSmsPlaceholder: "የባንክ ማስተላለፊያ ማረጋገጫ የSMS መልእክትዎን እዚህ ይለጥፉ...",
+    parsedAmount: "የተገኘው መጠን",
+    txnId: "የዝውውር ቁጥር (Txn ID)",
+    verifyAndConfirmPayment: "ክፍያውን አረጋግጥ እና መዝግብ",
+    paymentSuccessTitle: "ክፍያው በተሳካ ሁኔታ ተረጋግጧል!",
+    receiptTitle: "ይፋዊ የዲጂታል ክፍያ ደረሰኝ",
+    noTransactions: "እስካሁን ምንም የተመዘገበ የክፍያ ግብይት የለም።",
+    viewReceipt: "ደረሰኝ ይመልከቱ",
+    collectorAccount: "የሰብሳቢው የባንክ ሂሳብ",
   },
 } as const;
 
