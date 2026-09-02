@@ -63,17 +63,17 @@ export function buildPaymentConfirmationSms({
 
   return `ሰላም ${contributorName || "ውድ ደንበኛ"},
 
-የተቀማጭ ክፍያዎ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል (Payment Verified & Recorded)
+የተቀማጭ ክፍያዎ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል (Payment Verified)
 
-🔹 የተከፈለው ብር መጠን: ETB ${totalAmount.toLocaleString()}
-🔹 የተቀማጩ አይነት: ${typeText}
-🔹 የተመዘገበበት ቀን: ${ethiopianDateStr}
-🔹 የተመረጡ ቀናት: ${datesText}
-🔹 የቀናት ብዛት: ${daysCount}
-🔹 ተቀማጭ ሰብሳቢዎ: ${collector}
-🔹 የክፍያ ሁኔታ: ✅ ተረጋግጧል (Verified)
+• የተከፈለው ብር መጠን: ETB ${totalAmount.toLocaleString()}
+• የተቀማጩ አይነት: ${typeText}
+• የተመዘገበበት ቀን: ${ethiopianDateStr}
+• የተመረጡ ቀናት: ${datesText}
+• የቀናት ብዛት: ${daysCount}
+• ተቀማጭ ሰብሳቢዎ: ${collector}
+• የክፍያ ሁኔታ: ተረጋግጧል (Verified)
 
-በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት ከፈለጉ mini app ውስጥ በመግባት መመልከት ይችላሉ።`;
+በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት mini app ይክፈቱ።`;
 }
 
 export function cleanSmsText(text: string): string {
