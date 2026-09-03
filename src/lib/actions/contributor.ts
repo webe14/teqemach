@@ -292,53 +292,114 @@ export async function submitContributorPayment({
     const cleanTxnRef = (txnRef?.trim() || `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`);
     const cleanRawSms = rawSms.trim();
 
-    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN TELEBIRR_SMS TABLE
-    let telebirrMatch: { id: string; transaction_ref: string | null; message_text: string | null } | null = null;
+    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN EITHER bank_transactions OR telebirr_sms
+    let bankMatch: { id: string; transaction_ref: string | null; message_text: string | null; source_table: "bank_transactions" | "telebirr_sms" } | null = null;
 
-    // A. Check by cleanTxnRef
+    // A. Check in bank_transactions table by cleanTxnRef
     if (cleanTxnRef && cleanTxnRef.length >= 4) {
-      const { data: smsMatches } = await supabase
-        .from("telebirr_sms")
-        .select("id, transaction_ref, message_text, received_at")
-        .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
-        .order("received_at", { ascending: false })
-        .limit(1);
-
-      if (smsMatches && smsMatches.length > 0) {
-        telebirrMatch = smsMatches[0];
-      }
-    }
-
-    // B. Check by alphanumeric tokens from raw SMS if cleanTxnRef direct query missed
-    if (!telebirrMatch && cleanRawSms) {
-      const tokens = cleanRawSms.match(/[A-Za-z0-9]{6,25}/g) || [];
-      for (const token of tokens) {
-        if (/^(TELEBIRR|COMMERCIAL|ETHIOPIA|ACCOUNT|CURRENT|BALANCE|THANK|ETHIO|TELECOM|DEAR|RECEIVED|TRANSACTION|NUMBER)$/i.test(token)) {
-          continue;
-        }
-        const { data: tokenMatches } = await supabase
-          .from("telebirr_sms")
-          .select("id, transaction_ref, message_text, received_at")
-          .or(`transaction_ref.ilike.%${token}%,message_text.ilike.%${token}%`)
+      try {
+        const { data: bMatches } = await supabase
+          .from("bank_transactions")
+          .select("id, transaction_id, raw_message, received_at, amount")
+          .or(`transaction_id.ilike.%${cleanTxnRef}%,raw_message.ilike.%${cleanTxnRef}%`)
           .order("received_at", { ascending: false })
           .limit(1);
 
-        if (tokenMatches && tokenMatches.length > 0) {
-          telebirrMatch = tokenMatches[0];
-          break;
+        if (bMatches && bMatches.length > 0) {
+          bankMatch = {
+            id: bMatches[0].id,
+            transaction_ref: bMatches[0].transaction_id,
+            message_text: bMatches[0].raw_message,
+            source_table: "bank_transactions",
+          };
         }
+      } catch (bErr) {
+        console.warn("bank_transactions lookup warning:", bErr);
+      }
+    }
+
+    // B. Check in telebirr_sms table by cleanTxnRef
+    if (!bankMatch && cleanTxnRef && cleanTxnRef.length >= 4) {
+      try {
+        const { data: smsMatches } = await supabase
+          .from("telebirr_sms")
+          .select("id, transaction_ref, message_text, received_at")
+          .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
+          .order("received_at", { ascending: false })
+          .limit(1);
+
+        if (smsMatches && smsMatches.length > 0) {
+          bankMatch = {
+            id: smsMatches[0].id,
+            transaction_ref: smsMatches[0].transaction_ref,
+            message_text: smsMatches[0].message_text,
+            source_table: "telebirr_sms",
+          };
+        }
+      } catch (tErr) {
+        console.warn("telebirr_sms lookup warning:", tErr);
+      }
+    }
+
+    // C. Check by alphanumeric tokens from raw SMS if direct Txn query missed
+    if (!bankMatch && cleanRawSms) {
+      const tokens = cleanRawSms.match(/[A-Za-z0-9_-]{6,35}/g) || [];
+      for (const token of tokens) {
+        if (/^(TELEBIRR|COMMERCIAL|ETHIOPIA|ACCOUNT|CURRENT|BALANCE|THANK|ETHIO|TELECOM|DEAR|RECEIVED|TRANSACTION|NUMBER|TRANSFERRED|SUCCESSFULLY|SERVICE|CHARGE|DISASTER|RECOVERY|BANKING|FORMS|MBRECIEPT|HTTPS|HTTP|FEEDBACK)$/i.test(token)) {
+          continue;
+        }
+
+        // Check bank_transactions with token
+        try {
+          const { data: bTokenMatches } = await supabase
+            .from("bank_transactions")
+            .select("id, transaction_id, raw_message, received_at, amount")
+            .or(`transaction_id.ilike.%${token}%,raw_message.ilike.%${token}%`)
+            .order("received_at", { ascending: false })
+            .limit(1);
+
+          if (bTokenMatches && bTokenMatches.length > 0) {
+            bankMatch = {
+              id: bTokenMatches[0].id,
+              transaction_ref: bTokenMatches[0].transaction_id,
+              message_text: bTokenMatches[0].raw_message,
+              source_table: "bank_transactions",
+            };
+            break;
+          }
+        } catch {}
+
+        // Check telebirr_sms with token
+        try {
+          const { data: tTokenMatches } = await supabase
+            .from("telebirr_sms")
+            .select("id, transaction_ref, message_text, received_at")
+            .or(`transaction_ref.ilike.%${token}%,message_text.ilike.%${token}%`)
+            .order("received_at", { ascending: false })
+            .limit(1);
+
+          if (tTokenMatches && tTokenMatches.length > 0) {
+            bankMatch = {
+              id: tTokenMatches[0].id,
+              transaction_ref: tTokenMatches[0].transaction_ref,
+              message_text: tTokenMatches[0].message_text,
+              source_table: "telebirr_sms",
+            };
+            break;
+          }
+        } catch {}
       }
     }
 
     // IF NOT AVAILABLE ON DATABASE -> REJECT BEFORE APPROVING
-    if (!telebirrMatch) {
+    if (!bankMatch) {
       return {
         success: false,
-        error: `ይህ የክፍያ መልእክት (Txn: ${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (telebirr_sms) ውስጥ አልተገኘም! እባክዎ ክፍያው ለሰብሳቢው በትክክል መድረሱን ያረጋግጡ። (Payment message was not found in the bank SMS database.)`,
+        error: `ይህ የክፍያ መልእክት (Txn: ${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (bank_transactions / telebirr_sms) ውስጥ አልተገኘም! እባክዎ ክፍያው ለሰብሳቢው በትክክል መድረሱን ያረጋግጡ። (Payment message was not found in the bank transactions database.)`,
       };
     }
 
-    const matchedRef = (telebirrMatch.transaction_ref || cleanTxnRef).trim();
+    const matchedRef = (bankMatch.transaction_ref || cleanTxnRef).trim();
 
     // 1.5 CHECK IF ALREADY CLAIMED IN CLAIMED_TRANSACTIONS TABLE
     const { data: claimedMatches } = await supabase
@@ -493,6 +554,21 @@ export async function submitContributorPayment({
       });
     } catch (claimInsertErr) {
       console.warn("claimed_transactions insert note:", claimInsertErr);
+    }
+
+    // 5.3 Update bank_transactions table status if matched from it
+    if (bankMatch.source_table === "bank_transactions") {
+      try {
+        await supabase
+          .from("bank_transactions")
+          .update({
+            status: "matched",
+            matched_contributor_id: contributorId,
+          })
+          .eq("id", bankMatch.id);
+      } catch (updateBankErr) {
+        console.warn("bank_transactions status update note:", updateBankErr);
+      }
     }
 
     // 5.5 Send in-app notification to collector
