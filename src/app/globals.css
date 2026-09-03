@@ -227,3 +227,19 @@ html {
   font-size: 0.75rem;
   font-weight: 600;
 }
+
+/* High visibility input caret indicator & typography */
+input, textarea, select {
+  caret-color: #146ef5 !important;
+  color: #0b1f3a;
+}
+
+.dark input, .dark textarea, .dark select {
+  caret-color: #60a5fa !important;
+  color: #f8fafc;
+}
+
+::selection {
+  background-color: #146ef5;
+  color: #ffffff;
+}

@@ -505,7 +505,7 @@ export function PayEqubModal({
                     setErrorMessage(null);
                   }}
                   placeholder={t("pasteSmsPlaceholder")}
-                  className="w-full rounded-2xl border border-border bg-card p-3 text-xs font-mono text-foreground focus:outline-none focus:border-blue-500 shadow-sm leading-relaxed"
+                  className="w-full rounded-2xl border border-border bg-white dark:bg-slate-900 p-3 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm leading-relaxed"
                 />
 
                 {/* Live Real-Time Parsed Badges */}
@@ -560,7 +560,7 @@ export function PayEqubModal({
                       value={manualTxnRef}
                       onChange={(e) => setManualTxnRef(e.target.value.toUpperCase())}
                       placeholder="e.g. FT2609028881 or MP26090212345"
-                      className="h-10 w-full rounded-xl border border-border bg-card px-3 text-xs font-mono font-bold text-foreground focus:outline-none focus:border-blue-500 shadow-sm uppercase"
+                      className="h-10 w-full rounded-xl border border-border bg-white dark:bg-slate-900 px-3 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm uppercase"
                     />
                   </div>
                 )}

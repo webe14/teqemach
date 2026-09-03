@@ -64,17 +64,19 @@ export function parseEthiopianBankSms(text: string): ParsedSmsResult {
   // 2. Extract Amount
   let amount: number | null = null;
 
-  // Patterns for amount matching:
-  // "ETB 1,500.00", "ETB1500.00", "1500.00 ETB", "1500.00ETB", "1,500 ብር", "500.00 Birr", "debited with ETB 500"
+  // Normalize text: handle dot used as thousands separator if followed by 3 digits
+  const normalizedRaw = raw.replace(/(\d+)\.(\d{3})\.(\d{2})/g, "$1$2.$3");
+
+  // Patterns for amount matching (supporting ETB 17,500.00, ETB 17500, 17500.00, 17,500 ብር, etc.):
   const amountRegexes = [
-    /(?:ETB|Birr|ብር)\s*:?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i,
-    /([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:ETB|Birr|ብር)/i,
-    /(?:transferred|paid|debited|amount|ገንዘብ|የተከፈለው|ያስቀመጡት)\s*:?\s*(?:ETB|ብር)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i,
-    /(?:ETB|ብር)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:has been|transferred|credited|debited|ተላልፏል)/i,
+    /(?:ETB|Birr|ብር)\s*:?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i,
+    /([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:ETB|Birr|ብር)/i,
+    /(?:transferred|paid|debited|amount|received|ገንዘብ|የተከፈለው|ያስቀመጡት)\s*:?\s*(?:ETB|ብር)?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i,
+    /(?:ETB|ብር)?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:has been|transferred|credited|debited|ተላልፏል)/i,
   ];
 
   for (const regex of amountRegexes) {
-    const match = raw.match(regex);
+    const match = normalizedRaw.match(regex);
     if (match && match[1]) {
       const cleanNum = match[1].replace(/,/g, "");
       const parsed = parseFloat(cleanNum);
@@ -85,11 +87,11 @@ export function parseEthiopianBankSms(text: string): ParsedSmsResult {
     }
   }
 
-  // Fallback amount check: look for prominent money format like 500.00 or 1000.00
+  // Fallback amount check: look for prominent money format like 500.00, 17500.00, 1000.00, etc.
   if (amount === null) {
-    const fallbackMatch = raw.match(/\b([1-9][0-9]{1,6}(?:\.[0-9]{2}))\b/);
+    const fallbackMatch = normalizedRaw.match(/\b([1-9][0-9]{0,2}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[1-9][0-9]*(?:\.[0-9]{1,2})?)\b/);
     if (fallbackMatch && fallbackMatch[1]) {
-      const parsed = parseFloat(fallbackMatch[1]);
+      const parsed = parseFloat(fallbackMatch[1].replace(/,/g, ""));
       if (!isNaN(parsed) && parsed > 0) {
         amount = parsed;
       }
