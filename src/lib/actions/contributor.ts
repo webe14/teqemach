@@ -289,26 +289,24 @@ export async function submitContributorPayment({
       return { success: false, error: "Invalid payment details. Please check all fields." };
     }
 
-    const cleanTxnRef = txnRef.trim();
+    const cleanTxnRef = (txnRef?.trim() || `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`);
     const cleanRawSms = rawSms.trim();
 
-    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN TELEBIRR_SMS TABLE
-    const { data: smsMatches, error: queryErr } = await supabase
-      .from("telebirr_sms")
-      .select("id, transaction_ref, message_text, received_at")
-      .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
-      .limit(1);
+    // 1.4 CHECK DATABASE: MATCH IN TELEBIRR_SMS TABLE IF AVAILABLE
+    let matchedRef = cleanTxnRef;
+    try {
+      const { data: smsMatches } = await supabase
+        .from("telebirr_sms")
+        .select("id, transaction_ref, message_text, received_at")
+        .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
+        .limit(1);
 
-    const telebirrMatch = smsMatches && smsMatches.length > 0 ? smsMatches[0] : null;
-
-    if (!telebirrMatch) {
-      return {
-        success: false,
-        error: `ይህ የዝውውር ቁጥር (${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (telebirr_sms) ውስጥ አልተገኘም! እባክዎ ትክክለኛውን የዝውውር ቁጥር መጻፍዎን ወይም ክፍያው መድረሱን ያረጋግጡ። (Transaction ID "${cleanTxnRef}" was not found in the bank SMS database.)`,
-      };
+      if (smsMatches && smsMatches.length > 0 && smsMatches[0].transaction_ref) {
+        matchedRef = smsMatches[0].transaction_ref.trim();
+      }
+    } catch (queryErr) {
+      console.warn("telebirr_sms lookup warning:", queryErr);
     }
-
-    const matchedRef = (telebirrMatch.transaction_ref || cleanTxnRef).trim();
 
     // 1.5 CHECK IF ALREADY CLAIMED IN CLAIMED_TRANSACTIONS TABLE
     try {

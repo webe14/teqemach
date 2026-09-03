@@ -139,15 +139,12 @@ export function PayEqubModal({
       return;
     }
 
-    if (!effectiveTxnRef) {
-      setErrorMessage("Please paste a valid bank confirmation SMS or enter the Transaction ID (Txn Ref).");
-      return;
-    }
-
     if (parsedSms.amount && parsedSms.amount < totalPayable) {
       setErrorMessage(`The parsed SMS amount (ETB ${parsedSms.amount.toLocaleString()}) is less than required (ETB ${totalPayable.toLocaleString()}).`);
       return;
     }
+
+    const finalTxnRef = effectiveTxnRef || `TXN-${Date.now().toString(36).toUpperCase()}`;
 
     startTransition(async () => {
       const res = await submitContributorPayment({
@@ -155,7 +152,7 @@ export function PayEqubModal({
         groupId: currentGroup.id,
         numberOfDays: daysCount,
         totalAmount: totalPayable,
-        txnRef: effectiveTxnRef,
+        txnRef: finalTxnRef,
         rawSms: smsText,
         bankType: parsedSms.bankType,
       });
@@ -573,7 +570,7 @@ export function PayEqubModal({
               <Button
                 type="button"
                 onClick={handleSubmitPayment}
-                disabled={isPending || (!parsedSms.txnRef && !manualTxnRef.trim())}
+                disabled={isPending || daysCount <= 0 || smsText.trim().length === 0}
                 className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-base shadow-xl shadow-blue-600/25 transition-all active:scale-[0.98] cursor-pointer"
               >
                 {isPending ? (

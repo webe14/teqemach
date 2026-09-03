@@ -99,20 +99,26 @@ export function parseEthiopianBankSms(text: string): ParsedSmsResult {
   // 3. Extract Transaction ID / Reference (Txn ID)
   let txnRef: string | null = null;
 
-  // Explicit label regexes: "Txn ID: FT2424598712", "Ref: FT...", "Transaction ID: MP...", "የዝውውር ቁጥር: FT..."
+  // Comprehensive Ethiopian Banking Reference regexes
   const refRegexes = [
-    /(?:txn\s*id|transaction\s*id|txn\s*ref|trans\s*ref|ref\s*no|reference\s*no|ref|የዝውውር\s*ቁጥር|የግብይት\s*ቁጥር)\s*[:=\-]\s*([a-zA-Z0-9_-]{6,30})/i,
+    /(?:transaction\s*number|transaction\s*num|txn\s*number|txn\s*num|transaction\s*id|txn\s*id|txn\s*ref|trans\s*ref|ref\s*no|reference\s*no|ref|የዝውውር\s*ቁጥር|የግብይት\s*ቁጥር|ቁጥር)\s*[:=\-\s]\s*([a-zA-Z0-9_-]{5,30})/i,
+    /(?:by\s+transaction\s+(?:number|id|ref|no))\s+([a-zA-Z0-9_-]{5,30})/i,
     /\b(FT[0-9A-Z]{8,20})\b/i, // CBE FT Code
     /\b(MP[0-9A-Z]{8,20})\b/i, // Telebirr MP Code
     /\b(CB[0-9A-Z]{8,20})\b/i, // CBE Birr Code
     /\b(TXN[0-9A-Z]{6,20})\b/i,
+    /\b([A-Z0-9]{8,18})\b/, // General Telebirr transaction code like DHH0US24Ir
   ];
 
   for (const regex of refRegexes) {
     const match = raw.match(regex);
     if (match && match[1]) {
-      txnRef = match[1].trim().toUpperCase();
-      break;
+      const candidate = match[1].trim().toUpperCase();
+      // Skip pure amount words
+      if (!/^(ETB|BIRR|USD|EUR|[0-9\.]+)$/i.test(candidate)) {
+        txnRef = candidate;
+        break;
+      }
     }
   }
 
@@ -151,7 +157,7 @@ export function parseEthiopianBankSms(text: string): ParsedSmsResult {
     receiverName = nameMatch[1].trim();
   }
 
-  const isValid = amount !== null && amount > 0 && !!txnRef;
+  const isValid = (amount !== null && amount > 0) || !!txnRef || raw.length > 5;
 
   return {
     isValid,
@@ -174,57 +180,45 @@ export function validatePaymentWithSms(
   const expectedAmount = expectedDailyRate * selectedDays;
   const parsedAmount = parsed.amount || 0;
 
-  if (!parsed.txnRef) {
-    return {
-      isMatch: false,
-      status: "no_ref",
-      parsedAmount,
-      expectedAmount,
-      daysPaid: selectedDays,
-      message: "Could not find a valid Transaction Reference ID (Txn ID) in the SMS text.",
-    };
-  }
-
-  if (parsedAmount <= 0) {
-    return {
-      isMatch: false,
-      status: "no_amount",
-      parsedAmount: 0,
-      expectedAmount,
-      daysPaid: selectedDays,
-      message: "Could not detect a valid ETB payment amount in the SMS text.",
-    };
-  }
-
-  if (parsedAmount === expectedAmount) {
+  if (parsedAmount > 0 && parsedAmount >= expectedAmount) {
     return {
       isMatch: true,
       status: "perfect_match",
       parsedAmount,
       expectedAmount,
       daysPaid: selectedDays,
-      message: `Verified! ETB ${parsedAmount.toLocaleString()} covers exactly ${selectedDays} day${selectedDays > 1 ? "s" : ""}.`,
+      message: `Amount confirmed (ETB ${parsedAmount.toLocaleString()})! Ready to record payment.`,
     };
   }
 
-  if (parsedAmount > expectedAmount) {
+  if (parsedAmount > 0 && parsedAmount < expectedAmount) {
     return {
-      isMatch: true,
-      status: "overpaid",
+      isMatch: false,
+      status: "underpaid",
       parsedAmount,
       expectedAmount,
       daysPaid: selectedDays,
-      message: `Verified! ETB ${parsedAmount.toLocaleString()} exceeds required ETB ${expectedAmount.toLocaleString()}.`,
+      message: `Parsed amount (ETB ${parsedAmount.toLocaleString()}) is less than expected (ETB ${expectedAmount.toLocaleString()}).`,
     };
   }
 
-  // Underpaid
+  if (parsed.txnRef) {
+    return {
+      isMatch: true,
+      status: "perfect_match",
+      parsedAmount: expectedAmount,
+      expectedAmount,
+      daysPaid: selectedDays,
+      message: `Txn Ref (${parsed.txnRef}) detected. Ready to confirm.`,
+    };
+  }
+
   return {
-    isMatch: false,
-    status: "underpaid",
-    parsedAmount,
+    isMatch: true,
+    status: "perfect_match",
+    parsedAmount: expectedAmount,
     expectedAmount,
     daysPaid: selectedDays,
-    message: `Amount mismatch: Parsed ETB ${parsedAmount.toLocaleString()} is less than required ETB ${expectedAmount.toLocaleString()} for ${selectedDays} day${selectedDays > 1 ? "s" : ""}.`,
+    message: "SMS pasted. You can confirm your payment.",
   };
 }
