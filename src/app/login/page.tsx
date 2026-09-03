@@ -82,7 +82,7 @@ type Step =
 export default function LoginPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>("contributor_login");
+  const [step, setStep] = useState<Step>("init");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
 
@@ -644,11 +644,42 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md z-10 bg-card border border-border rounded-2xl p-8 shadow-xl animate-fadeInUp">
 
-        {/* ─── LOADING ─────────────────────────────────────────────── */}
+        {/* ─── LOADING / SPLASH SCREEN (BIGGER LOGO + SLOGAN) ────────── */}
         {(step === "init" || step === "loading") && (
-          <div className="flex flex-col items-center py-8">
-            <Loader2Icon className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground font-medium">Loading Telegram...</p>
+          <div className="flex flex-col items-center justify-center py-8 px-2 text-center space-y-6 animate-fadeIn">
+            {/* Bigger Logo with Pulse Glow */}
+            <div className="relative flex items-center justify-center">
+              <div className="absolute -inset-4 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+              <AppLogo
+                size="4xl"
+                rounded="3xl"
+                className="shadow-2xl border-2 border-primary/20 relative scale-105 transition-transform duration-300"
+                priority
+              />
+            </div>
+
+            {/* Brand Title */}
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#18244f] dark:text-[#9db3ed]">
+                ውብ ዲጂታል እቁብ
+              </h1>
+              <p className="text-xs sm:text-sm font-bold text-[#18244f]/80 dark:text-[#9db3ed]/80 tracking-wider">
+                WUB DIGITAL EQUB
+              </p>
+            </div>
+
+            {/* Slogan Pill */}
+            <div className="bg-primary/10 dark:bg-primary/20 border border-primary/25 rounded-full px-5 py-2 shadow-sm">
+              <p className="text-xs sm:text-sm font-semibold text-primary dark:text-primary-foreground">
+                ✨ የሚተማመኑበት አስተማማኝ የዕቁብ ቁጠባ! ✨
+              </p>
+            </div>
+
+            {/* Loading Indicator */}
+            <div className="flex items-center space-x-2 pt-2 text-muted-foreground text-xs font-medium">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span>እባክዎ ትንሽ ይጠብቁ... (Loading...)</span>
+            </div>
           </div>
         )}
 

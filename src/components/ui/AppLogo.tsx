@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface AppLogoProps {
   className?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   rounded?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full" | "none";
   priority?: boolean;
   alt?: string;
@@ -18,6 +18,8 @@ const sizeMap = {
   lg: 48,
   xl: 64,
   "2xl": 80,
+  "3xl": 96,
+  "4xl": 128,
 };
 
 const pixelClasses = {
@@ -27,6 +29,8 @@ const pixelClasses = {
   lg: "w-12 h-12",
   xl: "w-16 h-16",
   "2xl": "w-20 h-20",
+  "3xl": "w-24 h-24 sm:w-28 sm:h-28",
+  "4xl": "w-32 h-32 sm:w-36 sm:h-36",
 };
 
 const roundedClasses = {
