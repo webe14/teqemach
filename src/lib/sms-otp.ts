@@ -58,11 +58,11 @@ export function buildPaymentConfirmationSms({
   collectorName,
 }: PaymentSmsDetails): string {
   const typeText = ratePerCycle ? `ባለ ${ratePerCycle}` : (groupName || "እቁብ");
-  const datesText = selectedDatesStr || `ቀን ${daysCount > 1 ? `1 - ${daysCount}` : "1"}`;
-  const collector = collectorName || "ሰብሳቢዎ";
+  const datesText = selectedDatesStr ? `(${selectedDatesStr})` : "";
+  const collector = collectorName ? ` | ሰብሳቢ: ${collectorName}` : "";
 
-  return `ሰላም ${contributorName } ፤ ከ ${typeText} እቁብ በቀን ${ethiopianDateStr} የከፈሉት ${totalAmount.toLocaleString()} ለ${daysCount} ቀናት
- ${datesText} በተሳካ ሁኔታ ተመዝግቦሎታል።በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!!`;
+  return `ውብ ዲጂታል እቁብ
+ሰላም ${contributorName || "ውድ ደንበኛ"}፣ የ ETB ${totalAmount.toLocaleString()} (${typeText}) ክፍያዎ ለ ${daysCount} ቀን ${datesText} በቀን ${ethiopianDateStr} ተረጋግጧል${collector}። እናመሰግናለን!`;
 }
 
 export function cleanSmsText(text: string): string {
