@@ -55,14 +55,12 @@ export function buildPaymentConfirmationSms({
   ethiopianDateStr,
   selectedDatesStr,
   daysCount,
-  collectorName,
 }: PaymentSmsDetails): string {
   const typeText = ratePerCycle ? `ባለ ${ratePerCycle}` : (groupName || "እቁብ");
   const datesText = selectedDatesStr ? `(${selectedDatesStr})` : "";
-  const collector = collectorName ? ` | ሰብሳቢ: ${collectorName}` : "";
 
   return `ውብ ዲጂታል እቁብ
-ሰላም ${contributorName || "ውድ ደንበኛ"}፣ የ ETB ${totalAmount.toLocaleString()} (${typeText}) ክፍያዎ ለ ${daysCount} ቀን ${datesText} በቀን ${ethiopianDateStr} ተረጋግጧል${collector}። እናመሰግናለን!`;
+ሰላም ${contributorName || "ውድ ደንበኛ"}፣ የ ETB ${totalAmount.toLocaleString()} (${typeText}) ክፍያዎ ለ ${daysCount} ቀን ${datesText} በቀን ${ethiopianDateStr} ተረጋግጧል። እናመሰግናለን!`;
 }
 
 export function cleanSmsText(text: string): string {
