@@ -292,8 +292,8 @@ export async function submitContributorPayment({
     const cleanTxnRef = (txnRef?.trim() || `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`);
     const cleanRawSms = rawSms.trim();
 
-    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN EITHER bank_transactions OR telebirr_sms
-    let bankMatch: { id: string; transaction_ref: string | null; message_text: string | null; source_table: "bank_transactions" | "telebirr_sms" } | null = null;
+    // 1.4 STRICT DATABASE CHECK: MUST EXIST IN bank_transactions
+    let bankMatch: { id: string; transaction_id: string | null; raw_message: string | null; status: string | null } | null = null;
 
     // A. Check in bank_transactions table by cleanTxnRef
     if (cleanTxnRef && cleanTxnRef.length >= 4) {
@@ -306,43 +306,14 @@ export async function submitContributorPayment({
           .limit(1);
 
         if (bMatches && bMatches.length > 0) {
-          bankMatch = {
-            id: bMatches[0].id,
-            transaction_ref: bMatches[0].transaction_id,
-            message_text: bMatches[0].raw_message,
-            source_table: "bank_transactions",
-            status: bMatches[0].status,
-          } as any;
+          bankMatch = bMatches[0];
         }
       } catch (bErr) {
         console.warn("bank_transactions lookup warning:", bErr);
       }
     }
 
-    // B. Check in telebirr_sms table by cleanTxnRef
-    if (!bankMatch && cleanTxnRef && cleanTxnRef.length >= 4) {
-      try {
-        const { data: smsMatches } = await supabase
-          .from("telebirr_sms")
-          .select("id, transaction_ref, message_text, received_at")
-          .or(`transaction_ref.ilike.%${cleanTxnRef}%,message_text.ilike.%${cleanTxnRef}%`)
-          .order("received_at", { ascending: false })
-          .limit(1);
-
-        if (smsMatches && smsMatches.length > 0) {
-          bankMatch = {
-            id: smsMatches[0].id,
-            transaction_ref: smsMatches[0].transaction_ref,
-            message_text: smsMatches[0].message_text,
-            source_table: "telebirr_sms",
-          };
-        }
-      } catch (tErr) {
-        console.warn("telebirr_sms lookup warning:", tErr);
-      }
-    }
-
-    // C. Check by alphanumeric tokens from raw SMS if direct Txn query missed
+    // B. Check by alphanumeric tokens from raw SMS if direct Txn query missed
     if (!bankMatch && cleanRawSms) {
       const tokens = cleanRawSms.match(/[A-Za-z0-9_-]{6,35}/g) || [];
       for (const token of tokens) {
@@ -350,42 +321,16 @@ export async function submitContributorPayment({
           continue;
         }
 
-        // Check bank_transactions with token
         try {
           const { data: bTokenMatches } = await supabase
             .from("bank_transactions")
-            .select("id, transaction_id, raw_message, received_at, amount")
+            .select("id, transaction_id, raw_message, received_at, amount, status")
             .or(`transaction_id.ilike.%${token}%,raw_message.ilike.%${token}%`)
             .order("received_at", { ascending: false })
             .limit(1);
 
           if (bTokenMatches && bTokenMatches.length > 0) {
-            bankMatch = {
-              id: bTokenMatches[0].id,
-              transaction_ref: bTokenMatches[0].transaction_id,
-              message_text: bTokenMatches[0].raw_message,
-              source_table: "bank_transactions",
-            };
-            break;
-          }
-        } catch {}
-
-        // Check telebirr_sms with token
-        try {
-          const { data: tTokenMatches } = await supabase
-            .from("telebirr_sms")
-            .select("id, transaction_ref, message_text, received_at")
-            .or(`transaction_ref.ilike.%${token}%,message_text.ilike.%${token}%`)
-            .order("received_at", { ascending: false })
-            .limit(1);
-
-          if (tTokenMatches && tTokenMatches.length > 0) {
-            bankMatch = {
-              id: tTokenMatches[0].id,
-              transaction_ref: tTokenMatches[0].transaction_ref,
-              message_text: tTokenMatches[0].message_text,
-              source_table: "telebirr_sms",
-            };
+            bankMatch = bTokenMatches[0];
             break;
           }
         } catch {}
@@ -396,20 +341,14 @@ export async function submitContributorPayment({
     if (!bankMatch) {
       return {
         success: false,
-        error: `ይህ የክፍያ መልእክት (Txn: ${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (bank_transactions / telebirr_sms) ውስጥ አልተገኘም! እባክዎ ክፍያው ለሰብሳቢው በትክክል መድረሱን ያረጋግጡ። (Payment message was not found in the bank transactions database.)`,
+        error: `ይህ የክፍያ መልእክት (Txn: ${cleanTxnRef}) በዳታቤዝ ውስጥ ባለው የባንክ ኤስኤምኤስ (bank_transactions) ውስጥ አልተገኘም! እባክዎ ክፍያው ለሰብሳቢው በትክክል መድረሱን ያረጋግጡ። (Payment message was not found in the bank transactions database.)`,
       };
     }
 
-    const matchedRef = (bankMatch.transaction_ref || cleanTxnRef).trim();
+    const matchedRef = (bankMatch.transaction_id || cleanTxnRef).trim();
 
-    // 1.5 CHECK IF ALREADY CLAIMED IN CLAIMED_TRANSACTIONS TABLE
-    const { data: claimedMatches } = await supabase
-      .from("claimed_transactions")
-      .select("transaction_ref, claimed_at")
-      .or(`transaction_ref.ilike.%${cleanTxnRef}%,transaction_ref.ilike.%${matchedRef}%`)
-      .limit(1);
-
-    if (claimedMatches && claimedMatches.length > 0) {
+    // 1.5 CHECK IF ALREADY CLAIMED (Directly on bank_transactions status)
+    if (bankMatch.status === "matched") {
       return {
         success: false,
         error: `ይህ የዝውውር ቁጥር (${matchedRef}) ከዚህ በፊት ጥቅም ላይ ውሏል! (This Transaction reference has already been claimed and used.)`,
@@ -545,31 +484,17 @@ export async function submitContributorPayment({
       console.warn("payment_transactions insert warning (falling back to notifications):", txnInsertErr);
     }
 
-    // 5.2 Record in claimed_transactions table so it cannot be claimed again
+    // 5.2 Mark bank_transactions record as matched/claimed
     try {
-      await supabase.from("claimed_transactions").insert({
-        transaction_ref: matchedRef,
-        profile_id: contributorId,
-        group_id: groupId,
-        claimed_at: nowIso,
-      });
-    } catch (claimInsertErr) {
-      console.warn("claimed_transactions insert note:", claimInsertErr);
-    }
-
-    // 5.3 Update bank_transactions table status if matched from it
-    if (bankMatch.source_table === "bank_transactions") {
-      try {
-        await supabase
-          .from("bank_transactions")
-          .update({
-            status: "matched",
-            matched_contributor_id: contributorId,
-          })
-          .eq("id", bankMatch.id);
-      } catch (updateBankErr) {
-        console.warn("bank_transactions status update note:", updateBankErr);
-      }
+      await supabase
+        .from("bank_transactions")
+        .update({
+          status: "matched",
+          matched_contributor_id: contributorId,
+        })
+        .eq("id", bankMatch.id);
+    } catch (updateBankErr) {
+      console.warn("bank_transactions status update note:", updateBankErr);
     }
 
     // 5.5 Send in-app notification to collector
