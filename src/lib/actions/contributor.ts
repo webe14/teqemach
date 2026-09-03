@@ -300,7 +300,7 @@ export async function submitContributorPayment({
       try {
         const { data: bMatches } = await supabase
           .from("bank_transactions")
-          .select("id, transaction_id, raw_message, received_at, amount")
+          .select("id, transaction_id, raw_message, received_at, amount, status")
           .or(`transaction_id.ilike.%${cleanTxnRef}%,raw_message.ilike.%${cleanTxnRef}%`)
           .order("received_at", { ascending: false })
           .limit(1);
@@ -311,7 +311,8 @@ export async function submitContributorPayment({
             transaction_ref: bMatches[0].transaction_id,
             message_text: bMatches[0].raw_message,
             source_table: "bank_transactions",
-          };
+            status: bMatches[0].status,
+          } as any;
         }
       } catch (bErr) {
         console.warn("bank_transactions lookup warning:", bErr);
