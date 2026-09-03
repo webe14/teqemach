@@ -60,7 +60,7 @@ export function buildPaymentConfirmationSms({
   const datesText = selectedDatesStr ? ` (${selectedDatesStr})` : "";
   const nameDisplay = contributorName ? ` ${contributorName}` : "";
 
-  return `ውብ እቁብ: ሰላም${nameDisplay}፤ የ ${totalAmount.toLocaleString()} ብር (${typeText}) ክፍያዎ ለ ${daysCount} ቀናት${datesText} በቀን ${ethiopianDateStr} ተመዝግቧል። እናመሰግናለን!`;
+  return `ውብ ዲጂታል እቁብ: ሰላም${nameDisplay}፤ የ ${totalAmount.toLocaleString()} ብር (${typeText}) ክፍያዎ ለ ${daysCount} ቀናት${datesText} በቀን ${ethiopianDateStr} ተመዝግቧል። እናመሰግናለን!`;
 }
 
 export function cleanSmsText(text?: string | null): string {
