@@ -56,11 +56,14 @@ export function buildPaymentConfirmationSms({
   selectedDatesStr,
   daysCount,
 }: PaymentSmsDetails): string {
-  const typeText = ratePerCycle ? `ባለ ${ratePerCycle}` : (groupName || "እቁብ");
-  const datesText = selectedDatesStr ? ` (${selectedDatesStr})` : "";
-  const nameDisplay = contributorName ? ` ${contributorName}` : "";
+  const typeText = ratePerCycle ? `Bale ${ratePerCycle}` : (cleanSmsText(groupName) || "Equb");
+  const cleanDates = selectedDatesStr ? cleanSmsText(selectedDatesStr) : "";
+  const datesText = cleanDates ? ` (${cleanDates})` : "";
+  const cleanDate = cleanSmsText(ethiopianDateStr);
+  const cleanName = cleanSmsText(contributorName || "");
+  const nameDisplay = cleanName.length > 0 ? ` ${cleanName}` : "";
 
-  return `ውብ ዲጂታል እቁብ: ሰላም${nameDisplay}፤ የ ${totalAmount.toLocaleString()} ብር (${typeText}) ክፍያዎ ለ ${daysCount} ቀናት${datesText} በቀን ${ethiopianDateStr} ተመዝግቧል። እናመሰግናለን!`;
+  return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText}) on ${cleanDate} is confirmed. Thank you!`;
 }
 
 export function cleanSmsText(text?: string | null): string {
