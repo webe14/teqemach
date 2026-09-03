@@ -182,26 +182,40 @@ export function validatePaymentWithSms(
   const expectedAmount = expectedDailyRate * selectedDays;
   const parsedAmount = parsed.amount || 0;
 
-  if (parsedAmount > 0 && parsedAmount >= expectedAmount) {
-    return {
-      isMatch: true,
-      status: "perfect_match",
-      parsedAmount,
-      expectedAmount,
-      daysPaid: selectedDays,
-      message: `Amount confirmed (ETB ${parsedAmount.toLocaleString()})! Ready to record payment.`,
-    };
-  }
+  if (parsedAmount > 0) {
+    if (parsedAmount === expectedAmount) {
+      return {
+        isMatch: true,
+        status: "perfect_match",
+        parsedAmount,
+        expectedAmount,
+        daysPaid: selectedDays,
+        message: `ትክክለኛ መጠን (ETB ${parsedAmount.toLocaleString()})! ለ ${selectedDays} ቀን ክፍያ ዝግጁ ነው። (Verified exact match!)`,
+      };
+    }
 
-  if (parsedAmount > 0 && parsedAmount < expectedAmount) {
-    return {
-      isMatch: false,
-      status: "underpaid",
-      parsedAmount,
-      expectedAmount,
-      daysPaid: selectedDays,
-      message: `Parsed amount (ETB ${parsedAmount.toLocaleString()}) is less than expected (ETB ${expectedAmount.toLocaleString()}).`,
-    };
+    if (parsedAmount > expectedAmount) {
+      const calculatedDays = expectedDailyRate > 0 ? Math.floor(parsedAmount / expectedDailyRate) : selectedDays;
+      return {
+        isMatch: false,
+        status: "overpaid",
+        parsedAmount,
+        expectedAmount,
+        daysPaid: selectedDays,
+        message: `የተከፈለው መጠን (ETB ${parsedAmount.toLocaleString()}) ከተመረጡት ${selectedDays} ቀናት ጠቅላላ ክፍያ (ETB ${expectedAmount.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ${calculatedDays} ቢያደርጉ ይሸፍናል። (Amount cannot be greater than total payable: ETB ${parsedAmount.toLocaleString()} > ETB ${expectedAmount.toLocaleString()})`,
+      };
+    }
+
+    if (parsedAmount < expectedAmount) {
+      return {
+        isMatch: false,
+        status: "underpaid",
+        parsedAmount,
+        expectedAmount,
+        daysPaid: selectedDays,
+        message: `የተከፈለው መጠን (ETB ${parsedAmount.toLocaleString()}) ለተመረጡት ${selectedDays} ቀናት ከሚያስፈልገው (ETB ${expectedAmount.toLocaleString()}) ያንሳል! (Amount is less than total payable: ETB ${parsedAmount.toLocaleString()} < ETB ${expectedAmount.toLocaleString()})`,
+      };
+    }
   }
 
   if (parsed.txnRef) {
@@ -211,7 +225,7 @@ export function validatePaymentWithSms(
       parsedAmount: expectedAmount,
       expectedAmount,
       daysPaid: selectedDays,
-      message: `Txn Ref (${parsed.txnRef}) detected. Ready to confirm.`,
+      message: `የዝውውር ቁጥር (${parsed.txnRef}) ተገኝቷል። ለማረጋገጥ ዝግጁ ነው።`,
     };
   }
 
@@ -221,6 +235,6 @@ export function validatePaymentWithSms(
     parsedAmount: expectedAmount,
     expectedAmount,
     daysPaid: selectedDays,
-    message: "SMS pasted. You can confirm your payment.",
+    message: "የኤስኤምኤስ ጽሑፍ ተለጥፏል። ክፍያዎን ማረጋገጥ ይችላሉ።",
   };
 }

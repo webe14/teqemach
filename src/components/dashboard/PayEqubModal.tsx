@@ -139,8 +139,14 @@ export function PayEqubModal({
       return;
     }
 
+    if (parsedSms.amount && parsedSms.amount > totalPayable) {
+      const suggestedDays = rate > 0 ? Math.floor(parsedSms.amount / rate) : daysCount;
+      setErrorMessage(`የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል። (Amount cannot be greater than total payable).`);
+      return;
+    }
+
     if (parsedSms.amount && parsedSms.amount < totalPayable) {
-      setErrorMessage(`The parsed SMS amount (ETB ${parsedSms.amount.toLocaleString()}) is less than required (ETB ${totalPayable.toLocaleString()}).`);
+      setErrorMessage(`የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ያንሳል! (Amount is less than total payable: ETB ${parsedSms.amount.toLocaleString()} < ETB ${totalPayable.toLocaleString()}).`);
       return;
     }
 
