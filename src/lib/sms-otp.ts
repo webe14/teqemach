@@ -61,19 +61,8 @@ export function buildPaymentConfirmationSms({
   const datesText = selectedDatesStr || `ቀን ${daysCount > 1 ? `1 - ${daysCount}` : "1"}`;
   const collector = collectorName || "ሰብሳቢዎ";
 
-  return `ሰላም ${contributorName || "ውድ ደንበኛ"},
-
-የተቀማጭ ክፍያዎ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል (Payment Verified)
-
-• የተከፈለው ብር መጠን: ETB ${totalAmount.toLocaleString()}
-• የተቀማጩ አይነት: ${typeText}
-• የተመዘገበበት ቀን: ${ethiopianDateStr}
-• የተመረጡ ቀናት: ${datesText}
-• የቀናት ብዛት: ${daysCount}
-• ተቀማጭ ሰብሳቢዎ: ${collector}
-• የክፍያ ሁኔታ: ተረጋግጧል (Verified)
-
-በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!! ተጨማሪ መረጃ ለማየት mini app ይክፈቱ።`;
+  return `ሰላም ${contributorName } ፤ ከ ${typeText} እቁብ በቀን ${ethiopianDateStr} የከፈሉት ${totalAmount.toLocaleString()} ለ${daysCount} ቀናት
+ ${datesText} በተሳካ ሁኔታ ተመዝግቦሎታል።በዚህ ዘመናዊ ውብ ዲጂታል እቁብ ስለተጠቀሙ እናመሰግናለን!!`;
 }
 
 export function cleanSmsText(text: string): string {
