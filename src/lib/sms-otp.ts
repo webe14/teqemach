@@ -56,29 +56,33 @@ export function buildPaymentConfirmationSms({
   selectedDatesStr,
   daysCount,
 }: PaymentSmsDetails): string {
-  const typeText = ratePerCycle ? `ባለ ${ratePerCycle}` : (groupName || "እቁብ");
-  const datesText = selectedDatesStr ? `(${selectedDatesStr})` : "";
+  const typeText = ratePerCycle ? `Bale ${ratePerCycle}` : (cleanSmsText(groupName) || "Equb");
+  const cleanDates = selectedDatesStr ? cleanSmsText(selectedDatesStr) : "";
+  const datesText = cleanDates ? ` (${cleanDates})` : "";
+  const cleanDate = cleanSmsText(ethiopianDateStr);
+  const cleanName = cleanSmsText(contributorName || "");
+  const nameDisplay = cleanName.length > 0 ? ` ${cleanName}` : "";
 
-  return `ውብ ዲጂታል እቁብ
-ሰላም ${contributorName || "ውድ ደንበኛ"}፣ የ ETB ${totalAmount.toLocaleString()} (${typeText}) ክፍያዎ ለ ${daysCount} ቀን ${datesText} በቀን ${ethiopianDateStr} ተረጋግጧል። እናመሰግናለን!`;
+  return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText}) on ${cleanDate} is confirmed. Thank you!`;
 }
 
-export function cleanSmsText(text: string): string {
+export function cleanSmsText(text?: string | null): string {
   if (!text) return "";
   const amharicReplacements: [RegExp, string][] = [
-    [/መስከረም/g, "Meskerem"],
-    [/ጥቅምት/g, "Tikimt"],
-    [/ህዳር/g, "Hidar"],
-    [/ታህሳስ/g, "Tahsas"],
+    [/መስከረም|መስ/g, "Mes"],
+    [/ጥቅምት|ጥቅ/g, "Tik"],
+    [/ህዳር|ህዳ/g, "Hid"],
+    [/ታህሳስ|ታህ/g, "Tah"],
     [/ጥር/g, "Tir"],
-    [/የካቲት/g, "Yekatit"],
-    [/መጋቢት/g, "Megabit"],
-    [/ሚያዚያ/g, "Miazia"],
-    [/ግንቦት/g, "Ginbot"],
+    [/የካቲት|የካ/g, "Yek"],
+    [/መጋቢት|መጋ/g, "Meg"],
+    [/ሚያዚያ|ሚያ/g, "Mia"],
+    [/ግንቦት|ግን/g, "Gin"],
     [/ሰኔ/g, "Sene"],
-    [/ሐምሌ|ሀምሌ/g, "Hamle"],
-    [/ነሐሴ|ነሀሴ/g, "Nehase"],
-    [/ጳጉሜ/g, "Pagumen"],
+    [/ሐምሌ|ሀምሌ|ሐም/g, "Ham"],
+    [/ነሐሴ|ነሀሴ|ነሐ|ነሀ/g, "Neh"],
+    [/ጳጉሜ|ጳጉ/g, "Pagu"],
+    [/ቀን\s*/g, "Day "],
     [/ባለ\s*/g, "Bale "],
     [/ብር/g, "ETB"],
     [/ዕቁብ|እቁብ/g, "Equb"],
