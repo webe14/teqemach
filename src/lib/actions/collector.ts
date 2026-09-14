@@ -197,6 +197,28 @@ export async function addContributor(formData: {
   startDate?: string; // ISO date string for the contributor's starting date
 }) {
   const supabase = await createAdminClient();
+
+  const { data: existing } = await supabase
+    .from("group_memberships")
+    .select("id")
+    .eq("contributor_id", formData.contributorId)
+    .eq("group_id", formData.groupId)
+    .maybeSingle();
+
+  if (existing) {
+    const updateData: Record<string, unknown> = { collector_id: formData.collectorId };
+    if (formData.startDate) {
+      updateData.created_at = formData.startDate;
+    }
+    const { error: updateError } = await supabase
+      .from("group_memberships")
+      .update(updateData)
+      .eq("id", existing.id);
+    if (updateError) return { error: updateError.message };
+    revalidatePath("/dashboard/collector/contributors");
+    return { success: true };
+  }
+
   const insertData: Record<string, unknown> = {
     contributor_id: formData.contributorId,
     group_id: formData.groupId,
@@ -553,18 +575,31 @@ export async function createContributionCycles(
 ) {
   const supabase = await createAdminClient();
 
-  const cycles = Array.from({ length: totalDays }, (_, i) => ({
-    contributor_id: contributorId,
-    collector_id: collectorId,
-    group_id: groupId,
-    cycle_number: i + 1,
-    is_marked_paid: false,
-    disbursed: false,
-    contribution_date: null,
-  }));
+  // Check existing cycles for this contributor in this group
+  const { data: existingCycles } = await supabase
+    .from("contributions")
+    .select("cycle_number")
+    .eq("contributor_id", contributorId)
+    .eq("group_id", groupId);
 
-  const { error } = await supabase.from("contributions").insert(cycles);
-  if (error) return { error: error.message };
+  const existingCycleNumbers = new Set((existingCycles || []).map((c) => c.cycle_number));
+
+  const newCycles = Array.from({ length: totalDays }, (_, i) => i + 1)
+    .filter((cycleNum) => !existingCycleNumbers.has(cycleNum))
+    .map((cycleNum) => ({
+      contributor_id: contributorId,
+      collector_id: collectorId,
+      group_id: groupId,
+      cycle_number: cycleNum,
+      is_marked_paid: false,
+      disbursed: false,
+      contribution_date: null,
+    }));
+
+  if (newCycles.length > 0) {
+    const { error } = await supabase.from("contributions").insert(newCycles);
+    if (error) return { error: error.message };
+  }
   return { success: true };
 }
 

@@ -223,28 +223,89 @@ export async function getAllGroups() {
 export async function approveContributor(contributorId: string, groupId: string, collectorId: string, startDate?: string) {
   const supabase = await createAdminClient();
   
-  // 1. Update status to active
+  // 1. Update status to active and assign collector if provided
+  const profileUpdate: Record<string, unknown> = { status: "active" };
+  if (collectorId) {
+    profileUpdate.collector_id = collectorId;
+  }
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ status: "active" })
+    .update(profileUpdate)
     .eq("id", contributorId);
     
   if (updateError) return { error: updateError.message };
 
-  // 2. Add to group
-  const insertData: Record<string, unknown> = {
-    contributor_id: contributorId,
-    group_id: groupId,
-    collector_id: collectorId,
-  };
-  if (startDate) {
-    insertData.created_at = startDate;
+  // 2. Check if a membership for this contributor and group already exists
+  const { data: existingForGroup } = await supabase
+    .from("group_memberships")
+    .select("id")
+    .eq("contributor_id", contributorId)
+    .eq("group_id", groupId)
+    .maybeSingle();
+
+  if (existingForGroup) {
+    // Membership already exists for this group: update collector and start date (no duplicate insert)
+    const updateData: Record<string, unknown> = { collector_id: collectorId };
+    if (startDate) {
+      updateData.created_at = startDate;
+    }
+    const { error: updateMembershipError } = await supabase
+      .from("group_memberships")
+      .update(updateData)
+      .eq("id", existingForGroup.id);
+
+    if (updateMembershipError) return { error: updateMembershipError.message };
+  } else {
+    // Check if the contributor had a previous requested membership for a different group
+    const { data: otherMemberships } = await supabase
+      .from("group_memberships")
+      .select("id, group_id")
+      .eq("contributor_id", contributorId);
+
+    if (otherMemberships && otherMemberships.length === 1) {
+      // Reassign the requested membership to the newly approved group
+      const updateData: Record<string, unknown> = {
+        group_id: groupId,
+        collector_id: collectorId,
+      };
+      if (startDate) {
+        updateData.created_at = startDate;
+      }
+      const { error: updateGroupError } = await supabase
+        .from("group_memberships")
+        .update(updateData)
+        .eq("id", otherMemberships[0].id);
+
+      if (updateGroupError) return { error: updateGroupError.message };
+    } else {
+      // Insert new membership
+      const insertData: Record<string, unknown> = {
+        contributor_id: contributorId,
+        group_id: groupId,
+        collector_id: collectorId,
+      };
+      if (startDate) {
+        insertData.created_at = startDate;
+      }
+      
+      const { error: groupError } = await supabase.from("group_memberships").insert(insertData);
+      if (groupError) return { error: groupError.message };
+    }
+  }
+
+  // 3. Mark any pending contributor_request notifications as read
+  try {
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("type", "contributor_request")
+      .filter("data->>contributor_id", "eq", contributorId);
+  } catch {
+    // Non-critical notification update
   }
   
-  const { error: groupError } = await supabase.from("group_memberships").insert(insertData);
-  if (groupError) return { error: groupError.message };
-  
   revalidatePath("/dashboard/admin/contributors");
+  revalidatePath("/dashboard/collector/contributors");
   return { success: true };
 }
 
