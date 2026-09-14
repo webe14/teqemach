@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="9XXXXXXXX"
-                  className="pl-14"
+                  className="pl-14 text-black dark:text-black"
                   required
                 />
               </div>
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="pl-10"
+                  className="pl-10 text-black dark:text-black"
                   required
                 />
               </div>

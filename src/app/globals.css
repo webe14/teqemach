@@ -228,15 +228,40 @@ html {
   font-weight: 600;
 }
 
-/* High visibility input caret indicator & typography */
-input, textarea, select {
+/* High visibility input caret indicator & typography - ensure black text on light inputs */
+input:not([type="checkbox"]):not([type="radio"]), textarea, select {
   caret-color: #146ef5 !important;
-  color: #0b1f3a;
+  color: #000000 !important;
 }
 
-.dark input, .dark textarea, .dark select {
-  caret-color: #60a5fa !important;
-  color: #f8fafc;
+.dark input:not([type="checkbox"]):not([type="radio"]), .dark textarea, .dark select {
+  caret-color: #146ef5 !important;
+  color: #000000 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+.dark input::placeholder, .dark textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+/* Autofill styling so text remains black */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #f8fafc inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 ::selection {

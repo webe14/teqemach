@@ -766,7 +766,7 @@ export default function LoginPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Enter your phone number"
-                      className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                      className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                     />
                     <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
@@ -784,7 +784,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                      className="px-4 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                     />
                     <button
                       type="button"
@@ -870,7 +870,7 @@ export default function LoginPage() {
                           value={regPhone}
                           onChange={(e) => setRegPhone(e.target.value)}
                           placeholder="Enter your phone number"
-                          className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                          className="pl-3 pr-10 h-12 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                         />
                         <Phone className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
@@ -937,7 +937,7 @@ export default function LoginPage() {
                           value={regOtp}
                           onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ""))}
                           placeholder="6-digit code"
-                          className="px-4 h-12 text-center text-lg tracking-[0.3em] font-bold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none text-slate-900 placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-400"
+                          className="px-4 h-12 text-center text-lg tracking-[0.3em] font-bold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none text-black dark:text-black placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-500"
                         />
                       </div>
                     </div>
@@ -993,7 +993,7 @@ export default function LoginPage() {
                           value={regFullName}
                           onChange={(e) => setRegFullName(e.target.value)}
                           placeholder="e.g. Abebe Kebede"
-                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                         />
                         <UserCircle2 className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
@@ -1011,7 +1011,7 @@ export default function LoginPage() {
                           value={regEmail}
                           onChange={(e) => setRegEmail(e.target.value)}
                           placeholder="e.g. abebe@gmail.com"
-                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                         />
                         <Mail className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
@@ -1052,7 +1052,7 @@ export default function LoginPage() {
                           value={regPassword}
                           onChange={(e) => setRegPassword(e.target.value)}
                           placeholder="Minimum 6 characters"
-                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                         />
                         <button
                           type="button"
@@ -1076,7 +1076,7 @@ export default function LoginPage() {
                           value={regConfirmPassword}
                           onChange={(e) => setRegConfirmPassword(e.target.value)}
                           placeholder="Re-type password"
-                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-slate-900 placeholder:text-slate-400"
+                          className="px-4 pr-10 h-11 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-semibold text-black dark:text-black placeholder:text-slate-500"
                         />
                         <button
                           type="button"
@@ -1361,7 +1361,7 @@ export default function LoginPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name or email..."
-                  className="pl-10"
+                  className="pl-10 text-black dark:text-black placeholder:text-slate-500"
                 />
               </div>
 
@@ -1580,7 +1580,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="pl-10"
+                    className="pl-10 text-black dark:text-black placeholder:text-slate-500"
                     required
                     disabled={isSubmitting}
                   />
@@ -1596,7 +1596,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 text-black dark:text-black placeholder:text-slate-500"
                     required
                     disabled={isSubmitting}
                   />
