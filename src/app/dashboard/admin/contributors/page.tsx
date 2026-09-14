@@ -144,10 +144,12 @@ export default function ManageContributorsPage() {
   // ── Delete dialog state ───────────────────────────────────────────────────
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contributor | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // ── Pending Delete dialog state ───────────────────────────────────────────
   const [pendingDeleteDialogOpen, setPendingDeleteDialogOpen] = useState(false);
   const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingContributor | null>(null);
+  const [pendingDeleteError, setPendingDeleteError] = useState<string | null>(null);
 
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approveTarget, setApproveTarget] = useState<PendingContributor | null>(null);
@@ -450,15 +452,26 @@ export default function ManageContributorsPage() {
   // ── Delete helpers ────────────────────────────────────────────────────────
   function openDelete(c: Contributor) {
     setDeleteTarget(c);
+    setDeleteError(null);
     setDeleteDialogOpen(true);
   }
 
   async function handleDelete() {
     if (!deleteTarget || !userId) return;
+    setDeleteError(null);
     startTransition(async () => {
-      const result = await deleteContributor(deleteTarget.contributor_id);
-      if (result.error) return; // silently fail or could show toast
+      const targetId = deleteTarget.contributor_id || deleteTarget.contributor?.id;
+      if (!targetId) {
+        setDeleteError("Contributor ID not found");
+        return;
+      }
+      const result = await deleteContributor(targetId);
+      if (result.error) {
+        setDeleteError(result.error);
+        return;
+      }
       await refreshContributors();
+      router.refresh();
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
     });
@@ -466,15 +479,21 @@ export default function ManageContributorsPage() {
 
   function openPendingDelete(p: PendingContributor) {
     setPendingDeleteTarget(p);
+    setPendingDeleteError(null);
     setPendingDeleteDialogOpen(true);
   }
 
   async function handlePendingDelete() {
     if (!pendingDeleteTarget || !userId) return;
+    setPendingDeleteError(null);
     startTransition(async () => {
       const result = await deleteContributor(pendingDeleteTarget.id);
-      if (result.error) return; // silently fail or could show toast
+      if (result.error) {
+        setPendingDeleteError(result.error);
+        return;
+      }
       await refreshContributors();
+      router.refresh();
       setPendingDeleteDialogOpen(false);
       setPendingDeleteTarget(null);
     });
@@ -1140,6 +1159,13 @@ export default function ManageContributorsPage() {
             </div>
           )}
 
+          {deleteError && (
+            <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 pt-2">
             <Button
               type="button"
@@ -1190,6 +1216,13 @@ export default function ManageContributorsPage() {
             </div>
           )}
 
+          {pendingDeleteError && (
+            <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{pendingDeleteError}</span>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 pt-2">
             <Button
               type="button"
@@ -1202,6 +1235,7 @@ export default function ManageContributorsPage() {
               variant="destructive"
               onClick={handlePendingDelete}
               disabled={isPending}
+              id="confirm-delete-pending-contributor"
             >
               {isPending ? t("loading") : t("delete")}
             </Button>

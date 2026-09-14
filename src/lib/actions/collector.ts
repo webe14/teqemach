@@ -270,17 +270,106 @@ export async function updateContributor(data: {
 }
 
 export async function deleteContributor(contributorId: string) {
-  const supabase = await createAdminClient();
+  try {
+    const supabase = await createAdminClient();
 
-  // Delete the profile — memberships and contributions cascade-delete via FK
-  const { error } = await supabase
-    .from("profiles")
-    .delete()
-    .eq("id", contributorId);
+    // 1. Delete associated contributions
+    await supabase
+      .from("contributions")
+      .delete()
+      .eq("contributor_id", contributorId);
 
-  if (error) return { error: error.message };
-  revalidatePath("/dashboard/collector/contributors");
-  return { success: true };
+    // 2. Delete payment transactions
+    try {
+      await supabase
+        .from("payment_transactions")
+        .delete()
+        .eq("contributor_id", contributorId);
+    } catch {
+      // Non-critical if table doesn't exist
+    }
+
+    // 3. Unlink from bank_transactions
+    try {
+      await supabase
+        .from("bank_transactions")
+        .update({ matched_contributor_id: null, status: "unmatched" })
+        .eq("matched_contributor_id", contributorId);
+    } catch {
+      // Non-critical if column doesn't exist
+    }
+
+    // 4. Delete group memberships
+    await supabase
+      .from("group_memberships")
+      .delete()
+      .eq("contributor_id", contributorId);
+
+    // 5. Delete notifications for or referring to this user
+    try {
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("user_id", contributorId);
+        
+      await supabase
+        .from("notifications")
+        .delete()
+        .filter("data->>contributor_id", "eq", contributorId);
+    } catch {
+      // Non-critical
+    }
+
+    // 6. Delete telegram notification preferences & otps
+    try {
+      await supabase
+        .from("telegram_notification_prefs")
+        .delete()
+        .eq("user_id", contributorId);
+    } catch {}
+
+    try {
+      await supabase
+        .from("telegram_otps")
+        .delete()
+        .eq("user_id", contributorId);
+    } catch {}
+
+    // 7. Unlink from telegram_users if linked
+    try {
+      await supabase
+        .from("telegram_users")
+        .update({ user_id: null })
+        .eq("user_id", contributorId);
+    } catch {}
+
+    // 8. Unlink from any profile referencing this contributor as collector
+    try {
+      await supabase
+        .from("profiles")
+        .update({ collector_id: null })
+        .eq("collector_id", contributorId);
+    } catch {}
+
+    // 9. Delete the profile itself
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", contributorId);
+
+    if (error) return { error: error.message, success: false };
+
+    // 10. Attempt to delete auth user if exists in Supabase Auth
+    try {
+      await supabase.auth.admin.deleteUser(contributorId);
+    } catch {}
+
+    revalidatePath("/dashboard/admin/contributors");
+    revalidatePath("/dashboard/collector/contributors");
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { error: err.message || "Failed to delete contributor", success: false };
+  }
 }
 
 export async function getContributorCycles(
