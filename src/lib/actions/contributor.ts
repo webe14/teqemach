@@ -59,7 +59,7 @@ export async function getContributorStats(contributorId: string) {
     }
 
     const rawGroups: any[] = (membershipsRes?.data as any[])
-      ?.map((m) => m.equb_groups)
+      ?.map((m) => m.equb_groups || m.group)
       .filter(Boolean) ?? [];
 
     const groups = rawGroups.map((g) => {
@@ -98,6 +98,7 @@ export async function getContributorStats(contributorId: string) {
       paidCycles: 0,
       totalCycles: 0,
       group: null,
+      groups: [],
     };
   }
 }
@@ -183,7 +184,7 @@ export async function getPublicEqubGroups() {
     const supabase = await createAdminClient();
     const { data, error } = await supabase
       .from("equb_groups")
-      .select("id, name, contribution_amount, total_days, frequency, collector_id, created_at")
+      .select("id, name, contribution_amount, total_days, frequency, collector_id, created_at, collector:profiles!collector_id(full_name, phone_number)")
       .order("contribution_amount", { ascending: false });
 
     if (error) return { error: error.message, data: [] };

@@ -804,14 +804,18 @@ export async function getCollectorGroups(collectorId: string) {
   const supabase = await createAdminClient();
 
   let collectorIds = [collectorId];
+  let isAdmin = false;
   try {
     const { data: currentProf } = await supabase
       .from("profiles")
-      .select("phone_number, telegram_id, email")
+      .select("phone_number, telegram_id, email, role")
       .eq("id", collectorId)
       .single();
 
     if (currentProf) {
+      if (currentProf.role === "admin") {
+        isAdmin = true;
+      }
       const orCond: string[] = [];
       if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
       if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
@@ -831,11 +835,16 @@ export async function getCollectorGroups(collectorId: string) {
     console.warn("getCollectorGroups profile resolution note:", err);
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("equb_groups")
     .select("*, group_memberships(id)")
-    .in("collector_id", collectorIds)
     .order("contribution_amount", { ascending: false });
+
+  if (!isAdmin) {
+    query = query.in("collector_id", collectorIds);
+  }
+
+  const { data, error } = await query;
   if (error) return { error: error.message, data: [] };
   
   const mapped = data?.map((g: any) => ({
