@@ -20,7 +20,6 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 import {
   adminNavItems,
-  collectorNavItems,
   contributorNavItems,
 } from "./NavLinks";
 import {
@@ -35,7 +34,7 @@ import { signOut } from "@/lib/actions/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
 
 interface MobileBottomNavProps {
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   userName?: string;
   isAdmin?: boolean;
 }
@@ -47,12 +46,7 @@ export function MobileBottomNav({ role, userName, isAdmin }: MobileBottomNavProp
 
   const showAdminLink = role === "admin" || isAdmin;
 
-  const allItems =
-    role === "admin"
-      ? adminNavItems
-      : role === "collector"
-      ? collectorNavItems
-      : contributorNavItems;
+  const allItems = role === "admin" ? adminNavItems : contributorNavItems;
 
   const leftItem = allItems[1];
   const centerItem = allItems[0];

@@ -57,7 +57,7 @@ export default function BroadcastPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Linked Users</SelectItem>
-              <SelectItem value="collector">Collectors Only</SelectItem>
+              <SelectItem value="admin">Admins Only</SelectItem>
               <SelectItem value="contributor">Contributors Only</SelectItem>
             </SelectContent>
           </Select>

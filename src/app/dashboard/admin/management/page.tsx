@@ -30,18 +30,20 @@ export default function ManagementHubPage() {
     phoneNumber: "",
     email: "",
     password: "",
-    role: "" as "collector" | "contributor" | "",
+    role: "contributor" as const,
     collectorId: "",
   });
 
-  // Fetch collectors when component mounts or when role changes to contributor
+  // Fetch admin/collector when component mounts
   useEffect(() => {
-    if (form.role === "contributor") {
-      getCollectors().then((res) => {
-        setCollectors((res.data as Collector[]) ?? []);
-      });
-    }
-  }, [form.role]);
+    getCollectors().then((res) => {
+      const cols = (res.data as Collector[]) ?? [];
+      setCollectors(cols);
+      if (cols.length === 1 && !form.collectorId) {
+        setForm(f => ({ ...f, collectorId: cols[0].id }));
+      }
+    });
+  }, []);
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -51,8 +53,7 @@ export default function ManagementHubPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.role) { setError(t("pleaseSelectRole")); return; }
-    if (form.role === "contributor" && !form.collectorId) {
+    if (!form.collectorId && collectors.length > 0) {
       setError(t("pleaseSelectCollector"));
       return;
     }
@@ -62,13 +63,13 @@ export default function ManagementHubPage() {
         phoneNumber: form.phoneNumber,
         email: form.email,
         password: form.password,
-        role: form.role as "collector" | "contributor",
+        role: "contributor",
         collectorId: form.collectorId || undefined,
       });
       if (result.error) { setError(result.error); }
       else {
         setSuccess(true);
-        setForm({ fullName: "", phoneNumber: "", email: "", password: "", role: "", collectorId: "" });
+        setForm({ fullName: "", phoneNumber: "", email: "", password: "", role: "contributor", collectorId: collectors[0]?.id || "" });
       }
     });
   }
@@ -173,83 +174,55 @@ export default function ManagementHubPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>{t("selectRole")}</Label>
-                <Select
-                  value={form.role}
-                  onValueChange={(v) => {
-                    update("role", v);
-                    // reset collectorId when switching roles
-                    setForm((f) => ({ ...f, role: v as any, collectorId: "" }));
-                  }}
-                >
-                  <SelectTrigger id="roleSelect">
-                    <SelectValue placeholder="Select role..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="collector">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-indigo-500" />
-                        {t("collector")}
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="contributor">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-emerald-500" />
-                        {t("contributor")}
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>{t("role")}</Label>
+                <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-muted/40 text-sm font-medium">
+                  <User className="h-4 w-4 text-emerald-500" />
+                  <span>{t("contributor")}</span>
+                </div>
               </div>
             </div>
 
-            {/* Collector selector — only shown when role is contributor */}
-            {form.role === "contributor" && (
-              <div className="space-y-2">
-                <Label htmlFor="collectorSelect">{t("assignToCollector")} <span className="text-destructive">*</span></Label>
-                <Select
-                  value={form.collectorId}
-                  onValueChange={(v) => update("collectorId", v)}
-                >
-                  <SelectTrigger id="collectorSelect">
-                    <SelectValue placeholder={t("selectCollector")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {collectors.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        {t("noCollectorsYet")}
-                      </div>
-                    ) : (
-                      collectors.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{c.full_name ?? "—"}</span>
-                            <span className="text-xs text-muted-foreground">{c.email ?? c.phone_number ?? ""}</span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {t("contributorAssociated")}
-                </p>
-              </div>
-            )}
+            {/* Admin / Collector selector */}
+            <div className="space-y-2">
+              <Label htmlFor="collectorSelect">{t("assignToCollector")} <span className="text-destructive">*</span></Label>
+              <Select
+                value={form.collectorId}
+                onValueChange={(v) => update("collectorId", v)}
+              >
+                <SelectTrigger id="collectorSelect">
+                  <SelectValue placeholder={t("selectCollector")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {collectors.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {t("noCollectorsYet")}
+                    </div>
+                  ) : (
+                    collectors.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{c.full_name ?? "—"}</span>
+                          <span className="text-xs text-muted-foreground">{c.email ?? c.phone_number ?? ""}</span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("contributorAssociated")}
+              </p>
+            </div>
 
             {/* Role preview */}
-            {form.role && (
-              <div className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3">
-                <Badge variant={form.role === "collector" ? "info" : "success"} className="capitalize">
-                  {t(form.role as any)}
-                </Badge>
-                <p className="text-sm text-muted-foreground">
-                  {form.role === "collector"
-                    ? t("collectorRoleDesc")
-                    : t("contributorRoleDesc")}
-                </p>
-              </div>
-            )}
+            <div className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3">
+              <Badge variant="success" className="capitalize">
+                {t("contributor")}
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {t("contributorRoleDesc")}
+              </p>
+            </div>
 
             <Button
               type="submit"

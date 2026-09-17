@@ -291,7 +291,7 @@ Telegram connected: Yes`;
       }
 
       const { count: contributorCount } = await supabase.from("profiles").select("*", { count: 'exact', head: true }).eq("role", "contributor");
-      const { count: collectorCount } = await supabase.from("profiles").select("*", { count: 'exact', head: true }).eq("role", "collector");
+      const { count: adminCount } = await supabase.from("profiles").select("*", { count: 'exact', head: true }).eq("role", "admin");
       
       const startOfDay = new Date();
       startOfDay.setHours(0,0,0,0);
@@ -305,8 +305,8 @@ Telegram connected: Yes`;
       const todaysTotal = (payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
       const statsText = `📊 **Platform Stats**
+- Admins: ${adminCount || 0}
 - Contributors: ${contributorCount || 0}
-- Collectors: ${collectorCount || 0}
 - Today's Contributions: ETB ${todaysTotal}`;
 
       await sendTelegramMessage(chatId, statsText, { parse_mode: "Markdown" });

@@ -10,17 +10,17 @@ export default async function CollectorLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  const isAuthorized = Boolean(profile.isAdmin || profile.role === "collector" || profile.role === "admin");
+  const isAuthorized = Boolean(profile.isAdmin || profile.role === "admin");
   if (!isAuthorized) {
     redirect("/dashboard/contributor");
   }
 
   return (
     <AppShell 
-      role={profile.role === "admin" ? "admin" : "collector"} 
-      userName={profile.full_name ?? profile.email ?? "Collector"} 
+      role="admin" 
+      userName={profile.full_name ?? profile.email ?? "Admin"} 
       userId={profile.id}
-      isAdmin={Boolean(profile.isAdmin || profile.role === "admin")}
+      isAdmin={true}
     >
       {children}
     </AppShell>

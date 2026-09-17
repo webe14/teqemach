@@ -6,7 +6,7 @@ import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 interface MobileHeaderProps {
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   pageName?: string;
   userName?: string;
   userId?: string;
@@ -30,7 +30,7 @@ export function MobileHeader({ role, pageName, userId }: MobileHeaderProps) {
       </div>
 
       <div className="flex items-center gap-1">
-        {role === "collector" && userId && (
+        {role === "admin" && userId && (
           <NotificationBell userId={userId} isMobile />
         )}
         <LanguageToggle />

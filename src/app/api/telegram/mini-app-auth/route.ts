@@ -116,20 +116,20 @@ export async function POST(req: Request) {
       // User has one or more profiles!
       // Pick active profile:
       // 1. Previously selected active profile in telegram_users
-      // 2. Admin/Collector profile (if exists)
+      // 2. Admin profile (if exists)
       // 3. First profile
       let targetProfile = tgUser?.user_id
         ? profiles.find((p) => p.id === tgUser.user_id)
         : null;
 
       if (!targetProfile) {
-        targetProfile = profiles.find((p) => p.role === "admin" || p.role === "collector") || profiles[0];
+        targetProfile = profiles.find((p) => p.role === "admin") || profiles[0];
       }
 
       // Create persistent 30-day session
       await createCustomSession({
         userId: targetProfile.id,
-        role: targetProfile.role as "admin" | "collector" | "contributor",
+        role: targetProfile.role as "admin" | "contributor",
         email: targetProfile.email || "",
       });
 
@@ -155,7 +155,7 @@ export async function POST(req: Request) {
 
       await createCustomSession({
         userId: profile.id,
-        role: profile.role as "admin" | "collector" | "contributor",
+        role: profile.role as "admin" | "contributor",
         email: profile.email || "",
       });
 
@@ -164,77 +164,6 @@ export async function POST(req: Request) {
       return NextResponse.json({
         linked: true,
         redirect: `/dashboard/${profile.role}`,
-      });
-    }
-
-    // ─── REGISTER (collector — instant) ─────────────────────────────────
-    if (action === "register") {
-      if (!role || !["collector", "contributor"].includes(role)) {
-        return NextResponse.json({ error: "Invalid role selected" }, { status: 400 });
-      }
-
-      // Check if user already has a profile with this role
-      const existingWithRole = profiles.find((p) => p.role === role);
-      if (existingWithRole) {
-        return NextResponse.json(
-          { error: `You already have a ${role} account.` },
-          { status: 400 }
-        );
-      }
-
-      // For contributor registration, use the register_contributor action instead
-      if (role === "contributor") {
-        return NextResponse.json(
-          { error: "Use the contributor registration flow to select a collector and group." },
-          { status: 400 }
-        );
-      }
-
-      // Look up verified phone from telegram_users
-      const { data: tgUserForReg } = await adminClient
-        .from("telegram_users")
-        .select("phone_number")
-        .eq("telegram_id", telegramId)
-        .single();
-      const verifiedPhone = tgUserForReg?.phone_number || "";
-
-      // Collector registration — instant, no password
-      const fullName = [initDataObj.first_name, initDataObj.last_name].filter(Boolean).join(" ");
-      const username = initDataObj.username || null;
-
-      const { data: newProfile, error: insertError } = await adminClient
-        .from("profiles")
-        .insert({
-          full_name: fullName,
-          phone_number: verifiedPhone,
-          role: "collector",
-          status: "active",
-          telegram_id: telegramId,
-          telegram_chat_id: telegramId,
-          telegram_username: username,
-          telegram_verified: true,
-          telegram_linked_at: new Date().toISOString(),
-          telegram_last_seen: new Date().toISOString(),
-        })
-        .select("id, role, email")
-        .single();
-
-      if (insertError || !newProfile) {
-        console.error("Failed to create profile:", insertError);
-        return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
-      }
-
-      await createCustomSession({
-        userId: newProfile.id,
-        role: "collector",
-        email: newProfile.email || "",
-      });
-
-      await syncTelegramUserActiveProfile(telegramId, newProfile.id, "collector", initDataObj);
-
-      return NextResponse.json({
-        linked: true,
-        redirect: `/dashboard/collector`,
       });
     }
 
@@ -333,7 +262,7 @@ export async function POST(req: Request) {
         .from("profiles")
         .select("id, role, password, email, status")
         .eq("email", email)
-        .in("role", ["collector", "contributor"])
+        .in("role", ["admin", "contributor"])
         .single();
 
       if (profileError || !existingProfile) {
@@ -373,7 +302,7 @@ export async function POST(req: Request) {
       // Login
       await createCustomSession({
         userId: existingProfile.id,
-        role: existingProfile.role as "collector" | "contributor",
+        role: existingProfile.role as "admin" | "contributor",
         email: existingProfile.email || "",
       });
 

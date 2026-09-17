@@ -62,7 +62,7 @@ export default function AdminDashboardClient({
               <CardDescription>{t("allSystemUsers")}</CardDescription>
             </div>
             <div className="flex gap-2">
-              <Badge variant="info">{collectors.length} {t("collectorsLabel")}</Badge>
+              <Badge variant="info">{collectors.length} {t("admin")}</Badge>
               <Badge variant="success">{contributors.length} {t("contributorsLabel")}</Badge>
             </div>
           </div>
@@ -95,8 +95,6 @@ export default function AdminDashboardClient({
                         variant={
                           profile.role === "admin"
                             ? "default"
-                            : profile.role === "collector"
-                            ? "info"
                             : "success"
                         }
                       >

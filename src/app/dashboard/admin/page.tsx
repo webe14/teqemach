@@ -8,7 +8,7 @@ export default async function AdminOverviewPage() {
   const { data: profilesData } = await getAllProfiles();
   const profiles = (profilesData ?? []) as any[];
 
-  const collectors = profiles.filter((p) => p.role === "collector");
+  const collectors = profiles.filter((p) => p.role === "admin");
   const contributors = profiles.filter((p) => p.role === "contributor");
 
   return (

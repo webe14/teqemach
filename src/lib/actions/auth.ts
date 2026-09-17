@@ -42,7 +42,7 @@ export async function registerWithPhoneOtpAction({
   fullName: string;
   password: string;
   email?: string;
-  role?: "collector" | "contributor";
+  role?: "contributor";
 }) {
   const formattedPhone = formatEthiopianPhone(phone);
   if (!formattedPhone) {
@@ -102,7 +102,7 @@ export async function registerWithPhoneOtpAction({
   // Create 30-day session
   await createCustomSession({
     userId: newProfile.id,
-    role: newProfile.role as "admin" | "collector" | "contributor",
+    role: newProfile.role as "admin" | "contributor",
     email: userEmail,
   });
 
@@ -243,7 +243,7 @@ export async function getCollectors() {
   const { data, error } = await adminClient
     .from("profiles")
     .select("id, full_name, email, phone_number")
-    .in("role", ["admin", "collector"])
+    .eq("role", "admin")
     .order("full_name", { ascending: true });
 
   if (error) {
@@ -257,7 +257,7 @@ export async function signUp(formData: {
   email: string;
   password: string;
   phone: string;
-  role: "collector" | "contributor";
+  role: "contributor";
   collectorId?: string | null;
   groupId?: string | null;
 }) {
@@ -287,8 +287,8 @@ export async function signUp(formData: {
   // Hash the password for custom credential logins fallback
   const hashedPassword = await bcrypt.hash(formData.password, 10);
 
-  // Contributors who self-register are set to 'pending' until approved by the collector
-  const status = formData.role === "contributor" ? "pending" : "active";
+  // Contributors who self-register are set to 'pending' until approved by the admin
+  const status = "pending";
 
   // Insert profile
   const { data: newProfile, error: insertError } = await adminClient
@@ -310,8 +310,8 @@ export async function signUp(formData: {
     return { error: `Registration failed: ${insertError.message}` };
   }
 
-  // For contributors: create group membership and notify the collector
-  if (formData.role === "contributor" && formData.collectorId && formData.groupId && newProfile) {
+  // For contributors: create group membership and notify the admin
+  if (formData.collectorId && formData.groupId && newProfile) {
     // Create group membership
     await adminClient.from("group_memberships").insert({
       contributor_id: newProfile.id,
@@ -326,7 +326,7 @@ export async function signUp(formData: {
       .eq("id", formData.groupId)
       .single();
 
-    // Create notification for the collector
+    // Create notification for the admin
     await adminClient.from("notifications").insert({
       user_id: formData.collectorId,
       type: "contributor_request",
@@ -348,11 +348,11 @@ export async function signUp(formData: {
 export async function getCollectorsWithGroups() {
   const adminClient = await createAdminClient();
 
-  // Fetch all collectors and admins (since admin is collector)
+  // Fetch all admins (since admin is collector)
   const { data: collectors, error: collectorError } = await adminClient
     .from("profiles")
     .select("id, full_name, email, phone_number")
-    .in("role", ["admin", "collector"])
+    .eq("role", "admin")
     .order("full_name", { ascending: true });
 
   if (collectorError) return { error: collectorError.message, data: [] };
@@ -364,7 +364,7 @@ export async function getCollectorsWithGroups() {
 
   if (groupError) return { error: groupError.message, data: [] };
 
-  // Attach groups to each collector (or fallback to primary admin collector)
+  // Attach groups to each admin
   const primaryCollectorId = collectors?.[0]?.id;
   const collectorsWithGroups = (collectors ?? []).map((collector) => ({
     ...collector,
@@ -443,9 +443,9 @@ export async function getCurrentProfile() {
 
     if (!profile) return null;
 
-    // Check if this profile or any related profile (by telegram_id, email, or phone_number) has admin/collector role
+    // Check if this profile or any related profile (by telegram_id, email, or phone_number) has admin role
     const adminClient = await createAdminClient();
-    let hasAdminRights = profile.role === "admin" || profile.role === "collector";
+    let hasAdminRights = profile.role === "admin";
 
     if (!hasAdminRights) {
       const conditions: string[] = [];
@@ -457,7 +457,7 @@ export async function getCurrentProfile() {
         const { data: adminMatches } = await adminClient
           .from("profiles")
           .select("id, role")
-          .in("role", ["admin", "collector"])
+          .eq("role", "admin")
           .or(conditions.join(","))
           .limit(1);
 
@@ -514,7 +514,7 @@ export async function updateProfile(data: {
   // Update password (requires current password for non-admin)
   if (data.newPassword) {
     if (profile.role !== "admin") {
-      // Verify current password for collector/contributor
+      // Verify current password for contributor
       if (!data.currentPassword) {
         return { error: "Current password is required" };
       }
@@ -587,14 +587,14 @@ export async function activateAccount(newPassword: string) {
 /**
  * Switch the active session to another linked role (e.g. contributor <-> admin)
  */
-export async function switchActiveRole(targetRole: "admin" | "collector" | "contributor") {
+export async function switchActiveRole(targetRole: "admin" | "contributor") {
   const current = await getCurrentProfile();
   if (!current) {
     return { error: "Not authenticated" };
   }
 
-  // Must have admin rights to switch to admin or collector
-  if ((targetRole === "admin" || targetRole === "collector") && !current.isAdmin) {
+  // Must have admin rights to switch to admin
+  if (targetRole === "admin" && !current.isAdmin) {
     return { error: "Unauthorized to switch to this role" };
   }
 

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface EditProfileModalProps {
   userName: string;
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   collapsed?: boolean;
   isMobile?: boolean;
   className?: string;
@@ -115,7 +115,6 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
 
   const roleGradients = {
     admin: "from-violet-500 to-indigo-600",
-    collector: "from-indigo-500 to-blue-600",
     contributor: "from-blue-500 to-cyan-600",
   };
 
@@ -164,7 +163,6 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
               <span className={cn(
                 "mt-0.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
                 role === "admin" ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" :
-                role === "collector" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300" :
                 "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
               )}>
                 {role}

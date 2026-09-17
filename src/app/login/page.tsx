@@ -452,8 +452,6 @@ export default function LoginPage() {
 
       if (res?.role === "admin") {
         window.location.href = "/dashboard/admin";
-      } else if (res?.role === "collector") {
-        window.location.href = "/dashboard/collector";
       } else {
         window.location.href = "/dashboard/contributor";
       }
@@ -477,27 +475,6 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(result.error || "Login failed");
       if (result.redirect) {
         localStorage.removeItem("teqemach_explicit_logout");
-        router.push(result.redirect);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message);
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleRegisterCollector() {
-    setIsSubmitting(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch("/api/telegram/mini-app-auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, action: "register", role: "collector" }),
-      });
-      const result = await res.json();
-
-      if (!res.ok) throw new Error(result.error || "Registration failed");
-      if (result.redirect) {
         router.push(result.redirect);
       }
     } catch (err: any) {
@@ -797,7 +774,7 @@ export default function LoginPage() {
                   <div className="text-right pt-0.5">
                     <button
                       type="button"
-                      onClick={() => setErrorMsg("Please contact your Equb collector to reset your password.")}
+                      onClick={() => setErrorMsg("Please contact the Equb admin to reset your password.")}
                       className="text-xs font-bold text-emerald-600 hover:underline"
                     >
                       Forgot Password?
@@ -1268,14 +1245,10 @@ export default function LoginPage() {
                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
                     r.role === "admin"
                       ? "bg-gradient-to-br from-violet-600 to-indigo-700 shadow-md shadow-violet-500/20"
-                      : r.role === "collector"
-                      ? "bg-gradient-to-br from-emerald-500 to-teal-600"
                       : "bg-gradient-to-br from-indigo-500 to-blue-600"
                   }`}>
                     {r.role === "admin" ? (
                       <ShieldAlert className="h-5 w-5 text-white" />
-                    ) : r.role === "collector" ? (
-                      <ShieldCheck className="h-5 w-5 text-white" />
                     ) : (
                       <Users className="h-5 w-5 text-white" />
                     )}
@@ -1621,7 +1594,7 @@ export default function LoginPage() {
             <h3 className="text-xl font-bold text-foreground">How to Use Wub Digital Equb</h3>
             <div className="text-xs text-muted-foreground space-y-2 text-left bg-muted/40 p-4 rounded-2xl border border-border/50">
               <p>1. <strong>Register / Share Phone</strong>: Connect your Telegram phone number to create your profile.</p>
-              <p>2. <strong>Join Equb Group</strong>: Select your preferred Equb Collector and choose a Daily, Weekly, or Monthly group.</p>
+              <p>2. <strong>Join Equb Group</strong>: Choose a Daily, Weekly, or Monthly group to participate in.</p>
               <p>3. <strong>Track Contributions</strong>: Make regular payments, track cycle progress, and receive payouts digitally.</p>
             </div>
             <Button

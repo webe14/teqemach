@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 interface AppShellProps {
   children: React.ReactNode;
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   pageName?: string;
   userName?: string;
   userId?: string;
@@ -48,7 +48,7 @@ export function AppShell({ children, role, pageName, userName, userId, isAdmin }
         <div className="hidden lg:flex sticky top-0 z-20 h-16 items-center justify-between border-b border-border bg-card/80  px-6">
           <h1 className="text-base font-semibold text-foreground">{pageName}</h1>
           <div className="flex items-center gap-2">
-            {role === "collector" && userId && (
+            {role === "admin" && userId && (
               <NotificationBell userId={userId} />
             )}
             <LanguageToggle />

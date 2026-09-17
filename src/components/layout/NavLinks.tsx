@@ -34,15 +34,6 @@ export const adminNavItems: NavItem[] = [
   { labelKey: "broadcast", href: "/dashboard/admin/broadcast", icon: Send },
 ];
 
-export const collectorNavItems: NavItem[] = [
-  { labelKey: "overview", href: "/dashboard/collector", icon: LayoutDashboard },
-  { labelKey: "equbGroups", href: "/dashboard/collector/groups", icon: PlusCircle },
-  { labelKey: "manageContributors", href: "/dashboard/collector/contributors", icon: Users },
-  { labelKey: "financialReports", href: "/dashboard/collector/reports", icon: BarChart3 },
-  { labelKey: "addRule", href: "/dashboard/collector/rules", icon: FileText },
-];
-
-
 export const contributorNavItems: NavItem[] = [
   { labelKey: "personalDashboard", href: "/dashboard/contributor", icon: Home },
   { labelKey: "myEqubs", href: "/dashboard/contributor/my-equbs", icon: BookOpen },
@@ -52,7 +43,7 @@ export const contributorNavItems: NavItem[] = [
 
 
 interface NavLinksProps {
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   collapsed?: boolean;
   onNavigate?: () => void;
   isMobile?: boolean;
@@ -62,22 +53,15 @@ export function NavLinks({ role, collapsed = false, onNavigate, isMobile = false
   const pathname = usePathname();
   const { t } = useLocale();
 
-  const items =
-    role === "admin"
-      ? adminNavItems
-      : role === "collector"
-      ? collectorNavItems
-      : contributorNavItems;
+  const items = role === "admin" ? adminNavItems : contributorNavItems;
 
   const roleGradients = {
     admin: "bg-gradient-to-r from-violet-600 to-indigo-600 shadow-md shadow-violet-500/20 text-white",
-    collector: "bg-gradient-to-r from-indigo-600 to-blue-600 shadow-md shadow-indigo-500/20 text-white",
     contributor: "bg-gradient-to-r from-blue-600 to-cyan-600 shadow-md shadow-blue-500/20 text-white",
   };
 
   const roleTextHover = {
     admin: "hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/20",
-    collector: "hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20",
     contributor: "hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20",
   };
 

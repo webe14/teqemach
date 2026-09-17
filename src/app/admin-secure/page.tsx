@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
         return;
       }
       
-      if (result?.role === "admin" || result?.role === "collector") {
+      if (result?.role === "admin") {
         window.location.href = "/dashboard/admin";
       } else {
         window.location.href = "/dashboard/contributor";

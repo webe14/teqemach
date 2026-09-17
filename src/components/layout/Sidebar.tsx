@@ -18,7 +18,7 @@ import {
 import { AppLogo } from "@/components/ui/AppLogo";
 
 interface SidebarProps {
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   userName?: string;
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -31,19 +31,16 @@ export function Sidebar({ role, userName, collapsed, onToggleCollapse, isAdmin }
 
   const roleColors = {
     admin: "from-violet-600 via-indigo-600 to-indigo-700 shadow-violet-500/20",
-    collector: "from-indigo-600 via-blue-600 to-blue-700 shadow-indigo-500/20",
     contributor: "from-blue-600 via-cyan-600 to-cyan-700 shadow-blue-500/20",
   };
 
   const roleBadges = {
     admin: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border-violet-100/60 dark:border-violet-900/30",
-    collector: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-100/60 dark:border-indigo-900/30",
     contributor: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-100/60 dark:border-blue-900/30",
   };
 
   const roleLabels = {
     admin: t("admin"),
-    collector: t("collector"),
     contributor: t("contributor"),
   };
 

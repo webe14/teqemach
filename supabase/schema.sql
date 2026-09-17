@@ -7,13 +7,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 --    NOTE: id is now a standalone UUID (no FK to auth.users).
 --    Admin profile links to Supabase Auth via matching UUID (set manually).
 --    Collector/Contributor profiles have no Supabase Auth entry.
---    email  – used as login credential for collector/contributor
---    password – bcrypt hash for collector/contributor; 'supabase_auth' for admin
+--    email  – used as login credential for contributor
+--    password – bcrypt hash for contributor; 'supabase_auth' for admin
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name TEXT NOT NULL,
     phone_number TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('admin', 'collector', 'contributor')),
+    role TEXT NOT NULL CHECK (role IN ('admin', 'contributor')),
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'rejected')),
     email TEXT UNIQUE,
     password TEXT,
@@ -98,7 +98,7 @@ CREATE OR REPLACE FUNCTION public.is_collector()
 RETURNS boolean AS $$
 BEGIN
   RETURN COALESCE(
-    (SELECT role = 'collector' FROM public.profiles WHERE id = auth.uid()),
+    (SELECT role = 'admin' FROM public.profiles WHERE id = auth.uid()),
     false
   );
 END;

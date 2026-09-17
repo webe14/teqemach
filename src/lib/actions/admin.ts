@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 
 /**
- * Register a new collector or contributor.
- * - Does NOT create a Supabase Auth user.
+ * Register a new contributor.
+ * - Does NOT create a Supabase Auth user directly via client.
  * - Stores email + bcrypt-hashed password directly in the profiles table.
  */
 export async function registerUser(formData: {
@@ -15,7 +15,7 @@ export async function registerUser(formData: {
   phoneNumber: string;
   email: string;
   password: string;
-  role: "collector" | "contributor";
+  role: "contributor";
   collectorId?: string;
 }) {
   const adminSupabase = await createAdminClient();
@@ -51,7 +51,7 @@ export async function registerUser(formData: {
       email: formData.email,
       password: hashedPassword,
       role: formData.role,
-      collector_id: formData.role === "contributor" ? (formData.collectorId || null) : null,
+      collector_id: formData.collectorId || null,
     })
     .select("id")
     .single();
@@ -74,7 +74,7 @@ export async function getAdminStats() {
     supabase
       .from("profiles")
       .select("id", { count: "exact" })
-      .in("role", ["admin", "collector"]),
+      .eq("role", "admin"),
     supabase.from("equb_groups").select("id, contribution_amount", { count: "exact" }),
     supabase
       .from("contributions")
@@ -108,7 +108,7 @@ export async function getCollectors() {
   const { data, error } = await adminSupabase
     .from("profiles")
     .select("id, full_name, phone_number, email")
-    .in("role", ["admin", "collector"])
+    .eq("role", "admin")
     .order("full_name", { ascending: true });
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };

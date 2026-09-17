@@ -8,12 +8,12 @@ const SECRET = new TextEncoder().encode(
 
 export interface CustomSessionPayload {
   userId: string;
-  role: "admin" | "collector" | "contributor";
+  role: "admin" | "contributor";
   email: string;
 }
 
 /**
- * Create and persist a signed JWT cookie for collector/contributor users.
+ * Create and persist a signed JWT cookie for contributor users.
  * Should be called server-side (Server Action or Route Handler).
  */
 export async function createCustomSession(payload: CustomSessionPayload) {

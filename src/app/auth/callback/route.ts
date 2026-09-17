@@ -31,7 +31,7 @@ export async function GET(request: Request) {
           id: authData.user.id,
           full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.fullName || authData.user.email?.split('@')[0] || "User",
           email: authData.user.email,
-          role: (role === "collector" || role === "contributor") ? role : "admin",
+          role: role === "contributor" ? "contributor" : "admin",
           status,
           phone_number: "",
           password: "supabase_auth",
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
             .eq("id", groupId)
             .single();
 
-          // Create notification for the collector
+          // Create notification for the admin
           await adminClient.from("notifications").insert({
             user_id: collectorId,
             type: "contributor_request",
