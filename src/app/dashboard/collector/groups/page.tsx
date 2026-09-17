@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { getCurrentProfile } from "@/lib/actions/auth";
-import { getCollectorGroups, createEqubGroup, getGroupContributors } from "@/lib/actions/collector";
+import { getCollectorGroups, createEqubGroup, updateEqubGroup, getGroupContributors } from "@/lib/actions/collector";
 import { deleteEqubGroup } from "@/lib/actions/admin";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2, Users, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, Layers, CalendarDays, Coins, Timer, AlertCircle, CheckCircle2, Users, Trash2, Pencil, Loader2 } from "lucide-react";
 
 type EqubGroup = {
   id: string;
@@ -36,6 +36,18 @@ export default function EqubGroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
   const [groupContributors, setGroupContributors] = useState<any[]>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+
+  // Edit Group State
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EqubGroup | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    contributionAmount: "",
+    totalDays: "",
+    frequency: "daily" as "daily" | "weekly" | "monthly",
+  });
+  const [editFormError, setEditFormError] = useState<string | null>(null);
+  const [editFormSuccess, setEditFormSuccess] = useState(false);
 
   // Delete Group State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -94,6 +106,71 @@ export default function EqubGroupsPage() {
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
       await loadGroups(collectorId);
+    });
+  }
+
+  function openEditGroup(e: React.MouseEvent, group: EqubGroup) {
+    e.stopPropagation();
+    setEditTarget(group);
+    setEditForm({
+      name: group.name,
+      contributionAmount: group.contribution_amount.toString(),
+      totalDays: group.total_days.toString(),
+      frequency: group.frequency,
+    });
+    setEditFormError(null);
+    setEditFormSuccess(false);
+    setEditDialogOpen(true);
+  }
+
+  function updateEditForm(field: string, value: string) {
+    setEditForm((f) => ({ ...f, [field]: value }));
+    setEditFormError(null);
+    setEditFormSuccess(false);
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget || !collectorId) return;
+    if (!editForm.name.trim() || !editForm.contributionAmount || !editForm.totalDays) {
+      setEditFormError("Please fill in all fields");
+      return;
+    }
+
+    const amount = parseFloat(editForm.contributionAmount);
+    const days = parseInt(editForm.totalDays);
+
+    if (isNaN(amount) || amount <= 0) {
+      setEditFormError("Contribution amount must be greater than 0");
+      return;
+    }
+    if (isNaN(days) || days <= 0) {
+      setEditFormError("Total days must be greater than 0");
+      return;
+    }
+
+    setEditFormError(null);
+    startTransition(async () => {
+      const result = await updateEqubGroup({
+        groupId: editTarget.id,
+        name: editForm.name.trim(),
+        contributionAmount: amount,
+        totalDays: days,
+        frequency: editForm.frequency,
+      });
+
+      if (result.error) {
+        setEditFormError(result.error);
+        return;
+      }
+
+      setEditFormSuccess(true);
+      await loadGroups(collectorId);
+      setTimeout(() => {
+        setEditFormSuccess(false);
+        setEditDialogOpen(false);
+        setEditTarget(null);
+      }, 1200);
     });
   }
 
@@ -204,6 +281,14 @@ export default function EqubGroupsPage() {
                     <Badge variant="info" className="capitalize shrink-0">
                       {group.frequency}
                     </Badge>
+                    <button
+                      type="button"
+                      title="Edit Equb Group"
+                      onClick={(e) => openEditGroup(e, group)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       title="Delete Equb Group"
@@ -374,6 +459,95 @@ export default function EqubGroupsPage() {
           <DialogFooter className="mt-4">
             <Button onClick={() => setContributorsDialogOpen(false)}>{t("close")}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Equb Group Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" />
+              Edit Equb Group
+            </DialogTitle>
+            <DialogDescription>Update the details of this savings group</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            {editFormError && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{editFormError}</span>
+              </div>
+            )}
+            {editFormSuccess && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Equb Group updated successfully!</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-group-name">{t("groupName")}</Label>
+              <Input
+                id="edit-group-name"
+                value={editForm.name}
+                onChange={(e) => updateEditForm("name", e.target.value)}
+                placeholder="e.g. Merkato Shop Owners"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-contribution-amount">{t("contributionAmount")} (ETB)</Label>
+                <Input
+                  id="edit-contribution-amount"
+                  type="number"
+                  min="1"
+                  value={editForm.contributionAmount}
+                  onChange={(e) => updateEditForm("contributionAmount", e.target.value)}
+                  placeholder="e.g. 500"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-total-days">{t("totalCyclesDays")}</Label>
+                <Input
+                  id="edit-total-days"
+                  type="number"
+                  min="1"
+                  value={editForm.totalDays}
+                  onChange={(e) => updateEditForm("totalDays", e.target.value)}
+                  placeholder="e.g. 30"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("frequency")}</Label>
+              <Select
+                value={editForm.frequency}
+                onValueChange={(v: "daily" | "weekly" | "monthly") => updateEditForm("frequency", v)}
+              >
+                <SelectTrigger id="edit-group-frequency">
+                  <SelectValue placeholder="Select frequency..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">{t("daily")}</SelectItem>
+                  <SelectItem value="weekly">{t("weekly")}</SelectItem>
+                  <SelectItem value="monthly">{t("monthly")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setEditDialogOpen(false)}>{t("cancel")}</Button>
+              <Button type="submit" disabled={isPending} id="confirm-edit-group">
+                {isPending ? t("loading") : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

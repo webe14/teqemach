@@ -951,6 +951,32 @@ export async function createEqubGroup(formData: {
   return { success: true, group: data };
 }
 
+export async function updateEqubGroup(formData: {
+  groupId: string;
+  name: string;
+  contributionAmount: number;
+  totalDays: number;
+  frequency: "daily" | "weekly" | "monthly";
+}) {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("equb_groups")
+    .update({
+      name: formData.name,
+      contribution_amount: formData.contributionAmount,
+      total_days: formData.totalDays,
+      frequency: formData.frequency,
+    })
+    .eq("id", formData.groupId)
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/collector/groups");
+  return { success: true, group: data };
+}
+
 export async function getGroupContributors(groupId: string) {
   const supabase = await createAdminClient();
   const { data, error } = await supabase
