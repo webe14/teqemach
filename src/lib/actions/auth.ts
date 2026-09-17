@@ -242,8 +242,9 @@ export async function getCollectors() {
   const adminClient = await createAdminClient();
   const { data, error } = await adminClient
     .from("profiles")
-    .select("id, full_name, email")
-    .eq("role", "collector");
+    .select("id, full_name, email, phone_number")
+    .in("role", ["admin", "collector"])
+    .order("full_name", { ascending: true });
 
   if (error) {
     return { error: error.message };
@@ -347,11 +348,12 @@ export async function signUp(formData: {
 export async function getCollectorsWithGroups() {
   const adminClient = await createAdminClient();
 
-  // Fetch all collectors
+  // Fetch all collectors and admins (since admin is collector)
   const { data: collectors, error: collectorError } = await adminClient
     .from("profiles")
-    .select("id, full_name, email")
-    .eq("role", "collector");
+    .select("id, full_name, email, phone_number")
+    .in("role", ["admin", "collector"])
+    .order("full_name", { ascending: true });
 
   if (collectorError) return { error: collectorError.message, data: [] };
 
@@ -362,14 +364,12 @@ export async function getCollectorsWithGroups() {
 
   if (groupError) return { error: groupError.message, data: [] };
 
-  // Attach groups to each collector
+  // Attach groups to each collector (or fallback to primary admin collector)
+  const primaryCollectorId = collectors?.[0]?.id;
   const collectorsWithGroups = (collectors ?? []).map((collector) => ({
     ...collector,
-    groups: (groups ?? []).filter((g) => g.collector_id === collector.id),
+    groups: (groups ?? []).filter((g) => g.collector_id === collector.id || (!g.collector_id && collector.id === primaryCollectorId)),
   }));
-
-  console.log("DEBUG: groups", groups);
-  console.log("DEBUG: collectorsWithGroups", JSON.stringify(collectorsWithGroups, null, 2));
 
   return { data: collectorsWithGroups, error: null };
 }

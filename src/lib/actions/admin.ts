@@ -74,7 +74,7 @@ export async function getAdminStats() {
     supabase
       .from("profiles")
       .select("id", { count: "exact" })
-      .eq("role", "collector"),
+      .in("role", ["admin", "collector"]),
     supabase.from("equb_groups").select("id, contribution_amount", { count: "exact" }),
     supabase
       .from("contributions")
@@ -108,7 +108,7 @@ export async function getCollectors() {
   const { data, error } = await adminSupabase
     .from("profiles")
     .select("id, full_name, phone_number, email")
-    .eq("role", "collector")
+    .in("role", ["admin", "collector"])
     .order("full_name", { ascending: true });
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
