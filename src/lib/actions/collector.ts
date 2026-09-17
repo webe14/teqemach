@@ -447,42 +447,100 @@ export async function deleteContributor(contributorId: string) {
 
 export async function getContributorCycles(
   contributorId: string,
-  groupId: string
+  groupId?: string
 ) {
   const supabase = await createAdminClient();
 
-  // Fetch cycles, the group's frequency, and the membership's created_at (start date)
-  const [cyclesRes, groupRes, membershipRes] = await Promise.all([
-    supabase
-      .from("contributions")
-      .select("*")
+  let activeGroupId = groupId;
+
+  // If no groupId provided, find the contributor's group membership
+  if (!activeGroupId) {
+    const { data: mem } = await supabase
+      .from("group_memberships")
+      .select("group_id")
       .eq("contributor_id", contributorId)
-      .eq("group_id", groupId)
-      .order("cycle_number", { ascending: true }),
+      .limit(1)
+      .maybeSingle();
+
+    if (mem?.group_id) {
+      activeGroupId = mem.group_id;
+    } else {
+      // Fall back to first available group and auto-enroll
+      const { data: defaultGroup } = await supabase
+        .from("equb_groups")
+        .select("id, collector_id")
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultGroup) {
+        activeGroupId = defaultGroup.id;
+        await supabase.from("group_memberships").insert({
+          contributor_id: contributorId,
+          group_id: defaultGroup.id,
+          collector_id: defaultGroup.collector_id || contributorId,
+        });
+      }
+    }
+  }
+
+  if (!activeGroupId) {
+    return { error: "No Equb group found", data: [], group: null };
+  }
+
+  // Fetch group info & membership
+  const [groupRes, membershipRes] = await Promise.all([
     supabase
       .from("equb_groups")
-      .select("created_at, frequency, total_days, contribution_amount")
-      .eq("id", groupId)
+      .select("id, created_at, frequency, total_days, contribution_amount, collector_id")
+      .eq("id", activeGroupId)
       .single(),
     supabase
       .from("group_memberships")
       .select("created_at")
       .eq("contributor_id", contributorId)
-      .eq("group_id", groupId)
+      .eq("group_id", activeGroupId)
       .single(),
   ]);
 
-  if (cyclesRes.error) return { error: cyclesRes.error.message, data: [], group: null };
+  if (groupRes.error || !groupRes.data) {
+    return { error: groupRes.error?.message || "Group not found", data: [], group: null };
+  }
 
-  // Use the membership's created_at (contributor start date) if available,
-  // otherwise fall back to the group's created_at
+  // Fetch cycles
+  let { data: cycles, error: cyclesError } = await supabase
+    .from("contributions")
+    .select("*")
+    .eq("contributor_id", contributorId)
+    .eq("group_id", activeGroupId)
+    .order("cycle_number", { ascending: true });
+
+  // If cycles are missing, auto-create them
+  if (!cycles || cycles.length === 0) {
+    await createContributionCycles(
+      contributorId,
+      groupRes.data.collector_id || contributorId,
+      activeGroupId,
+      groupRes.data.total_days
+    );
+
+    const refetched = await supabase
+      .from("contributions")
+      .select("*")
+      .eq("contributor_id", contributorId)
+      .eq("group_id", activeGroupId)
+      .order("cycle_number", { ascending: true });
+
+    cycles = refetched.data || [];
+  }
+
   const startDate = membershipRes.data?.created_at ?? groupRes.data?.created_at;
-  const group = groupRes.data
-    ? { ...groupRes.data, created_at: startDate ?? groupRes.data.created_at }
-    : null;
+  const group = {
+    ...groupRes.data,
+    created_at: startDate ?? groupRes.data.created_at,
+  };
 
   return {
-    data: (cyclesRes.data as any[]) ?? [],
+    data: (cycles as any[]) ?? [],
     group,
     error: null,
   };

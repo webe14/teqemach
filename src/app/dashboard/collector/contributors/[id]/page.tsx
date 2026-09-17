@@ -368,7 +368,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
                     <button
                       key={cycle.id}
                       onClick={() => handleMarkPaid(cycle)}
-                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending) || cycle.id.startsWith('virtual-')}
+                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending)}
                       className={`
                         relative flex flex-col items-center justify-center rounded-xl p-2 text-[11px] font-semibold
                         transition-all duration-150 aspect-square border-2
