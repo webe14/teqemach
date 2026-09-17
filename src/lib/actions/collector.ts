@@ -100,6 +100,7 @@ export async function getCollectorContributors(collectorId: string) {
 
   // Find all related collector/admin profile IDs for this user
   let collectorIds = [collectorId];
+  let isAdmin = false;
   try {
     const { data: currentProf } = await supabase
       .from("profiles")
@@ -108,6 +109,9 @@ export async function getCollectorContributors(collectorId: string) {
       .single();
 
     if (currentProf) {
+      if (currentProf.role === "admin") {
+        isAdmin = true;
+      }
       const orCond: string[] = [];
       if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
       if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
@@ -127,24 +131,93 @@ export async function getCollectorContributors(collectorId: string) {
     console.warn("getCollectorContributors profile resolution note:", err);
   }
 
-  const { data, error } = await supabase
+  // 1. Fetch active contributor profiles
+  let profQuery = supabase
+    .from("profiles")
+    .select("id, full_name, phone_number, email, status, created_at, collector_id")
+    .eq("role", "contributor")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (!isAdmin) {
+    profQuery = profQuery.in("collector_id", collectorIds);
+  }
+
+  const { data: profiles, error: profError } = await profQuery;
+  if (profError || !profiles) {
+    return { error: profError?.message || "Failed to fetch contributors", data: [] };
+  }
+
+  // 2. Fetch memberships
+  let membQuery = supabase
     .from("group_memberships")
-    .select(
-      `
+    .select(`
       id,
       group_id,
       contributor_id,
       created_at,
-      contributor:profiles!group_memberships_contributor_id_fkey(id, full_name, phone_number, email, status),
+      collector_id,
       group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
-    `
-    )
-    .in("collector_id", collectorIds);
+    `);
 
-  if (error) return { error: error.message, data: [] };
-  // Only return contributors whose profile status is active
-  const active = (data as any[])?.filter((c) => c.contributor?.status === "active") ?? [];
-  return { data: active, error: null };
+  if (!isAdmin) {
+    membQuery = membQuery.in("collector_id", collectorIds);
+  }
+
+  const { data: memberships } = await membQuery;
+
+  const membershipsByContributor: Record<string, any[]> = {};
+  if (memberships) {
+    for (const m of memberships) {
+      if (!membershipsByContributor[m.contributor_id]) {
+        membershipsByContributor[m.contributor_id] = [];
+      }
+      membershipsByContributor[m.contributor_id].push(m);
+    }
+  }
+
+  const result: any[] = [];
+
+  for (const p of profiles) {
+    const userMemberships = membershipsByContributor[p.id];
+    if (userMemberships && userMemberships.length > 0) {
+      for (const m of userMemberships) {
+        result.push({
+          id: m.id,
+          group_id: m.group_id,
+          contributor_id: p.id,
+          created_at: m.created_at || p.created_at,
+          collector_id: m.collector_id || p.collector_id,
+          contributor: {
+            id: p.id,
+            full_name: p.full_name,
+            phone_number: p.phone_number,
+            email: p.email,
+            status: p.status,
+          },
+          group: m.group,
+        });
+      }
+    } else {
+      result.push({
+        id: p.id,
+        group_id: "",
+        contributor_id: p.id,
+        created_at: p.created_at,
+        collector_id: p.collector_id,
+        contributor: {
+          id: p.id,
+          full_name: p.full_name,
+          phone_number: p.phone_number,
+          email: p.email,
+          status: p.status,
+        },
+        group: null,
+      });
+    }
+  }
+
+  return { data: result, error: null };
 }
 
 export async function getPendingContributors(collectorId: string) {

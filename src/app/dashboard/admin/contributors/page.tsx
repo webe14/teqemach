@@ -195,9 +195,13 @@ export default function ManageContributorsPage() {
   });
 
   function handleRowClick(c: Contributor) {
-    router.push(
-      `/dashboard/collector/contributors/${c.contributor_id}?groupId=${c.group_id}`
-    );
+    if (c.group_id) {
+      router.push(
+        `/dashboard/collector/contributors/${c.contributor_id}?groupId=${c.group_id}`
+      );
+    } else {
+      openEdit(c);
+    }
   }
 
   // ── Add helpers ───────────────────────────────────────────────────────────

@@ -142,24 +142,83 @@ export async function getFinancialReport(fromDate?: string, toDate?: string) {
 
 export async function getAllContributors() {
   const supabase = await createAdminClient();
-  const { data, error } = await supabase
+
+  // 1. Fetch all active contributor profiles
+  const { data: profiles, error: profError } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone_number, email, status, created_at, collector_id")
+    .eq("role", "contributor")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (profError || !profiles) {
+    return { error: profError?.message || "Failed to fetch contributors", data: [] };
+  }
+
+  // 2. Fetch all group memberships with group details
+  const { data: memberships } = await supabase
     .from("group_memberships")
-    .select(
-      `
+    .select(`
       id,
       group_id,
       contributor_id,
       created_at,
       collector_id,
-      contributor:profiles!group_memberships_contributor_id_fkey(id, full_name, phone_number, email, status),
       group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
-    `
-    );
+    `);
 
-  if (error) return { error: error.message, data: [] };
-  // Only return contributors whose profile status is active
-  const active = (data as any[])?.filter((c) => c.contributor?.status === "active") ?? [];
-  return { data: active, error: null };
+  const membershipsByContributor: Record<string, any[]> = {};
+  if (memberships) {
+    for (const m of memberships) {
+      if (!membershipsByContributor[m.contributor_id]) {
+        membershipsByContributor[m.contributor_id] = [];
+      }
+      membershipsByContributor[m.contributor_id].push(m);
+    }
+  }
+
+  const result: any[] = [];
+
+  for (const p of profiles) {
+    const userMemberships = membershipsByContributor[p.id];
+    if (userMemberships && userMemberships.length > 0) {
+      for (const m of userMemberships) {
+        result.push({
+          id: m.id,
+          group_id: m.group_id,
+          contributor_id: p.id,
+          created_at: m.created_at || p.created_at,
+          collector_id: m.collector_id || p.collector_id,
+          contributor: {
+            id: p.id,
+            full_name: p.full_name,
+            phone_number: p.phone_number,
+            email: p.email,
+            status: p.status,
+          },
+          group: m.group,
+        });
+      }
+    } else {
+      result.push({
+        id: p.id,
+        group_id: "",
+        contributor_id: p.id,
+        created_at: p.created_at,
+        collector_id: p.collector_id,
+        contributor: {
+          id: p.id,
+          full_name: p.full_name,
+          phone_number: p.phone_number,
+          email: p.email,
+          status: p.status,
+        },
+        group: null,
+      });
+    }
+  }
+
+  return { data: result, error: null };
 }
 
 export async function getAllPendingContributors() {
