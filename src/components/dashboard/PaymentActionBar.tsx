@@ -27,14 +27,18 @@ export function PaymentActionBar({
           type="button"
           onClick={onPayEqub}
           className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border-2 ${
-            isPending 
+            !hasActiveEqub
+              ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 hover:bg-amber-500/10"
+              : isPending 
               ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 hover:bg-amber-500/10" 
               : "border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/10 hover:border-blue-500/50 hover:bg-blue-500/10"
-          } active:scale-[0.98] transition-all duration-200 text-left group shadow-sm`}
+          } active:scale-[0.98] transition-all duration-200 text-left group shadow-sm cursor-pointer`}
         >
           {/* Circular Arrow Badge */}
           <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full ${
-            isPending
+            !hasActiveEqub
+              ? "bg-amber-500/15 border border-amber-500/30 text-amber-500 group-hover:bg-amber-500 group-hover:text-white"
+              : isPending
               ? "bg-amber-500/15 border border-amber-500/30 text-amber-500 group-hover:bg-amber-500 group-hover:text-white"
               : "bg-blue-500/15 border border-blue-500/30 text-blue-500 group-hover:bg-blue-500 group-hover:text-white"
           } flex items-center justify-center shrink-0 transition-all shadow-sm`}>
@@ -44,13 +48,21 @@ export function PaymentActionBar({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h3 className={`font-extrabold text-xs sm:text-sm text-foreground ${
-                isPending ? "group-hover:text-amber-600 dark:group-hover:text-amber-400" : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                !hasActiveEqub
+                  ? "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                  : isPending 
+                  ? "group-hover:text-amber-600 dark:group-hover:text-amber-400" 
+                  : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
               } transition-colors truncate`}>
                 {t("payEqub")}
               </h3>
             </div>
             <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate mt-0.5 font-medium">
-              {isPending ? (locale === "am" ? "በአድሚን ማረጋገጫ በመጠባበቅ ላይ" : "Pending Admin Approval") : t("payEqubSubtitle")}
+              {!hasActiveEqub
+                ? (locale === "am" ? "መጀመሪያ እቁብ ይቀላቀሉ" : "First join an Equb")
+                : isPending 
+                ? (locale === "am" ? "በአድሚን ማረጋገጫ በመጠባበቅ ላይ" : "Pending Admin Approval") 
+                : t("payEqubSubtitle")}
             </p>
           </div>
         </button>

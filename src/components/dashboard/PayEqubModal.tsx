@@ -17,7 +17,8 @@ import {
   Building2,
   Phone,
   Receipt,
-  RotateCcw
+  RotateCcw,
+  PlusCircle,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { parseEthiopianBankSms, validatePaymentWithSms, type ParsedSmsResult } from "@/lib/sms-parser";
@@ -332,6 +333,36 @@ export function PayEqubModal({
                 </Button>
               </div>
 
+            </div>
+          ) : activeGroups.length === 0 ? (
+            /* ═════════════════════════════════════════════════════════════ */
+            /* VIEW C: NO ACTIVE EQUBS - FIRST JOIN EQUB                    */
+            /* ═════════════════════════════════════════════════════════════ */
+            <div className="py-8 px-4 text-center space-y-5 animate-fadeIn">
+              <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center text-amber-500 mx-auto shadow-lg shadow-amber-500/10">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-extrabold text-base sm:text-lg text-foreground">
+                  {locale === "am" ? "መጀመሪያ እቁብ ይቀላቀሉ!" : "First Join an Equb!"}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                  {locale === "am"
+                    ? "ክፍያ ከመፈጸምዎ በፊት እባክዎ የሚፈልጉትን የእቁብ አይነት ይምረጡና ይቀላቀሉ።"
+                    : "You have not joined any Equb yet. Please join an Equb group first before making contributions."}
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <a
+                  href="/dashboard/contributor/teqemachs"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-blue-600/25 transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>{locale === "am" ? "እቁብ ይምረጡና ይቀላቀሉ" : "Browse & Join Equb"}</span>
+                </a>
+              </div>
             </div>
           ) : (
             /* ═════════════════════════════════════════════════════════════ */

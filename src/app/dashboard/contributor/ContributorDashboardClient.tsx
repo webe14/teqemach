@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   Layers,
   Sparkles,
-  Check
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
@@ -58,6 +59,20 @@ export default function ContributorDashboardClient({
   const [selectedType, setSelectedType] = useState<EqubTypeCategory>("daily");
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  const [noEqubNotice, setNoEqubNotice] = useState(false);
+
+  const activeUserGroups = stats?.groups?.length 
+    ? stats.groups 
+    : (stats?.group ? [stats.group] : []);
+  const hasActiveEqub = activeUserGroups.length > 0;
+
+  function handlePayEqubClick() {
+    if (!hasActiveEqub) {
+      setNoEqubNotice(true);
+      return;
+    }
+    setIsPayModalOpen(true);
+  }
 
   // Sync if initialStats prop updates
   useEffect(() => {
@@ -289,11 +304,39 @@ export default function ContributorDashboardClient({
           userId={userId}
         />
 
+        {/* Notice if user tries to pay without active Equb */}
+        {noEqubNotice && !hasActiveEqub && (
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200 animate-fadeIn shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-foreground">
+                  {locale === "am" ? "መጀመሪያ እቁብ ይቀላቀሉ!" : "First Join an Equb!"}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {locale === "am" 
+                    ? "ክፍያ ከመፈጸምዎ በፊት እባክዎ የሚፈልጉትን የእቁብ አይነት ይምረጡና ይቀላቀሉ።"
+                    : "You must join at least one Equb group before you can make a contribution payment."}
+                </p>
+              </div>
+            </div>
+            <a
+              href="/dashboard/contributor/teqemachs"
+              className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{locale === "am" ? "እቁብ ይቀላቀሉ" : "Join Equb"}</span>
+            </a>
+          </div>
+        )}
+
         {/* ─── 5. CBE-STYLE ACTION BAR (PAY EQUB & TRANSACTIONS) ──────── */}
         <PaymentActionBar 
-          onPayEqub={() => setIsPayModalOpen(true)}
+          onPayEqub={handlePayEqubClick}
           onTransactions={() => setIsTransactionsModalOpen(true)}
-          hasActiveEqub={Boolean(stats?.group || stats?.groups?.length)}
+          hasActiveEqub={hasActiveEqub}
           isPending={status === "pending"}
         />
 
@@ -306,7 +349,7 @@ export default function ContributorDashboardClient({
         contributorId={userId || ""}
         contributorName={userName}
         contributorPhone={stats?.group?.collector?.phone_number || ""}
-        activeGroups={stats?.groups?.length ? stats.groups : (stats?.group ? [stats.group] : allGroups)}
+        activeGroups={activeUserGroups}
         isPendingApproval={status === "pending"}
         onPaymentSuccess={handlePaymentSuccess}
         onOpenTransactions={() => setIsTransactionsModalOpen(true)}
@@ -317,7 +360,7 @@ export default function ContributorDashboardClient({
         onClose={() => setIsTransactionsModalOpen(false)}
         contributorId={userId || ""}
         contributorName={userName}
-        onPayEqub={() => setIsPayModalOpen(true)}
+        onPayEqub={handlePayEqubClick}
       />
     </div>
   );
