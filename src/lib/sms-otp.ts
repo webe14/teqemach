@@ -68,7 +68,7 @@ export function buildPaymentConfirmationSms({
   const nameDisplay = cleanName.length > 0 ? ` ${cleanName}` : "";
   const cleanPaid = paidDays !== undefined && paidDays !== null ? cleanSmsText(String(paidDays)) : "";
   const cleanRemaining = remainingDays !== undefined && remainingDays !== null ? cleanSmsText(String(remainingDays)) : "";
-  const statusText = cleanPaid ? `, Paid: ${cleanPaid}` : cleanRemaining ? `, Remaining: ${cleanRemaining}` : "";
+  const statusText = cleanPaid ? `, Total Paid: ${cleanPaid}` : cleanRemaining ? `, Remaining: ${cleanRemaining}` : "";
 
   return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText})${statusText} on ${cleanDate} is confirmed. Thank you!`;
 }
