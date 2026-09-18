@@ -32,6 +32,40 @@ export async function verifyRegistrationOtpAction(phone: string, code: string) {
   return await verifyRegistrationOtp({ phone, code });
 }
 
+export async function checkTelegramLinkedForPhoneAction(phone: string) {
+  try {
+    const formattedPhone = formatEthiopianPhone(phone);
+    if (!formattedPhone) {
+      return { isLinked: false, error: "Please enter a valid phone number." };
+    }
+    const adminClient = await createAdminClient();
+    const phoneVariants = getPhoneVariants(phone);
+    const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
+
+    const { data: tgUser } = await adminClient
+      .from("telegram_users")
+      .select("telegram_id, username, first_name, last_name, phone_number")
+      .or(orConditions)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (tgUser && tgUser.telegram_id) {
+      return {
+        isLinked: true,
+        telegramId: tgUser.telegram_id,
+        telegramUsername: tgUser.username,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name,
+      };
+    }
+
+    return { isLinked: false };
+  } catch (err: any) {
+    return { isLinked: false, error: err.message };
+  }
+}
+
 export async function registerWithPhoneOtpAction({
   phone,
   fullName,
@@ -82,7 +116,21 @@ export async function registerWithPhoneOtpAction({
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create profile
+  // Check if phone was linked in telegram_users
+  const phoneVariants = getPhoneVariants(phone);
+  const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
+  const { data: tgUser } = await adminClient
+    .from("telegram_users")
+    .select("telegram_id, username, first_name, last_name")
+    .or(orConditions)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const telegramId = tgUser?.telegram_id || null;
+  const telegramUsername = tgUser?.username || null;
+
+  // Create profile with status pending and linked telegram info
   const { data: newProfile, error: insertError } = await adminClient
     .from("profiles")
     .insert({
@@ -91,13 +139,26 @@ export async function registerWithPhoneOtpAction({
       phone_number: formattedPhone,
       password: hashedPassword,
       role: role,
-      status: "active",
+      status: "pending",
+      telegram_id: telegramId,
+      telegram_chat_id: telegramId,
+      telegram_username: telegramUsername,
+      telegram_verified: !!telegramId,
+      telegram_linked_at: telegramId ? new Date().toISOString() : null,
+      telegram_last_seen: telegramId ? new Date().toISOString() : null,
     })
     .select("*")
     .single();
 
   if (insertError) {
     return { error: insertError.message };
+  }
+
+  if (telegramId) {
+    await adminClient
+      .from("telegram_users")
+      .update({ user_id: newProfile.id })
+      .eq("telegram_id", telegramId);
   }
 
   // Create 30-day session

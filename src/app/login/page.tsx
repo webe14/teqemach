@@ -29,6 +29,7 @@ import {
   Play,
   Globe,
   ExternalLink,
+  Send,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AppLogo } from "@/components/ui/AppLogo";
@@ -39,6 +40,7 @@ import {
   requestRegistrationOtpAction,
   verifyRegistrationOtpAction,
   registerWithPhoneOtpAction,
+  checkTelegramLinkedForPhoneAction,
 } from "@/lib/actions/auth";
 
 type EqubGroup = {
@@ -110,6 +112,11 @@ export default function LoginPage() {
   const [regAgreedToTerms, setRegAgreedToTerms] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
   const [otpLoading, setOtpLoading] = useState(false);
+
+  // Telegram verification state for registration
+  const [telegramLinked, setTelegramLinked] = useState(false);
+  const [telegramChecking, setTelegramChecking] = useState(false);
+  const [telegramUser, setTelegramUser] = useState<any>(null);
 
   // Link form state
   const [email, setEmail] = useState("");
@@ -287,6 +294,44 @@ export default function LoginPage() {
     };
   }, [resendTimer]);
 
+  async function checkTelegramStatus(phoneToCheck = regPhone) {
+    if (!phoneToCheck || phoneToCheck.replace(/\D/g, "").length < 9) return;
+    setTelegramChecking(true);
+    try {
+      const res = await checkTelegramLinkedForPhoneAction(phoneToCheck);
+      if (res.isLinked) {
+        setTelegramLinked(true);
+        setTelegramUser(res);
+      } else {
+        setTelegramLinked(false);
+      }
+    } catch {
+      // Non-blocking
+    } finally {
+      setTelegramChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    if (regStep !== "otp" && regStep !== "profile") return;
+    if (initData) {
+      setTelegramLinked(true);
+      return;
+    }
+
+    if (!regPhone || regPhone.replace(/\D/g, "").length < 9) return;
+
+    checkTelegramStatus(regPhone);
+
+    const interval = setInterval(() => {
+      if (!telegramLinked) {
+        checkTelegramStatus(regPhone);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [regStep, regPhone, telegramLinked, initData]);
+
   async function handleSendCode(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -322,6 +367,8 @@ export default function LoginPage() {
       setRegStep("otp");
       setResendTimer(45);
       setErrorMsg(null);
+      // Pre-check telegram status
+      checkTelegramStatus(regPhone);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to send verification code.");
     } finally {
@@ -335,6 +382,19 @@ export default function LoginPage() {
     if (!regOtp || regOtp.trim().length !== 6) {
       setErrorMsg("Please enter the complete 6-digit verification code.");
       return;
+    }
+
+    // Check mandatory Telegram connection
+    if (!telegramLinked && !initData) {
+      setOtpLoading(true);
+      const tgRes = await checkTelegramLinkedForPhoneAction(regPhone);
+      if (!tgRes.isLinked) {
+        setOtpLoading(false);
+        setErrorMsg("እባክዎ መጀመሪያ ከላይ ያለውን ቁልፍ በመጫን ቴሌግራምዎን ያገናኙ (Please connect Telegram first using the button above).");
+        return;
+      }
+      setTelegramLinked(true);
+      setTelegramUser(tgRes);
     }
 
     setOtpLoading(true);
@@ -895,11 +955,11 @@ export default function LoginPage() {
                   </form>
                 )}
 
-                {/* ── STEP 2: ENTER OTP CODE ── */}
+                {/* ── STEP 2: ENTER OTP CODE & MANDATORY TELEGRAM CONNECTION ── */}
                 {regStep === "otp" && (
                   <form onSubmit={handleVerifyCode} className="space-y-4">
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-slate-900">Verification Code</h3>
+                      <h3 className="text-base font-bold text-slate-900">Verification & Telegram</h3>
                       <p className="text-xs text-slate-600">
                         Enter the 6-digit code sent to <span className="font-bold text-slate-900">+251 {regPhone}</span>
                       </p>
@@ -919,7 +979,7 @@ export default function LoginPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1">
+                    <div className="flex items-center justify-between text-xs pt-0.5">
                       <span className="text-slate-600">Didn&apos;t receive code?</span>
                       {resendTimer > 0 ? (
                         <span className="font-semibold text-slate-600">Resend in {resendTimer}s</span>
@@ -936,15 +996,89 @@ export default function LoginPage() {
                       )}
                     </div>
 
+                    {/* ── MANDATORY TELEGRAM CONNECTION CARD ── */}
+                    <div className={`p-4 rounded-2xl border-2 transition-all space-y-2.5 ${
+                      telegramLinked || initData
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950"
+                        : "bg-blue-500/5 border-blue-500/30 text-slate-900"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
+                            telegramLinked || initData
+                              ? "bg-emerald-500/20 text-emerald-600"
+                              : "bg-blue-500/15 text-blue-600"
+                          }`}>
+                            <Send className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold leading-tight">
+                              {telegramLinked || initData ? "ቴሌግራም ተገናኝቷል (Telegram Connected)" : "ቴሌግራም ማገናኘት (ግዴታ / Mandatory)"}
+                            </h4>
+                            <p className="text-[10.5px] text-slate-500">
+                              {telegramLinked || initData
+                                ? (telegramUser?.telegramUsername ? `@${telegramUser.telegramUsername}` : "Connected")
+                                : "የክፍያ ማሳወቂያዎችን በግል ቴሌግራምዎ ለማግኘት"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                          telegramLinked || initData
+                            ? "bg-emerald-500/20 text-emerald-700 border border-emerald-500/30"
+                            : "bg-blue-500/20 text-blue-700 border border-blue-500/30"
+                        }`}>
+                          {telegramLinked || initData ? "ተገናኝቷል" : "ግዴታ"}
+                        </span>
+                      </div>
+
+                      {!(telegramLinked || initData) ? (
+                        <div className="space-y-2 pt-1">
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            የእቁብ ክፍያ ማረጋገጫዎች፣ ማሳወቂያዎች እና ደረሰኞች በግል ቴሌግራም መልዕክት እንዲደርስዎት ከታች ያለውን ቁልፍ በመጫን ቴሌግራምዎን ያገናኙ።
+                          </p>
+                          
+                          <div className="flex gap-2">
+                            <a
+                              href={`https://t.me/teqemachBot?start=reg_${regPhone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>ቴሌግራም አገናኝ / Connect</span>
+                              <ExternalLink className="w-3 h-3 opacity-80" />
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => checkTelegramStatus()}
+                              disabled={telegramChecking}
+                              className="px-3.5 h-11 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                              title="Check Telegram Connection"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${telegramChecking ? "animate-spin" : ""}`} />
+                              <span>አረጋግጥ</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-800 text-xs font-bold flex items-center gap-2 border border-emerald-500/20">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>ቴሌግራምዎ በተሳካ ሁኔታ ተገናኝቷል። ማሳወቂያዎች ይደርሱዎታል።</span>
+                        </div>
+                      )}
+                    </div>
+
                     <Button
                       type="submit"
-                      disabled={otpLoading || regOtp.length !== 6}
-                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2 cursor-pointer"
+                      disabled={otpLoading || regOtp.length !== 6 || (!telegramLinked && !initData)}
+                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50"
                     >
                       {otpLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                       ) : (
-                        "Verify Code"
+                        "Verify Code & Continue"
                       )}
                     </Button>
                   </form>
@@ -955,7 +1089,14 @@ export default function LoginPage() {
                   <form onSubmit={handleCompleteRegistration} className="space-y-3.5">
                     <div className="space-y-1">
                       <h3 className="text-base font-bold text-slate-900">Complete Profile</h3>
-                      <p className="text-xs text-emerald-600 font-medium">✓ Phone +251 {regPhone} verified</p>
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <span className="text-[11px] text-emerald-700 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Phone +251 {regPhone} Verified
+                        </span>
+                        <span className="text-[11px] text-blue-700 font-bold bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Send className="w-3 h-3" /> Telegram Connected
+                        </span>
+                      </div>
                     </div>
 
                     {/* Full Name */}

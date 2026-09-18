@@ -146,14 +146,70 @@ async function handleMessage(message: any) {
         break;
       }
 
-      // Handle deep link logic for linking accounts
+      // Handle deep link: reg_<phone> (for binding Telegram to web registration)
+      if (args.length > 0 && (args[0].startsWith("reg_") || /^\d{9,12}$/.test(args[0]))) {
+        const rawPhone = args[0].replace(/^reg_/, "");
+        const digits = rawPhone.replace(/\D/g, "");
+        
+        let normalizedPhone = rawPhone;
+        if (digits.startsWith("251") && digits.length === 12) {
+          normalizedPhone = `0${digits.slice(3)}`;
+        } else if (digits.startsWith("9") && digits.length === 9) {
+          normalizedPhone = `0${digits}`;
+        }
+
+        // 1. Upsert into telegram_users with phone_number
+        await supabase
+          .from("telegram_users")
+          .upsert({
+            telegram_id: telegramId,
+            username: from.username || null,
+            first_name: from.first_name || null,
+            last_name: from.last_name || null,
+            language_code: from.language_code || null,
+            phone_number: normalizedPhone,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "telegram_id" });
+
+        // 2. Also check if any existing profile matches this phone
+        const { data: matchedProfiles } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(`phone_number.eq.${normalizedPhone},phone_number.eq.+251${normalizedPhone.replace(/^0/, "")},phone_number.eq.251${normalizedPhone.replace(/^0/, "")},phone_number.eq.${normalizedPhone.replace(/^0/, "")}`);
+
+        if (matchedProfiles && matchedProfiles.length > 0) {
+          const profileIds = matchedProfiles.map((p: any) => p.id);
+          await supabase
+            .from("profiles")
+            .update({
+              telegram_id: telegramId,
+              telegram_chat_id: telegramId,
+              telegram_username: from.username || null,
+              telegram_verified: true,
+              telegram_linked_at: new Date().toISOString(),
+              telegram_last_seen: new Date().toISOString(),
+            })
+            .in("id", profileIds);
+        }
+
+        const successText = `✅ ውብ ዲጂታል እቁብ - ቴሌግራምዎ በተሳካ ሁኔታ ተገናኝቷል!\n\nየእርስዎ ቴሌግራም ከስልክ ቁጥር +251 ${normalizedPhone.replace(/^0/, "")} ጋር ተገናኝቷል። አሁን ወደ ምዝገባው ገጽ ተመልሰው ምዝገባዎን ማጠናቀቅ ይችላሉ።\n\nWelcome to Wub Digital Equb 👋\nYour Telegram is now connected. Return to the registration page to complete your account.`;
+        const replyMarkup = {
+          inline_keyboard: [
+            [openMiniAppButton("ውብ ዲጂታል እቁብ ክፈት / Open Mini App", APP_URL)]
+          ]
+        };
+        await sendTelegramMessage(chatId, successText, { reply_markup: replyMarkup });
+        break;
+      }
+
+      // Handle deep link logic for linking accounts by profile ID
       if (args.length > 0 && args[0].startsWith("link_")) {
         const profileIdToLink = args[0].replace("link_", "");
         
         // Lookup profile
         const { data: profileToLink } = await supabase
           .from("profiles")
-          .select("id, telegram_username")
+          .select("id, telegram_username, full_name, phone_number")
           .eq("id", profileIdToLink)
           .single();
           
@@ -162,23 +218,26 @@ async function handleMessage(message: any) {
           break;
         }
         
-        if (profileToLink.telegram_username?.toLowerCase() !== from.username?.toLowerCase()) {
-          await sendTelegramMessage(chatId, `❌ Username mismatch! The collector linked this account to @${profileToLink.telegram_username}, but your Telegram username is @${from.username}. Please update your username or ask the collector to fix it.`);
-          break;
-        }
-        
         await supabase.from("profiles").update({
           telegram_id: telegramId,
           telegram_chat_id: telegramId,
+          telegram_username: from.username || profileToLink.telegram_username || null,
           telegram_verified: true,
           telegram_linked_at: new Date().toISOString(),
-          status: "active",
+          telegram_last_seen: new Date().toISOString(),
         }).eq("id", profileIdToLink);
         
         // Also update telegram_users
-        await supabase.from("telegram_users").update({
-          user_id: profileIdToLink
-        }).eq("telegram_id", telegramId);
+        await supabase.from("telegram_users").upsert({
+          telegram_id: telegramId,
+          username: from.username || null,
+          first_name: from.first_name || null,
+          last_name: from.last_name || null,
+          language_code: from.language_code || null,
+          phone_number: profileToLink.phone_number || null,
+          user_id: profileIdToLink,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "telegram_id" });
         
         const successText = `✅ Account successfully linked!\n\nWelcome to Wub Digital Equb (ውብ ዲጂታል እቁብ) 👋\nManage your equb contributions easily. Click below to open the Mini App!`;
         const replyMarkup = {
