@@ -232,6 +232,30 @@ CREATE POLICY "Rules are deleteable by admins or collectors"
 
 
 -- ============================================================
+-- Performance Indexes for Fast Queries and Joins
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_group_memberships_contributor_id ON public.group_memberships(contributor_id);
+CREATE INDEX IF NOT EXISTS idx_group_memberships_group_id ON public.group_memberships(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_memberships_collector_id ON public.group_memberships(collector_id);
+
+CREATE INDEX IF NOT EXISTS idx_contributions_contributor_id ON public.contributions(contributor_id);
+CREATE INDEX IF NOT EXISTS idx_contributions_group_id ON public.contributions(group_id);
+CREATE INDEX IF NOT EXISTS idx_contributions_collector_id ON public.contributions(collector_id);
+CREATE INDEX IF NOT EXISTS idx_contributions_is_marked_paid ON public.contributions(is_marked_paid);
+CREATE INDEX IF NOT EXISTS idx_contributions_lookup ON public.contributions(contributor_id, group_id, is_marked_paid);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_phone ON public.profiles(phone_number);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles(status);
+
+CREATE INDEX IF NOT EXISTS idx_equb_groups_collector ON public.equb_groups(collector_id);
+CREATE INDEX IF NOT EXISTS idx_equb_groups_amount ON public.equb_groups(contribution_amount);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_rules_collector ON public.contribution_rules(collector_id);
+
+-- ============================================================
 -- MIGRATION SQL (run in Supabase SQL editor for existing DBs)
 -- ============================================================
 --

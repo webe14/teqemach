@@ -24,13 +24,22 @@ import {
   Check,
   AlertCircle
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import EqubBalanceCard from "@/components/dashboard/EqubBalanceCard";
 import { PaymentActionBar } from "@/components/dashboard/PaymentActionBar";
-import { PayEqubModal } from "@/components/dashboard/PayEqubModal";
-import { TransactionsModal } from "@/components/dashboard/TransactionsModal";
 import { getContributorStats } from "@/lib/actions/contributor";
+
+const PayEqubModal = dynamic(
+  () => import("@/components/dashboard/PayEqubModal").then((mod) => mod.PayEqubModal),
+  { ssr: false }
+);
+
+const TransactionsModal = dynamic(
+  () => import("@/components/dashboard/TransactionsModal").then((mod) => mod.TransactionsModal),
+  { ssr: false }
+);
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 

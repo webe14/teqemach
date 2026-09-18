@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { TelegramProvider } from "@/components/TelegramProvider";
 
-const inter = { variable: "font-sans" };
+const inter = { variable: "--font-sans" };
 
 export const viewport: Viewport = {
   width: "device-width",

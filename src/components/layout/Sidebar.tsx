@@ -1,11 +1,16 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
 import { NavLinks } from "./NavLinks";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { signOut } from "@/lib/actions/auth";
-import { EditProfileModal } from "./EditProfileModal";
 import { Button } from "@/components/ui/button";
+
+const EditProfileModal = dynamic(
+  () => import("./EditProfileModal").then((mod) => mod.EditProfileModal),
+  { ssr: false }
+);
 import Link from "next/link";
 import {
   ChevronLeft,

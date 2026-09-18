@@ -29,9 +29,14 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { EditProfileModal } from "./EditProfileModal";
+import dynamic from "next/dynamic";
 import { signOut } from "@/lib/actions/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
+
+const EditProfileModal = dynamic(
+  () => import("./EditProfileModal").then((mod) => mod.EditProfileModal),
+  { ssr: false }
+);
 
 interface MobileBottomNavProps {
   role: "admin" | "contributor";
