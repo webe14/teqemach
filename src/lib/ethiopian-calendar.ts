@@ -235,33 +235,10 @@ export function formatCycleDatesSummary({
   const smsEnd = formatShortEthiopianDate(getCycleDate(lastCycle, start, frequency), "en");
   const smsSelectedDates = sorted.length <= 1 ? smsStart : `${smsStart} - ${smsEnd}`;
 
-  // 3. Remaining Days & Date Range for both Bot and SMS
+  // 3. Remaining Days for both Bot and SMS (clean day count)
   const remainingCount = Math.max(0, totalDays - totalPaidCyclesCount);
-  let botRemainingText = `${remainingCount} ቀናት`;
-  let smsRemainingText = `${remainingCount} days`;
-
-  if (remainingCount === 0) {
-    botRemainingText = "0 (ሁሉም ቀናት ተጠናቀዋል)";
-    smsRemainingText = "0 days (Completed)";
-  } else {
-    const nextUnpaidCycle = (sorted[sorted.length - 1] || 0) + 1;
-    if (nextUnpaidCycle <= totalDays) {
-      const remStartDate = getCycleDate(nextUnpaidCycle, start, frequency);
-      const remEndDate = getCycleDate(totalDays, start, frequency);
-      const remStartAm = formatShortEthiopianDate(remStartDate, "am");
-      const remEndAm = formatShortEthiopianDate(remEndDate, "am");
-      const remStartEn = formatShortEthiopianDate(remStartDate, "en");
-      const remEndEn = formatShortEthiopianDate(remEndDate, "en");
-
-      if (nextUnpaidCycle === totalDays) {
-        botRemainingText = `1 ቀን (${remStartAm})`;
-        smsRemainingText = `1 day (${remStartEn})`;
-      } else {
-        botRemainingText = `${remainingCount} ቀናት (${remStartAm} - ${remEndAm})`;
-        smsRemainingText = `${remainingCount} days (${remStartEn} - ${remEndEn})`;
-      }
-    }
-  }
+  const botRemainingText = remainingCount === 1 ? "1 ቀን" : `${remainingCount} ቀናት`;
+  const smsRemainingText = remainingCount === 1 ? "1 day" : `${remainingCount} days`;
 
   return {
     botSelectedDates,
