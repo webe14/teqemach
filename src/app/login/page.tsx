@@ -376,6 +376,24 @@ export default function LoginPage() {
     }
   }
 
+  async function handleNativeSharePhone() {
+    const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : null;
+    if (tg && tg.requestContact) {
+      setTelegramChecking(true);
+      tg.requestContact((shared: boolean) => {
+        if (shared) {
+          setTimeout(() => {
+            checkTelegramStatus(regPhone);
+          }, 1000);
+        } else {
+          setTelegramChecking(false);
+        }
+      });
+    } else {
+      checkTelegramStatus(regPhone);
+    }
+  }
+
   async function handleVerifyCode(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -384,21 +402,19 @@ export default function LoginPage() {
       return;
     }
 
-    // Check mandatory Telegram connection
-    if (!telegramLinked && !initData) {
-      setOtpLoading(true);
-      const tgRes = await checkTelegramLinkedForPhoneAction(regPhone);
-      if (!tgRes.isLinked) {
-        setOtpLoading(false);
-        setErrorMsg("እባክዎ መጀመሪያ ከላይ ያለውን ቁልፍ በመጫን ቴሌግራምዎን ያገናኙ (Please connect Telegram first using the button above).");
-        return;
-      }
-      setTelegramLinked(true);
-      setTelegramUser(tgRes);
-    }
-
     setOtpLoading(true);
     try {
+      // Check telegram status in background if available
+      if (!telegramLinked && !initData) {
+        try {
+          const tgRes = await checkTelegramLinkedForPhoneAction(regPhone);
+          if (tgRes.isLinked) {
+            setTelegramLinked(true);
+            setTelegramUser(tgRes);
+          }
+        } catch {}
+      }
+
       const res = await verifyRegistrationOtpAction(regPhone, regOtp.trim());
       if (!res.success) {
         setErrorMsg(res.error || "Invalid or expired verification code.");
@@ -996,84 +1012,48 @@ export default function LoginPage() {
                       )}
                     </div>
 
-                    {/* ── MANDATORY TELEGRAM CONNECTION CARD ── */}
-                    <div className={`p-4 rounded-2xl border-2 transition-all space-y-2.5 ${
-                      telegramLinked || initData
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950"
-                        : "bg-blue-500/5 border-blue-500/30 text-slate-900"
-                    }`}>
-                      <div className="flex items-center justify-between">
+                    {/* ── IN-APP TELEGRAM STATUS CARD ── */}
+                    {(telegramLinked || initData) ? (
+                      <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-950 flex items-center justify-between animate-fadeIn">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
-                            telegramLinked || initData
-                              ? "bg-emerald-500/20 text-emerald-600"
-                              : "bg-blue-500/15 text-blue-600"
-                          }`}>
-                            <Send className="w-4 h-4" />
+                          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold">
+                            <CheckCircle2 className="w-4 h-4" />
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold leading-tight">
-                              {telegramLinked || initData ? "ቴሌግራም ተገናኝቷል (Telegram Connected)" : "ቴሌግራም ማገናኘት (ግዴታ / Mandatory)"}
+                            <h4 className="text-xs font-bold leading-tight text-emerald-900">
+                              ቴሌግራም ተገናኝቷል (Telegram Connected)
                             </h4>
-                            <p className="text-[10.5px] text-slate-500">
-                              {telegramLinked || initData
-                                ? (telegramUser?.telegramUsername ? `@${telegramUser.telegramUsername}` : "Connected")
-                                : "የክፍያ ማሳወቂያዎችን በግል ቴሌግራምዎ ለማግኘት"}
+                            <p className="text-[10.5px] text-emerald-700">
+                              {telegramUser?.telegramUsername ? `@${telegramUser.telegramUsername}` : "Verified for automated alerts"}
                             </p>
                           </div>
                         </div>
-
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                          telegramLinked || initData
-                            ? "bg-emerald-500/20 text-emerald-700 border border-emerald-500/30"
-                            : "bg-blue-500/20 text-blue-700 border border-blue-500/30"
-                        }`}>
-                          {telegramLinked || initData ? "ተገናኝቷል" : "ግዴታ"}
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-700 border border-emerald-500/30">
+                          ተገናኝቷል
                         </span>
                       </div>
-
-                      {!(telegramLinked || initData) ? (
-                        <div className="space-y-2 pt-1">
-                          <p className="text-[11px] text-slate-600 leading-relaxed">
-                            የእቁብ ክፍያ ማረጋገጫዎች፣ ማሳወቂያዎች እና ደረሰኞች በግል ቴሌግራም መልዕክት እንዲደርስዎት ከታች ያለውን ቁልፍ በመጫን ቴሌግራምዎን ያገናኙ።
-                          </p>
-                          
-                          <div className="flex gap-2">
-                            <a
-                              href={`https://t.me/teqemachBot?start=reg_${regPhone.replace(/\D/g, "")}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all cursor-pointer"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>ቴሌግራም አገናኝ / Connect</span>
-                              <ExternalLink className="w-3 h-3 opacity-80" />
-                            </a>
-
-                            <button
-                              type="button"
-                              onClick={() => checkTelegramStatus()}
-                              disabled={telegramChecking}
-                              className="px-3.5 h-11 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                              title="Check Telegram Connection"
-                            >
-                              <RefreshCw className={`w-3.5 h-3.5 ${telegramChecking ? "animate-spin" : ""}`} />
-                              <span>አረጋግጥ</span>
-                            </button>
-                          </div>
+                    ) : (typeof window !== "undefined" && window.Telegram?.WebApp) ? (
+                      <div className="p-3 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">Telegram Verification</span>
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">Mini App</span>
                         </div>
-                      ) : (
-                        <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-800 text-xs font-bold flex items-center gap-2 border border-emerald-500/20">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>ቴሌግራምዎ በተሳካ ሁኔታ ተገናኝቷል። ማሳወቂያዎች ይደርሱዎታል።</span>
-                        </div>
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={handleNativeSharePhone}
+                          disabled={telegramChecking}
+                          className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                        >
+                          <Smartphone className="w-4 h-4" />
+                          <span>{telegramChecking ? "Verifying..." : "Share Phone in Telegram"}</span>
+                        </button>
+                      </div>
+                    ) : null}
 
                     <Button
                       type="submit"
-                      disabled={otpLoading || regOtp.length !== 6 || (!telegramLinked && !initData)}
-                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50"
+                      disabled={otpLoading || regOtp.length !== 6}
+                      className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 rounded-2xl transition-all active:scale-[0.98] mt-2 cursor-pointer"
                     >
                       {otpLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
