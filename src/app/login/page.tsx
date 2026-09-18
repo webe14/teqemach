@@ -86,6 +86,7 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<Step>("init");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
 
   // Multi-role state
@@ -478,8 +479,20 @@ export default function LoginPage() {
         } catch {}
       }
 
-      localStorage.removeItem("teqemach_explicit_logout");
-      window.location.href = "/dashboard/contributor";
+      // Navigate to login page / tab with prefilled phone and success notification
+      const registeredPhone = regPhone;
+      setPhone(registeredPhone);
+      setPassword("");
+      setAuthTab("login");
+      setRegStep("phone");
+      setRegOtp("");
+      setRegPassword("");
+      setRegConfirmPassword("");
+      setRegFullName("");
+      setRegEmail("");
+      setIsSubmitting(false);
+      setSuccessMsg("ምዝገባዎ በተሳካ ሁኔታ ተጠናቋል! እባክዎ በስልክ ቁጥርዎ እና በይለፍ ቃልዎ ይግቡ። (Registration completed successfully! Please log in.)");
+      setErrorMsg(null);
     } catch (err: any) {
       setErrorMsg(err.message || "Registration failed.");
       setIsSubmitting(false);
@@ -768,6 +781,7 @@ export default function LoginPage() {
                 onClick={() => {
                   setAuthTab("login");
                   setErrorMsg(null);
+                  setSuccessMsg(null);
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "login"
@@ -783,6 +797,7 @@ export default function LoginPage() {
                   setAuthTab("register");
                   setRegStep("phone");
                   setErrorMsg(null);
+                  setSuccessMsg(null);
                 }}
                 className={`flex-1 py-3 text-sm rounded-xl transition-all duration-200 ${
                   authTab === "register"
@@ -793,6 +808,13 @@ export default function LoginPage() {
                 Register
               </button>
             </div>
+
+            {successMsg && (
+              <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 p-3.5 text-xs font-bold text-emerald-800 text-left animate-fadeIn">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-left animate-shake">

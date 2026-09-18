@@ -161,13 +161,6 @@ export async function registerWithPhoneOtpAction({
       .eq("telegram_id", telegramId);
   }
 
-  // Create 30-day session
-  await createCustomSession({
-    userId: newProfile.id,
-    role: newProfile.role as "admin" | "contributor",
-    email: userEmail,
-  });
-
   return { success: true, profile: newProfile };
 }
 
