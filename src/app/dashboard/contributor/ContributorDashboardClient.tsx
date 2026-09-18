@@ -186,30 +186,6 @@ export default function ContributorDashboardClient({
       {/* ─── 2. MAIN CONTAINER ────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 relative z-20 space-y-6">
 
-        {/* ─── PENDING APPROVAL BANNER ──────────────────────────────────────── */}
-        {status === "pending" && (
-          <div className="p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 dark:text-amber-200 shadow-md flex items-start gap-4 animate-in fade-in">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-amber-900 dark:text-amber-100">
-                  {locale === "am" ? "ምዝገባዎ በአድሚን ማረጋገጫ በመጠባበቅ ላይ ነው" : "Registration Pending Approval"}
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  {locale === "am" ? "በመጠባበቅ ላይ" : "Pending"}
-                </span>
-              </div>
-              <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-1.5 leading-relaxed">
-                {locale === "am"
-                  ? "የእርስዎ የእቁብ ምዝገባ በአስተዳዳሪው (Admin) ተቀባይነት እስኪያገኝ ድረስ ክፍያ መፈጸም አይቻልም። አስተዳዳሪው ምዝገባዎን እንዳረጋገጠልዎ ክፍያዎችን መፈጸም እና እቁብ መቆጠብ ይችላሉ።"
-                  : "Your Equb registration is pending admin approval. You will not be able to submit contributions until an administrator approves your account."}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* ─── 3. EQUB / TEQEMACH TYPE SELECTION GRID (WITH DISTINCT BLUE RECTANGLES) ─── */}
         <div className="bg-card border border-border rounded-3xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">

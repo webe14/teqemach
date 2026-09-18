@@ -183,7 +183,7 @@ export function PayEqubModal({
         {/* ─── MODAL HEADER ──────────────────────────────────────────────── */}
         <div className="p-4 sm:p-5 border-b border-border/80 flex items-center justify-between bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0 shadow-sm">
               <ArrowUpRight className="w-5 h-5" />
             </div>
             <div>

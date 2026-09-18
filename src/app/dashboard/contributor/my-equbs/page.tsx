@@ -27,6 +27,8 @@ export default async function MyEqubsPage() {
     }
   }
 
+  const status = currentProfile?.status || stats?.status || "active";
+
   return (
     <Suspense 
       fallback={
@@ -39,6 +41,7 @@ export default async function MyEqubsPage() {
         userName={profile?.full_name || "Webshet W."} 
         group={stats?.group} 
         groups={stats?.groups || []}
+        status={status}
       />
     </Suspense>
   );

@@ -11,9 +11,10 @@ interface MyEqubsClientProps {
   userName?: string;
   group?: any;
   groups?: any[];
+  status?: string;
 }
 
-export default function MyEqubsClient({ userName = "Webshet W.", group, groups = [] }: MyEqubsClientProps) {
+export default function MyEqubsClient({ userName = "Webshet W.", group, groups = [], status = "active" }: MyEqubsClientProps) {
   const { t, locale } = useLocale();
 
   const activeGroups = groups && groups.length > 0 ? groups : (group ? [group] : []);
@@ -52,7 +53,9 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
             {t("virtualEqub")}
           </span>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-snug">
-            {locale === "am" ? "የእኔ ንቁ እቁቦች" : "My Active Equbs"}
+            {status === "pending"
+              ? (locale === "am" ? "የእኔ እቁቦች (በመጠባበቅ ላይ)" : "My Equbs (Pending)")
+              : (locale === "am" ? "የእኔ ንቁ እቁቦች" : "My Active Equbs")}
           </h1>
           <div className="ethiopian-divider mt-2 w-24" />
         </div>
@@ -68,7 +71,7 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
               <Users className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">No Active Equbs Found</h3>
+              <h3 className="text-base font-bold text-foreground">No Equbs Found</h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
                 You haven&apos;t joined any Equb groups yet. Browse available groups to start saving.
               </p>
@@ -83,7 +86,9 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-lg font-bold text-foreground tracking-tight">
-                My Active Equbs ({activeGroups.length})
+                {status === "pending"
+                  ? (locale === "am" ? "የእኔ እቁቦች" : "My Equbs")
+                  : (locale === "am" ? "የእኔ ንቁ እቁቦች" : "My Active Equbs")} ({activeGroups.length})
               </h3>
               <Link href="/dashboard/contributor/teqemachs" className="text-xs font-bold text-primary hover:underline">
                 + Join Another
@@ -91,44 +96,53 @@ export default function MyEqubsClient({ userName = "Webshet W.", group, groups =
             </div>
 
             <div className="space-y-3">
-              {activeGroups.map((g, idx) => (
-                <Link 
-                  key={g.id || idx}
-                  href={`/dashboard/contributor/my-equbs/${g.id}`} 
-                  className="p-4 rounded-2xl border border-border bg-card hover:bg-muted/40 transition-all shadow-sm block group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 p-1.5 flex items-center justify-center shadow-md shadow-blue-900/10 shrink-0 overflow-hidden">
-                        <Image
-                          src="/logo.png"
-                          alt="Equb"
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-foreground leading-tight group-hover:text-primary transition-colors">
-                          {g.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                          Collector: {g.collector?.full_name || "Assigned Collector"}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-primary">
-                          <span>ETB {g.contribution_amount?.toLocaleString() || 500} ({g.frequency || 'daily'})</span>
-                          <span>•</span>
-                          <span>{g.total_days || 30} Days</span>
+              {activeGroups.map((g, idx) => {
+                const isGroupPending = status === "pending" || g.status === "pending" || g.membership_status === "pending";
+                return (
+                  <Link 
+                    key={g.id || idx}
+                    href={`/dashboard/contributor/my-equbs/${g.id}`} 
+                    className="p-4 rounded-2xl border border-border bg-card hover:bg-muted/40 transition-all shadow-sm block group cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 p-1.5 flex items-center justify-center shadow-md shadow-blue-900/10 shrink-0 overflow-hidden">
+                          <Image
+                            src="/logo.png"
+                            alt="Equb"
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-base text-foreground leading-tight group-hover:text-primary transition-colors">
+                            {g.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            Collector: {g.collector?.full_name || "Assigned Collector"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-primary">
+                            <span>ETB {g.contribution_amount?.toLocaleString() || 500} ({g.frequency || 'daily'})</span>
+                            <span>•</span>
+                            <span>{g.total_days || 30} Days</span>
+                          </div>
                         </div>
                       </div>
+                      
+                      <div className={`px-3 py-1.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${
+                        isGroupPending
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      }`}>
+                        {isGroupPending 
+                          ? (locale === "am" ? "በመጠባበቅ ላይ" : "Pending")
+                          : (locale === "am" ? "ንቁ" : "Active")}
+                      </div>
                     </div>
-                    
-                    <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full text-[11px] font-bold border border-emerald-500/20 whitespace-nowrap">
-                      Active
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
