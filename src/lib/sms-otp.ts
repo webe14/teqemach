@@ -44,6 +44,7 @@ export interface PaymentSmsDetails {
   ethiopianDateStr: string;
   selectedDatesStr?: string;
   daysCount: number;
+  remainingDays?: number | string;
   collectorName?: string;
 }
 
@@ -55,6 +56,7 @@ export function buildPaymentConfirmationSms({
   ethiopianDateStr,
   selectedDatesStr,
   daysCount,
+  remainingDays,
 }: PaymentSmsDetails): string {
   const typeText = ratePerCycle ? `Bale ${ratePerCycle}` : (cleanSmsText(groupName) || "Equb");
   const cleanDates = selectedDatesStr ? cleanSmsText(selectedDatesStr) : "";
@@ -62,8 +64,10 @@ export function buildPaymentConfirmationSms({
   const cleanDate = cleanSmsText(ethiopianDateStr);
   const cleanName = cleanSmsText(contributorName || "");
   const nameDisplay = cleanName.length > 0 ? ` ${cleanName}` : "";
+  const cleanRemaining = remainingDays !== undefined && remainingDays !== null ? cleanSmsText(String(remainingDays)) : "";
+  const remainingText = cleanRemaining ? `, Remaining: ${cleanRemaining}` : "";
 
-  return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText}) on ${cleanDate} is confirmed. Thank you!`;
+  return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText})${remainingText} on ${cleanDate} is confirmed. Thank you!`;
 }
 
 export function cleanSmsText(text?: string | null): string {

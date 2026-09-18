@@ -151,6 +151,127 @@ export function ethiopianDaysDiff(from: EthiopianDate, to: EthiopianDate): numbe
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
+const SHORT_ETHIOPIAN_MONTHS_AM = [
+  "መስ", "ጥቅ", "ህዳ", "ታህ", "ጥር", "የካ",
+  "መጋ", "ሚያ", "ግን", "ሰኔ", "ሐም", "ነሐ", "ጳጉ",
+];
+
+const SHORT_ETHIOPIAN_MONTHS_EN = [
+  "Mes", "Tik", "Hid", "Tah", "Tir", "Yek",
+  "Meg", "Mia", "Gin", "Sene", "Ham", "Neh", "Pagu",
+];
+
+/**
+ * Format a Date as short Ethiopian "Month Day" (e.g. "መስ 2" or "Mes 2").
+ */
+export function formatShortEthiopianDate(
+  date: Date,
+  locale: "am" | "en" = "am"
+): string {
+  const ec = toEthiopian(date);
+  const months = locale === "am" ? SHORT_ETHIOPIAN_MONTHS_AM : SHORT_ETHIOPIAN_MONTHS_EN;
+  const monthName = months[ec.month - 1] ?? "";
+  return `${monthName} ${ec.day}`;
+}
+
+/**
+ * Compute the expected Date for a cycle given start date and frequency.
+ */
+export function getCycleDate(
+  cycleNumber: number,
+  startDate: Date | string,
+  frequency: "daily" | "weekly" | "monthly" = "daily"
+): Date {
+  const d = new Date(startDate);
+  const n = Math.max(0, cycleNumber - 1);
+  switch (frequency) {
+    case "weekly":
+      d.setDate(d.getDate() + n * 7);
+      break;
+    case "monthly":
+      d.setMonth(d.getMonth() + n);
+      break;
+    case "daily":
+    default:
+      d.setDate(d.getDate() + n);
+      break;
+  }
+  return d;
+}
+
+export interface CycleSummaryInput {
+  cycleNumbers: number[];
+  startDate: Date | string;
+  frequency?: "daily" | "weekly" | "monthly";
+  totalDays?: number;
+  totalPaidCyclesCount: number;
+}
+
+/**
+ * Generate formatted cycle dates for Bot (individual dates list) and SMS (interval range)
+ * and remaining days / date range for both.
+ */
+export function formatCycleDatesSummary({
+  cycleNumbers,
+  startDate,
+  frequency = "daily",
+  totalDays = 365,
+  totalPaidCyclesCount,
+}: CycleSummaryInput) {
+  const sorted = [...cycleNumbers].sort((a, b) => a - b);
+  const start = new Date(startDate);
+
+  // 1. Bot Selected Dates: List of all selected dates, e.g. "መስ 2, መስ 3, መስ 4"
+  const botDatesList = sorted.map((c) => {
+    const d = getCycleDate(c, start, frequency);
+    return formatShortEthiopianDate(d, "am");
+  });
+  const botSelectedDates = botDatesList.length > 0 ? botDatesList.join(", ") : "0 ቀናት";
+
+  // 2. SMS Selected Dates: Interval range, e.g. "Mes 2 - Mes 20"
+  const firstCycle = sorted[0] || 1;
+  const lastCycle = sorted[sorted.length - 1] || 1;
+  const smsStart = formatShortEthiopianDate(getCycleDate(firstCycle, start, frequency), "en");
+  const smsEnd = formatShortEthiopianDate(getCycleDate(lastCycle, start, frequency), "en");
+  const smsSelectedDates = sorted.length <= 1 ? smsStart : `${smsStart} - ${smsEnd}`;
+
+  // 3. Remaining Days & Date Range for both Bot and SMS
+  const remainingCount = Math.max(0, totalDays - totalPaidCyclesCount);
+  let botRemainingText = `${remainingCount} ቀናት`;
+  let smsRemainingText = `${remainingCount} days`;
+
+  if (remainingCount === 0) {
+    botRemainingText = "0 (ሁሉም ቀናት ተጠናቀዋል)";
+    smsRemainingText = "0 days (Completed)";
+  } else {
+    const nextUnpaidCycle = (sorted[sorted.length - 1] || 0) + 1;
+    if (nextUnpaidCycle <= totalDays) {
+      const remStartDate = getCycleDate(nextUnpaidCycle, start, frequency);
+      const remEndDate = getCycleDate(totalDays, start, frequency);
+      const remStartAm = formatShortEthiopianDate(remStartDate, "am");
+      const remEndAm = formatShortEthiopianDate(remEndDate, "am");
+      const remStartEn = formatShortEthiopianDate(remStartDate, "en");
+      const remEndEn = formatShortEthiopianDate(remEndDate, "en");
+
+      if (nextUnpaidCycle === totalDays) {
+        botRemainingText = `1 ቀን (${remStartAm})`;
+        smsRemainingText = `1 day (${remStartEn})`;
+      } else {
+        botRemainingText = `${remainingCount} ቀናት (${remStartAm} - ${remEndAm})`;
+        smsRemainingText = `${remainingCount} days (${remStartEn} - ${remEndEn})`;
+      }
+    }
+  }
+
+  return {
+    botSelectedDates,
+    smsSelectedDates,
+    botRemainingText,
+    smsRemainingText,
+    remainingCount,
+  };
+}
+
 /**
  * Parse a string "DD/MM/YYYY" in Ethiopian calendar to EthiopianDate.
  */

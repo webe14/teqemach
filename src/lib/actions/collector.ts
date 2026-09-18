@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
-import { gregorianToEthiopianString } from "@/lib/ethiopian-calendar";
+import { gregorianToEthiopianString, formatCycleDatesSummary } from "@/lib/ethiopian-calendar";
 import { formatEthiopianPhone, toLocalEthiopianPhone, cleanSmsText, buildPaymentConfirmationSms } from "@/lib/sms-otp";
 
 export async function inviteContributor(formData: {
@@ -599,7 +599,7 @@ export async function markCyclePaid(
       contribution_date: now,
     })
     .eq("id", contributionId)
-    .select("contributor_id, collector_id")
+    .select("contributor_id, collector_id, cycle_number")
     .single();
 
   if (error) return { error: error.message };
@@ -623,12 +623,37 @@ export async function markCyclePaid(
         console.error("[markCyclePaid] Error fetching details:", detailsError);
       }
         
-      const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+      const { data: group } = await supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single();
       const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", updatedContribution.collector_id).single();
       
       if (group && collector) {
         const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-        const selDates = cycleDateText || "ቀን 1";
+        
+        const [{ data: membershipRecord }, { data: allContribs }] = await Promise.all([
+          supabase
+            .from("group_memberships")
+            .select("created_at")
+            .eq("group_id", groupId)
+            .eq("contributor_id", updatedContribution.contributor_id)
+            .maybeSingle(),
+          supabase
+            .from("contributions")
+            .select("cycle_number")
+            .eq("group_id", groupId)
+            .eq("contributor_id", updatedContribution.contributor_id)
+            .eq("is_marked_paid", true),
+        ]);
+
+        const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
+        const paidCount = allContribs?.length || 1;
+
+        const datesSummary = formatCycleDatesSummary({
+          cycleNumbers: [updatedContribution.cycle_number],
+          startDate: memberStartDate,
+          frequency: group.frequency || "daily",
+          totalDays: group.total_days || 365,
+          totalPaidCyclesCount: paidCount,
+        });
 
         // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
         if (details?.phone_number) {
@@ -639,8 +664,9 @@ export async function markCyclePaid(
             ratePerCycle: group.contribution_amount,
             groupName: group.name,
             ethiopianDateStr: contribDateTg,
-            selectedDatesStr: selDates,
+            selectedDatesStr: datesSummary.smsSelectedDates,
             daysCount: 1,
+            remainingDays: datesSummary.smsRemainingText,
             collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
           });
 
@@ -736,8 +762,9 @@ export async function markCyclePaid(
             amount: group.contribution_amount,
             groupName: group.name,
             contributionDate: contribDateTg,
-            selectedDates: selDates,
+            selectedDates: datesSummary.botSelectedDates,
             totalSelected: 1,
+            remainingDays: datesSummary.botRemainingText,
             collectorName: collector.full_name || "ሰብሳቢዎ"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
@@ -749,8 +776,9 @@ export async function markCyclePaid(
                 amount: group.contribution_amount,
                 groupName: group.name,
                 contributionDate: contribDateTg,
-                selectedDates: selDates,
-                totalSelected: 1
+                selectedDates: datesSummary.botSelectedDates,
+                totalSelected: 1,
+                remainingDays: datesSummary.botRemainingText,
               });
               console.log("[markCyclePaid] Collector notification sent");
             } catch (ce) {
@@ -796,7 +824,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
     .from("contributions")
     .update({ is_marked_paid: true, contribution_date: now })
     .in("id", ids)
-    .select("id, contributor_id, collector_id, group_id, contribution_date");
+    .select("id, contributor_id, collector_id, group_id, cycle_number, contribution_date");
 
   if (error) return { error: error.message };
   
@@ -825,13 +853,39 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
         const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
         const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
         
-        const { data: group } = await supabase.from("equb_groups").select("name, contribution_amount").eq("id", groupId).single();
+        const { data: group } = await supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single();
         const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single();
         
         if (group && collector) {
           const totalAmount = group.contribution_amount * contributorContributions.length;
           const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-          const selDates = cycleDateText || `${contributorContributions.length} ቀናት`;
+
+          const [{ data: membershipRecord }, { data: allContribs }] = await Promise.all([
+            supabase
+              .from("group_memberships")
+              .select("created_at")
+              .eq("group_id", groupId)
+              .eq("contributor_id", contributorId)
+              .maybeSingle(),
+            supabase
+              .from("contributions")
+              .select("cycle_number")
+              .eq("group_id", groupId)
+              .eq("contributor_id", contributorId)
+              .eq("is_marked_paid", true),
+          ]);
+
+          const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
+          const paidCount = allContribs?.length || contributorContributions.length;
+          const cycleNumbers = contributorContributions.map((c) => c.cycle_number);
+
+          const datesSummary = formatCycleDatesSummary({
+            cycleNumbers,
+            startDate: memberStartDate,
+            frequency: group.frequency || "daily",
+            totalDays: group.total_days || 365,
+            totalPaidCyclesCount: paidCount,
+          });
 
           // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
           if (details?.phone_number) {
@@ -842,8 +896,9 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               ratePerCycle: group.contribution_amount,
               groupName: group.name,
               ethiopianDateStr: contribDateTg,
-              selectedDatesStr: selDates,
+              selectedDatesStr: datesSummary.smsSelectedDates,
               daysCount: contributorContributions.length,
+              remainingDays: datesSummary.smsRemainingText,
               collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
             });
 
@@ -939,8 +994,9 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               amount: totalAmount,
               groupName: group.name,
               contributionDate: contribDateTg,
-              selectedDates: selDates,
+              selectedDates: datesSummary.botSelectedDates,
               totalSelected: contributorContributions.length,
+              remainingDays: datesSummary.botRemainingText,
               collectorName: collector.full_name || "ሰብሳቢዎ"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
@@ -952,8 +1008,9 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
                   amount: totalAmount,
                   groupName: group.name,
                   contributionDate: contribDateTg,
-                  selectedDates: selDates,
-                  totalSelected: contributorContributions.length
+                  selectedDates: datesSummary.botSelectedDates,
+                  totalSelected: contributorContributions.length,
+                  remainingDays: datesSummary.botRemainingText,
                 });
                 console.log("[markMultipleCyclesPaid] Collector notification sent");
               } catch (ce) {

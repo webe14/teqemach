@@ -8,8 +8,13 @@ export class TelegramNotifier {
     contributionDate: string;
     selectedDates: string;
     totalSelected: number;
+    remainingDays?: number | string;
     collectorName: string;
   }) {
+    const remainingLine = data.remainingDays !== undefined && data.remainingDays !== null
+      ? `\n🔹 <b>የቀሩ ቀናት:</b> ${data.remainingDays}`
+      : "";
+
     const text = `✅ <b>ክፍያው ተረጋግጧል (Payment Verified)</b>
 
 ሰላም <b>${data.contributorName}</b>,
@@ -20,7 +25,7 @@ export class TelegramNotifier {
 🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
 🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
 🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${remainingLine}
 🔹 <b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
 🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
@@ -36,7 +41,12 @@ export class TelegramNotifier {
     contributionDate: string;
     selectedDates: string;
     totalSelected: number;
+    remainingDays?: number | string;
   }) {
+    const remainingLine = data.remainingDays !== undefined && data.remainingDays !== null
+      ? `\n🔹 <b>የቀሩ ቀናት:</b> ${data.remainingDays}`
+      : "";
+
     const text = `📥 <b>የክፍያ ማረጋገጫ (Payment Verified)</b>
 
 የመዘገቡት ተቀማጭ ክፍያ በተሳካ ሁኔታ ተረጋግጦ ተመዝግቧል።
@@ -46,7 +56,7 @@ export class TelegramNotifier {
 🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
 🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
 🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${remainingLine}
 🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
 አዋጭዎ የተረጋገጠበት ማረጋገጫ መልእክት ደርሶታል።`;

@@ -463,6 +463,7 @@ export async function submitContributorPayment({
           contribution_amount,
           total_days,
           frequency,
+          created_at,
           collector_id,
           collector:profiles!collector_id (
             id,
@@ -655,18 +656,27 @@ export async function submitContributorPayment({
     }
 
     // C. Format Ethiopian dates and strings
-    const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
+    const { gregorianToEthiopianString, formatCycleDatesSummary } = await import("@/lib/ethiopian-calendar");
     const { buildPaymentConfirmationSms } = await import("@/lib/sms-otp");
     const ethDate = gregorianToEthiopianString(new Date(), "am");
     
-    let datesStr = `${cyclesToPay.length} ቀናት`;
-    if (cyclesToPay.length === 1) {
-      datesStr = `ቀን ${cyclesToPay[0]}`;
-    } else if (cyclesToPay.length <= 4) {
-      datesStr = cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ");
-    } else {
-      datesStr = `ቀን ${cyclesToPay[0]} - ${cyclesToPay[cyclesToPay.length - 1]} (${cyclesToPay.length} ቀናት)`;
-    }
+    // Fetch start_date for this contributor membership
+    const { data: membershipRecord } = await supabase
+      .from("group_memberships")
+      .select("created_at")
+      .eq("group_id", groupId)
+      .eq("contributor_id", contributorId)
+      .maybeSingle();
+
+    const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
+
+    const datesSummary = formatCycleDatesSummary({
+      cycleNumbers: cyclesToPay,
+      startDate: memberStartDate,
+      frequency: group.frequency || "daily",
+      totalDays: group.total_days || 365,
+      totalPaidCyclesCount: paidCycles.size + cyclesToPay.length,
+    });
 
     // 7. Instant Telegram Delivery to Contributor
     if (contributorChatId) {
@@ -677,8 +687,9 @@ export async function submitContributorPayment({
           amount: totalAmount.toLocaleString(),
           groupName: group.name,
           contributionDate: ethDate,
-          selectedDates: datesStr,
+          selectedDates: datesSummary.botSelectedDates,
           totalSelected: cyclesToPay.length,
+          remainingDays: datesSummary.botRemainingText,
           collectorName: group.collector?.full_name || "ሰብሳቢዎ",
         });
         console.log(`[submitContributorPayment] Telegram message sent successfully to contributor.`);
@@ -696,8 +707,9 @@ export async function submitContributorPayment({
           amount: totalAmount.toLocaleString(),
           groupName: group.name,
           contributionDate: ethDate,
-          selectedDates: datesStr,
+          selectedDates: datesSummary.botSelectedDates,
           totalSelected: cyclesToPay.length,
+          remainingDays: datesSummary.botRemainingText,
         });
       } catch (ce) {
         console.error("[submitContributorPayment] Error sending collector confirmation:", ce);
@@ -713,8 +725,9 @@ export async function submitContributorPayment({
           ratePerCycle: rate,
           groupName: group.name,
           ethiopianDateStr: ethDate,
-          selectedDatesStr: datesStr,
+          selectedDatesStr: datesSummary.smsSelectedDates,
           daysCount: cyclesToPay.length,
+          remainingDays: datesSummary.smsRemainingText,
           collectorName: group.collector?.full_name || "ውብ ዲጂታል እቁብ",
         });
 
