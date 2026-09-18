@@ -189,11 +189,6 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
                 <span className="text-2xl font-extrabold text-foreground">
                   ETB {totalPaid.toLocaleString()}
                 </span>
-                {totalTarget > 0 && (
-                  <span className="text-xs text-muted-foreground font-medium">
-                    / ETB {totalTarget.toLocaleString()}
-                  </span>
-                )}
               </div>
             </div>
             <div className="text-right">
