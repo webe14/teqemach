@@ -1,20 +1,18 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/actions/auth";
-import { getPublicEqubGroups } from "@/lib/actions/contributor";
+import { getPublicEqubGroups, getContributorJoinedGroupIds } from "@/lib/actions/contributor";
 import TeqemachsClient from "./TeqemachsClient";
 
 export const metadata = { title: "Explore Equbs — Wub Digital Equb" };
 
 export default async function TeqemachsPage() {
-  const currentProfile = await getCurrentProfile() as any;
-  const profile = currentProfile || {
-    id: "test-contributor-id",
-    full_name: "Webshet W.",
-    email: "webshet@example.com",
-    role: "contributor"
-  };
+  const currentProfile = (await getCurrentProfile()) as any;
+  const profile = currentProfile;
 
-  const groupsRes = await getPublicEqubGroups();
+  const [groupsRes, joinedRes] = await Promise.all([
+    getPublicEqubGroups(),
+    profile?.id ? getContributorJoinedGroupIds(profile.id) : Promise.resolve({ data: [] }),
+  ]);
 
   return (
     <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Equbs...</div>}>
@@ -22,6 +20,7 @@ export default async function TeqemachsPage() {
         userName={profile?.full_name || profile?.email?.split('@')[0] || "Webshet W."}
         userId={profile?.id}
         allGroups={groupsRes.data || []}
+        joinedGroupIds={joinedRes?.data || []}
       />
     </Suspense>
   );

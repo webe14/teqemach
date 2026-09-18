@@ -84,11 +84,13 @@ const TERMS_OF_SERVICE = `የተጠቃሚዎች መተዳደሪያ ደንብ እ
 export default function TeqemachsClient({ 
   userName = "Webshet W.",
   userId,
-  allGroups = []
+  allGroups = [],
+  joinedGroupIds = [],
 }: { 
   userName?: string;
   userId?: string;
   allGroups?: any[];
+  joinedGroupIds?: string[];
 }) {
   const { t, locale } = useLocale();
   const router = useRouter();
@@ -141,6 +143,10 @@ export default function TeqemachsClient({
 
   function handleJoinClick() {
     if (joinStep === "details") {
+      if (selectedGroup && joinedGroupIds.includes(selectedGroup.id)) {
+        setJoinError(locale === "am" ? "ቀድመው የዚህ እቁብ አባል ሆነዋል!" : "You are already a member of this Equb group.");
+        return;
+      }
       // First click: show terms
       setJoinStep("terms");
     }
@@ -151,6 +157,10 @@ export default function TeqemachsClient({
   function handleAcceptTerms() {
     if (!userId || !selectedGroup) {
       setJoinError("User or Group ID missing. Please log in.");
+      return;
+    }
+    if (joinedGroupIds.includes(selectedGroup.id)) {
+      setJoinError(locale === "am" ? "ቀድመው የዚህ እቁብ አባል ሆነዋል!" : "You are already a member of this Equb group.");
       return;
     }
     setJoinError(null);
@@ -299,30 +309,53 @@ export default function TeqemachsClient({
                   total_days: g.total_days,
                 }))
                 .sort((a, b) => (b.amount || 0) - (a.amount || 0))
-                .map((g) => (
-                  <button 
-                    key={g.id}
-                    onClick={() => openGroupSheet(g)}
-                    className="w-full text-left p-4 rounded-2xl border border-border bg-card hover:bg-muted/30 transition-all flex items-center justify-between gap-4 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/30 shrink-0">
-                        <Coins className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-card-foreground leading-tight">{g.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">{g.collector}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs font-semibold text-blue-400">
-                          <span>ETB {g.amount.toLocaleString()} ({g.rate})</span>
-                          <span>•</span>
-                          <span>{g.days} Days</span>
+                .map((g) => {
+                  const isAlreadyJoined = joinedGroupIds.includes(g.id);
+                  return (
+                    <button 
+                      key={g.id}
+                      onClick={() => openGroupSheet(g)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 shadow-sm ${
+                        isAlreadyJoined 
+                          ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10" 
+                          : "border-border bg-card hover:bg-muted/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shadow-md shrink-0 ${
+                          isAlreadyJoined 
+                            ? "bg-emerald-600 text-white shadow-emerald-600/30" 
+                            : "bg-blue-600 text-white shadow-blue-600/30"
+                        }`}>
+                          <Coins className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-base text-card-foreground leading-tight">{g.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{g.collector}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs font-semibold text-blue-400">
+                            <span>ETB {g.amount.toLocaleString()} ({g.rate})</span>
+                            <span>•</span>
+                            <span>{g.days} Days</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
-                  </button>
-                ))}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isAlreadyJoined ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {locale === "am" ? "ተቀላቅለዋል" : "Joined"}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                            {locale === "am" ? "+ ተቀላቀል" : "+ Join"}
+                          </span>
+                        )}
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -349,9 +382,25 @@ export default function TeqemachsClient({
               {/* ─── DETAILS VIEW ─── */}
               {joinStep === "details" && (
                 <>
-                  <h2 className="text-xl font-bold text-card-foreground mb-5">
+                  <h2 className="text-xl font-bold text-card-foreground mb-4">
                     {selectedGroup.name} – ETB
                   </h2>
+
+                  {joinedGroupIds.includes(selectedGroup.id) && (
+                    <div className="mb-4 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-300 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <div>
+                          <h4 className="text-xs font-bold leading-tight">
+                            {locale === "am" ? "ቀድመው የዚህ እቁብ አባል ሆነዋል!" : "You are already a member of this Equb!"}
+                          </h4>
+                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                            {locale === "am" ? "ክፍያዎችን ወይም የቀናትን ታሪክ በእቁብ ገጽዎ ላይ መመልከት ይችላሉ።" : "You can manage payments and track cycles in your Equb dashboard."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <div className="border border-border rounded-2xl p-4">
@@ -393,29 +442,50 @@ export default function TeqemachsClient({
                   </div>
 
                   {/* Starting Date Selector (Default: Today) */}
-                  <div className="border border-border rounded-2xl p-4 mb-6 bg-transparent">
-                    <EthiopianDatePicker
-                      label={locale === "am" ? "የእቁብ መጀመሪያ ቀን (በነባሪ የዛሬ ቀን ተመርጧል):" : "Starting Date (Defaults to Today):"}
-                      value={selectedStartDate}
-                      onChange={setSelectedStartDate}
-                      locale={locale as "en" | "am"}
-                    />
-                  </div>
+                  {!joinedGroupIds.includes(selectedGroup.id) && (
+                    <div className="border border-border rounded-2xl p-4 mb-6 bg-transparent">
+                      <EthiopianDatePicker
+                        label={locale === "am" ? "የእቁብ መጀመሪያ ቀን (በነባሪ የዛሬ ቀን ተመርጧል):" : "Starting Date (Defaults to Today):"}
+                        value={selectedStartDate}
+                        onChange={setSelectedStartDate}
+                        locale={locale as "en" | "am"}
+                      />
+                    </div>
+                  )}
 
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={handleJoinClick}
-                      className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg shadow-lg shadow-emerald-600/20"
-                    >
-                      Join
-                    </Button>
-                    <a 
-                      href="tel:+251911000000"
-                      className="w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20"
-                    >
-                      <Phone className="w-5 h-5" />
-                    </a>
-                  </div>
+                  {joinedGroupIds.includes(selectedGroup.id) ? (
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => router.push(`/dashboard/contributor/my-equbs/${selectedGroup.id}`)}
+                        className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/20"
+                      >
+                        {locale === "am" ? "ወደ እቁቤ ሂድ" : "Go to My Equb"}
+                      </Button>
+                      <Button 
+                        disabled
+                        variant="outline"
+                        className="h-14 rounded-2xl border-emerald-500/30 bg-emerald-500/10 text-emerald-700 font-bold text-xs"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        {locale === "am" ? "ተቀላቅለዋል" : "Already Joined"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={handleJoinClick}
+                        className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg shadow-lg shadow-emerald-600/20"
+                      >
+                        Join
+                      </Button>
+                      <a 
+                        href="tel:+251911000000"
+                        className="w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20"
+                      >
+                        <Phone className="w-5 h-5" />
+                      </a>
+                    </div>
+                  )}
                 </>
               )}
 

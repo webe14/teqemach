@@ -203,33 +203,43 @@ export async function getPublicEqubGroups() {
   }
 }
 
+export async function getContributorJoinedGroupIds(contributorId: string) {
+  try {
+    if (!contributorId) return { data: [], error: null };
+    const supabase = await createAdminClient();
+    const { data, error } = await supabase
+      .from("group_memberships")
+      .select("group_id")
+      .eq("contributor_id", contributorId);
+
+    if (error || !data) return { data: [], error: error?.message || null };
+    const groupIds = (data as any[]).map((m) => m.group_id).filter(Boolean);
+    return { data: groupIds, error: null };
+  } catch (err: any) {
+    return { data: [], error: err.message };
+  }
+}
+
 export async function requestJoinGroup(contributorId: string, groupId: string, startDate?: string) {
   try {
     const supabase = await createAdminClient();
 
-    // Get the group's collector_id and name
+    if (!contributorId || !groupId) {
+      return { success: false, error: "Invalid contributor or group ID." };
+    }
+
+    // 1. Get group details
     const { data: group } = await supabase
       .from("equb_groups")
-      .select("collector_id, name")
+      .select("id, collector_id, name, contribution_amount")
       .eq("id", groupId)
       .single();
 
     if (!group) {
-      return { error: "Group not found.", success: false };
+      return { success: false, error: "Group not found." };
     }
 
-    // 1. Update contributor profile status to 'pending' and set collector_id
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        status: "pending",
-        collector_id: group.collector_id,
-      })
-      .eq("id", contributorId);
-
-    if (profileError) return { error: profileError.message, success: false };
-
-    // 2. Insert or update requested group_membership
+    // 2. Prevent duplicate joining: A contributor can join 1 group only once
     const { data: existing } = await supabase
       .from("group_memberships")
       .select("id")
@@ -237,39 +247,81 @@ export async function requestJoinGroup(contributorId: string, groupId: string, s
       .eq("group_id", groupId)
       .maybeSingle();
 
-    if (!existing) {
-      const membershipData: Record<string, unknown> = {
-        contributor_id: contributorId,
-        group_id: groupId,
-        collector_id: group.collector_id,
+    if (existing) {
+      return {
+        success: false,
+        error: "ቀድመው የዚህ እቁብ አባል ሆነዋል! (You are already a member of this Equb group.)",
       };
-      if (startDate) {
-        membershipData.created_at = startDate;
-      }
-      await supabase.from("group_memberships").insert(membershipData);
-    } else if (startDate) {
-      await supabase
-        .from("group_memberships")
-        .update({ created_at: startDate })
-        .eq("id", existing.id);
     }
 
-    // 3. Send a notification to the admin/collector
+    // 3. Fetch contributor profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone_number, status, collector_id")
+      .eq("id", contributorId)
+      .single();
+
+    if (!profile) {
+      return { success: false, error: "Contributor profile not found." };
+    }
+
+    // 4. Update collector_id on profile if missing (DO NOT reset active status back to pending!)
+    if (!profile.collector_id && group.collector_id) {
+      await supabase
+        .from("profiles")
+        .update({ collector_id: group.collector_id })
+        .eq("id", contributorId);
+    }
+
+    // 5. Insert new group_membership for this group
+    const membershipData: Record<string, unknown> = {
+      contributor_id: contributorId,
+      group_id: groupId,
+      collector_id: group.collector_id || profile.collector_id,
+    };
+    if (startDate) {
+      membershipData.created_at = startDate;
+    }
+    const { error: insertError } = await supabase
+      .from("group_memberships")
+      .insert(membershipData);
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        return {
+          success: false,
+          error: "ቀድመው የዚህ እቁብ አባል ሆነዋል! (You are already a member of this Equb group.)",
+        };
+      }
+      return { success: false, error: insertError.message };
+    }
+
+    // 6. Send notification to admin/collector
     try {
-      await supabase.from("notifications").insert({
-        user_id: group.collector_id,
-        title: "New Join Request",
-        body: `A contributor requested to join "${group.name}".`,
-        type: "join_request",
-        read: false,
-      });
-    } catch {
-      // Non-critical
+      const adminCollectorId = group.collector_id || profile.collector_id;
+      if (adminCollectorId) {
+        await supabase.from("notifications").insert({
+          user_id: adminCollectorId,
+          type: "contributor_request",
+          title: "New Equb Joined",
+          message: `${profile.full_name || "A contributor"} has joined the Equb group "${group.name}".`,
+          data: {
+            contributor_id: contributorId,
+            contributor_name: profile.full_name,
+            group_id: groupId,
+            group_name: group.name,
+            start_date: startDate || new Date().toISOString(),
+          },
+          is_read: false,
+        });
+      }
+    } catch (notifErr) {
+      console.warn("Notification insert warning in requestJoinGroup:", notifErr);
     }
 
     return { success: true, error: null };
   } catch (err: any) {
-    return { error: err.message, success: false };
+    return { success: false, error: err.message || "Failed to join group." };
   }
 }
 

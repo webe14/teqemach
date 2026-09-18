@@ -315,41 +315,18 @@ export async function approveContributor(contributorId: string, groupId: string,
 
     if (updateMembershipError) return { error: updateMembershipError.message };
   } else {
-    // Check if the contributor had a previous requested membership for a different group
-    const { data: otherMemberships } = await supabase
-      .from("group_memberships")
-      .select("id, group_id")
-      .eq("contributor_id", contributorId);
-
-    if (otherMemberships && otherMemberships.length === 1) {
-      // Reassign the requested membership to the newly approved group
-      const updateData: Record<string, unknown> = {
-        group_id: groupId,
-        collector_id: collectorId,
-      };
-      if (startDate) {
-        updateData.created_at = startDate;
-      }
-      const { error: updateGroupError } = await supabase
-        .from("group_memberships")
-        .update(updateData)
-        .eq("id", otherMemberships[0].id);
-
-      if (updateGroupError) return { error: updateGroupError.message };
-    } else {
-      // Insert new membership
-      const insertData: Record<string, unknown> = {
-        contributor_id: contributorId,
-        group_id: groupId,
-        collector_id: collectorId,
-      };
-      if (startDate) {
-        insertData.created_at = startDate;
-      }
-      
-      const { error: groupError } = await supabase.from("group_memberships").insert(insertData);
-      if (groupError) return { error: groupError.message };
+    // Insert new membership for this group (preserving all other group memberships)
+    const insertData: Record<string, unknown> = {
+      contributor_id: contributorId,
+      group_id: groupId,
+      collector_id: collectorId,
+    };
+    if (startDate) {
+      insertData.created_at = startDate;
     }
+    
+    const { error: groupError } = await supabase.from("group_memberships").insert(insertData);
+    if (groupError && groupError.code !== "23505") return { error: groupError.message };
   }
 
   // 3. Mark any pending contributor_request notifications as read
