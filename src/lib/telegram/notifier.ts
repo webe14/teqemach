@@ -8,10 +8,13 @@ export class TelegramNotifier {
     contributionDate: string;
     selectedDates: string;
     totalSelected: number;
+    paidDays?: number | string;
     remainingDays?: number | string;
     collectorName: string;
   }) {
-    const remainingLine = data.remainingDays !== undefined && data.remainingDays !== null
+    const paidLine = data.paidDays !== undefined && data.paidDays !== null
+      ? `\n🔹 <b>የተከፈሉ ቀናት:</b> ${data.paidDays}`
+      : data.remainingDays !== undefined && data.remainingDays !== null
       ? `\n🔹 <b>የቀሩ ቀናት:</b> ${data.remainingDays}`
       : "";
 
@@ -25,7 +28,7 @@ export class TelegramNotifier {
 🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
 🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
 🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${remainingLine}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${paidLine}
 🔹 <b>ተቀማጭ ሰብሳቢዎ:</b> ${data.collectorName}
 🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
@@ -41,9 +44,12 @@ export class TelegramNotifier {
     contributionDate: string;
     selectedDates: string;
     totalSelected: number;
+    paidDays?: number | string;
     remainingDays?: number | string;
   }) {
-    const remainingLine = data.remainingDays !== undefined && data.remainingDays !== null
+    const paidLine = data.paidDays !== undefined && data.paidDays !== null
+      ? `\n🔹 <b>የተከፈሉ ቀናት:</b> ${data.paidDays}`
+      : data.remainingDays !== undefined && data.remainingDays !== null
       ? `\n🔹 <b>የቀሩ ቀናት:</b> ${data.remainingDays}`
       : "";
 
@@ -56,7 +62,7 @@ export class TelegramNotifier {
 🔹 <b>የተቀማጩ አይነት:</b> ${data.groupName}
 🔹 <b>የተመዘገበበት ቀን:</b> ${data.contributionDate}
 🔹 <b>የተመረጡ ቀናት:</b> ${data.selectedDates}
-🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${remainingLine}
+🔹 <b>የቀናት ብዛት:</b> ${data.totalSelected}${paidLine}
 🔹 <b>የክፍያ ሁኔታ:</b> ✅ ተረጋግጧል (Verified)
 
 አዋጭዎ የተረጋገጠበት ማረጋገጫ መልእክት ደርሶታል።`;

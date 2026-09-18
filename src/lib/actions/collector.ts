@@ -666,7 +666,7 @@ export async function markCyclePaid(
             ethiopianDateStr: contribDateTg,
             selectedDatesStr: datesSummary.smsSelectedDates,
             daysCount: 1,
-            remainingDays: datesSummary.smsRemainingText,
+            paidDays: datesSummary.smsPaidText,
             collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
           });
 
@@ -764,7 +764,7 @@ export async function markCyclePaid(
             contributionDate: contribDateTg,
             selectedDates: datesSummary.botSelectedDates,
             totalSelected: 1,
-            remainingDays: datesSummary.botRemainingText,
+            paidDays: datesSummary.botPaidText,
             collectorName: collector.full_name || "ሰብሳቢዎ"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
@@ -778,7 +778,7 @@ export async function markCyclePaid(
                 contributionDate: contribDateTg,
                 selectedDates: datesSummary.botSelectedDates,
                 totalSelected: 1,
-                remainingDays: datesSummary.botRemainingText,
+                paidDays: datesSummary.botPaidText,
               });
               console.log("[markCyclePaid] Collector notification sent");
             } catch (ce) {
@@ -898,7 +898,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               ethiopianDateStr: contribDateTg,
               selectedDatesStr: datesSummary.smsSelectedDates,
               daysCount: contributorContributions.length,
-              remainingDays: datesSummary.smsRemainingText,
+              paidDays: datesSummary.smsPaidText,
               collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
             });
 
@@ -996,7 +996,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               contributionDate: contribDateTg,
               selectedDates: datesSummary.botSelectedDates,
               totalSelected: contributorContributions.length,
-              remainingDays: datesSummary.botRemainingText,
+              paidDays: datesSummary.botPaidText,
               collectorName: collector.full_name || "ሰብሳቢዎ"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
@@ -1010,7 +1010,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
                   contributionDate: contribDateTg,
                   selectedDates: datesSummary.botSelectedDates,
                   totalSelected: contributorContributions.length,
-                  remainingDays: datesSummary.botRemainingText,
+                  paidDays: datesSummary.botPaidText,
                 });
                 console.log("[markMultipleCyclesPaid] Collector notification sent");
               } catch (ce) {

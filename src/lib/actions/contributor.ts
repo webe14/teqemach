@@ -689,7 +689,7 @@ export async function submitContributorPayment({
           contributionDate: ethDate,
           selectedDates: datesSummary.botSelectedDates,
           totalSelected: cyclesToPay.length,
-          remainingDays: datesSummary.botRemainingText,
+          paidDays: datesSummary.botPaidText,
           collectorName: group.collector?.full_name || "ሰብሳቢዎ",
         });
         console.log(`[submitContributorPayment] Telegram message sent successfully to contributor.`);
@@ -709,7 +709,7 @@ export async function submitContributorPayment({
           contributionDate: ethDate,
           selectedDates: datesSummary.botSelectedDates,
           totalSelected: cyclesToPay.length,
-          remainingDays: datesSummary.botRemainingText,
+          paidDays: datesSummary.botPaidText,
         });
       } catch (ce) {
         console.error("[submitContributorPayment] Error sending collector confirmation:", ce);
@@ -727,7 +727,7 @@ export async function submitContributorPayment({
           ethiopianDateStr: ethDate,
           selectedDatesStr: datesSummary.smsSelectedDates,
           daysCount: cyclesToPay.length,
-          remainingDays: datesSummary.smsRemainingText,
+          paidDays: datesSummary.smsPaidText,
           collectorName: group.collector?.full_name || "ውብ ዲጂታል እቁብ",
         });
 

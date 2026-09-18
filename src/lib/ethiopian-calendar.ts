@@ -235,7 +235,11 @@ export function formatCycleDatesSummary({
   const smsEnd = formatShortEthiopianDate(getCycleDate(lastCycle, start, frequency), "en");
   const smsSelectedDates = sorted.length <= 1 ? smsStart : `${smsStart} - ${smsEnd}`;
 
-  // 3. Remaining Days for both Bot and SMS (clean day count)
+  // 3. Paid Days for both Bot and SMS (total days completed so far)
+  const botPaidText = totalPaidCyclesCount === 1 ? "1 ቀን" : `${totalPaidCyclesCount} ቀናት`;
+  const smsPaidText = totalPaidCyclesCount === 1 ? "1 day" : `${totalPaidCyclesCount} days`;
+
+  // 4. Remaining Days (if needed)
   const remainingCount = Math.max(0, totalDays - totalPaidCyclesCount);
   const botRemainingText = remainingCount === 1 ? "1 ቀን" : `${remainingCount} ቀናት`;
   const smsRemainingText = remainingCount === 1 ? "1 day" : `${remainingCount} days`;
@@ -243,8 +247,11 @@ export function formatCycleDatesSummary({
   return {
     botSelectedDates,
     smsSelectedDates,
+    botPaidText,
+    smsPaidText,
     botRemainingText,
     smsRemainingText,
+    totalPaidCyclesCount,
     remainingCount,
   };
 }
