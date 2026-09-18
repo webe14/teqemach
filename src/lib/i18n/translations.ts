@@ -291,7 +291,7 @@ export const translations = {
     pasteSmsPlaceholder: "Paste your bank transfer confirmation SMS here (e.g. CBE or Telebirr SMS)...",
     parsedAmount: "Parsed Amount",
     txnId: "Transaction ID",
-    verifyAndConfirmPayment: "Confirm & Record Payment",
+    verifyAndConfirmPayment: "Pay",
     paymentSuccessTitle: "Payment Confirmed!",
     receiptTitle: "Official Digital Payment Receipt",
     noTransactions: "No transactions recorded yet.",

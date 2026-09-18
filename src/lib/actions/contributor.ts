@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/server";
+import { parseEthiopianBankSms } from "@/lib/sms-parser";
 
 export async function getContributorStats(contributorId: string) {
   try {
@@ -379,6 +380,33 @@ export async function submitContributorPayment({
       }
     } catch (checkErr) {
       console.warn("Duplicate check warning:", checkErr);
+    }
+
+    // 1.6 STRICT AMOUNT MATCHING: The amount on the bank transaction MUST match the totalAmount calculated for the selected days
+    const dbAmount = (bankMatch as any).amount != null ? Number((bankMatch as any).amount) : NaN;
+    let actualBankAmount = !isNaN(dbAmount) && dbAmount > 0 ? dbAmount : 0;
+
+    if (!actualBankAmount && bankMatch.raw_message) {
+      const parsedFromMsg = parseEthiopianBankSms(bankMatch.raw_message);
+      if (parsedFromMsg.amount && parsedFromMsg.amount > 0) {
+        actualBankAmount = parsedFromMsg.amount;
+      }
+    }
+
+    if (actualBankAmount > 0 && Math.abs(actualBankAmount - totalAmount) > 0.01) {
+      if (actualBankAmount < totalAmount) {
+        return {
+          success: false,
+          error: `በዳታቤዝ ውስጥ የተገኘው የባንክ ዝውውር መጠን (ETB ${actualBankAmount.toLocaleString()}) ከተመረጡት ${numberOfDays} ቀናት ጠቅላላ ክፍያ (ETB ${totalAmount.toLocaleString()}) ያንሳል! እባክዎ የቀናትን ብዛት ያስተካክሉ ወይም ትክክለኛውን የክፍያ ዝውውር ቁጥር ያስገቡ። (The bank record amount ETB ${actualBankAmount.toLocaleString()} is less than the selected payable amount ETB ${totalAmount.toLocaleString()}.)`,
+        };
+      } else {
+        const ratePerDay = totalAmount / numberOfDays;
+        const suggestedDays = ratePerDay > 0 ? Math.floor(actualBankAmount / ratePerDay) : numberOfDays;
+        return {
+          success: false,
+          error: `በዳታቤዝ ውስጥ የተገኘው የባንክ ዝውውር መጠን (ETB ${actualBankAmount.toLocaleString()}) ከተመረጡት ${numberOfDays} ቀናት ጠቅላላ ክፍያ (ETB ${totalAmount.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል። (The bank record amount ETB ${actualBankAmount.toLocaleString()} is greater than the selected payable amount ETB ${totalAmount.toLocaleString()}.)`,
+        };
+      }
     }
 
     // 1. Fetch group details and verify membership
