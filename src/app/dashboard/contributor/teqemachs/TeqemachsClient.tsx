@@ -24,6 +24,8 @@ import Link from "next/link";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { requestJoinGroup } from "@/lib/actions/contributor";
+import { EthiopianDatePicker } from "@/components/ui/EthiopianDatePicker";
+import { getCurrentEthiopianDate, parseEthiopianDate, toGregorian } from "@/lib/ethiopian-calendar";
 
 type EqubTypeCategory = "daily" | "weekly" | "monthly" | "corporate";
 
@@ -98,6 +100,11 @@ export default function TeqemachsClient({
   const [joinStep, setJoinStep] = useState<"details" | "terms" | "success">("details");
   const [isPending, startTransition] = useTransition();
 
+  // Default starting date to today in Ethiopian calendar
+  const todayEC = getCurrentEthiopianDate();
+  const todayECStr = `${String(todayEC.day).padStart(2, "0")}/${String(todayEC.month).padStart(2, "0")}/${todayEC.year}`;
+  const [selectedStartDate, setSelectedStartDate] = useState<string>(todayECStr);
+
   useEffect(() => {
     const queryType = searchParams.get("type") as EqubTypeCategory;
     if (queryType && ["daily", "weekly", "monthly", "corporate"].includes(queryType)) {
@@ -122,11 +129,13 @@ export default function TeqemachsClient({
 
   function openGroupSheet(group: any) {
     setSelectedGroup(group);
+    setSelectedStartDate(todayECStr);
     setJoinStep("details");
   }
 
   function closeSheet() {
     setSelectedGroup(null);
+    setSelectedStartDate(todayECStr);
     setJoinStep("details");
   }
 
@@ -146,7 +155,13 @@ export default function TeqemachsClient({
     }
     setJoinError(null);
     startTransition(async () => {
-      const startDateISO = new Date().toISOString();
+      let startDateISO = new Date().toISOString();
+      if (selectedStartDate) {
+        const parsed = parseEthiopianDate(selectedStartDate);
+        if (parsed) {
+          startDateISO = toGregorian(parsed).toISOString();
+        }
+      }
       const result = await requestJoinGroup(userId, selectedGroup.id, startDateISO);
       if (result.success) {
         setJoinStep("success");
@@ -175,7 +190,7 @@ export default function TeqemachsClient({
       totalAmount,
       quota: days,
       duration: `${days} days`,
-      startDate: selectedGroup.created_at ? new Date(selectedGroup.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "TBD",
+      startDate: selectedStartDate || todayECStr,
       payoutAmount,
       serviceCharge,
     };
@@ -375,6 +390,16 @@ export default function TeqemachsClient({
                         {groupDetails?.serviceCharge.toLocaleString()}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Starting Date Selector (Default: Today) */}
+                  <div className="border border-border rounded-2xl p-4 mb-6 bg-transparent">
+                    <EthiopianDatePicker
+                      label={locale === "am" ? "የእቁብ መጀመሪያ ቀን (በነባሪ የዛሬ ቀን ተመርጧል):" : "Starting Date (Defaults to Today):"}
+                      value={selectedStartDate}
+                      onChange={setSelectedStartDate}
+                      locale={locale as "en" | "am"}
+                    />
                   </div>
 
                   <div className="flex gap-3">
