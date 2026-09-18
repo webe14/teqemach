@@ -242,63 +242,63 @@ export function PayEqubModal({
               </div>
 
               {/* CBE-Inspired Official Digital Receipt Box */}
-              <div className="rounded-2xl border-2 border-border/80 bg-slate-50 dark:bg-slate-900/60 p-5 space-y-3.5 shadow-md relative overflow-hidden">
+              <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-5 space-y-3.5 shadow-sm relative overflow-hidden text-slate-900">
                 {/* Decorative Top Accent */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-emerald-500" />
                 
-                <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <AppLogo size="sm" rounded="lg" />
                     <div>
-                      <h4 className="font-bold text-xs text-foreground">Wub Digital Equb</h4>
-                      <p className="text-[10px] text-muted-foreground">Official Payment Receipt</p>
+                      <h4 className="font-extrabold text-xs text-slate-900">Wub Digital Equb</h4>
+                      <p className="text-[10px] text-slate-500 font-medium">Official Payment Receipt</p>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold border border-emerald-500/20">
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-extrabold border border-emerald-300">
                     VERIFIED
                   </span>
                 </div>
 
                 {/* Amount Paid Big Display */}
-                <div className="text-center py-2 bg-card rounded-xl border border-border/60">
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                <div className="text-center py-3 bg-white rounded-xl border-2 border-slate-200 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Amount Paid
                   </span>
-                  <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-600">
                     ETB {receipt.amount?.toLocaleString()}
                   </span>
                 </div>
 
                 {/* Receipt Line Items */}
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center py-1 border-b border-border/40">
-                    <span className="text-muted-foreground">Transaction ID (Ref):</span>
-                    <span className="font-mono font-bold text-blue-500 dark:text-blue-400 select-all">
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-600 font-semibold">Transaction ID (Ref):</span>
+                    <span className="font-mono font-bold text-blue-600 select-all">
                       {receipt.txnRef}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center py-1 border-b border-border/40">
-                    <span className="text-muted-foreground">Equb Group:</span>
-                    <span className="font-bold text-foreground">{receipt.groupName}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-600 font-semibold">Equb Group:</span>
+                    <span className="font-bold text-slate-900">{receipt.groupName}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-1 border-b border-border/40">
-                    <span className="text-muted-foreground">Days Paid:</span>
-                    <span className="font-bold text-foreground">
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-600 font-semibold">Days Paid:</span>
+                    <span className="font-bold text-slate-900 text-right max-w-[60%]">
                       {receipt.cyclesPaid} Day{receipt.cyclesPaid > 1 ? "s" : ""}
                       {receipt.cycleNumbers?.length > 0 && ` (Cycles: #${receipt.cycleNumbers.join(", #")})`}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center py-1 border-b border-border/40">
-                    <span className="text-muted-foreground">Payer Name:</span>
-                    <span className="font-bold text-foreground">{receipt.contributorName}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-600 font-semibold">Payer Name:</span>
+                    <span className="font-bold text-slate-900">{receipt.contributorName}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-muted-foreground">Date (EC / GC):</span>
-                    <span className="font-semibold text-foreground">
+                  <div className="flex justify-between items-center py-1.5">
+                    <span className="text-slate-600 font-semibold">Date (EC / GC):</span>
+                    <span className="font-bold text-slate-900">
                       {formatEthiopianDate(getCurrentEthiopianDate())}
                     </span>
                   </div>
