@@ -204,7 +204,7 @@ export function PayEqubModal({
       <div className="bg-card border border-border/80 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
         
         {/* ─── MODAL HEADER ──────────────────────────────────────────────── */}
-        <div className="p-4 sm:p-5 border-b border-border/80 flex items-center justify-between bg-muted/20 shrink-0">
+        <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between bg-transparent shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0 shadow-sm">
               <ArrowUpRight className="w-5 h-5" />
@@ -412,7 +412,7 @@ export function PayEqubModal({
                   </div>
                 </div>
               ) : currentGroup ? (
-                <div className="p-3.5 rounded-2xl border border-border/80 bg-muted/30 flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl border-2 border-border bg-transparent flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider block">
                       Active Equb Selected
@@ -449,10 +449,10 @@ export function PayEqubModal({
                         key={opt}
                         type="button"
                         onClick={() => handleSelectDays(opt)}
-                        className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+                        className={`py-2 px-2.5 rounded-xl border-2 text-xs font-bold transition-all ${
                           isSelected
-                            ? "border-blue-500 bg-blue-600 text-white shadow-blue-600/20"
-                            : "border-border bg-card text-foreground hover:bg-muted"
+                            ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                            : "border-border bg-transparent text-foreground hover:bg-muted/30"
                         }`}
                       >
                         {opt} {locale === "am" ? "ቀን" : `Day${opt > 1 ? "s" : ""}`}
@@ -473,13 +473,13 @@ export function PayEqubModal({
                     value={customDays}
                     onChange={(e) => handleCustomDaysChange(e.target.value)}
                     placeholder={locale === "am" ? "የቀናት ብዛት ያስገቡ..." : "Enter days..."}
-                    className="h-10 flex-1 rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 shadow-sm"
+                    className="h-10 flex-1 rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-transparent px-3 text-xs sm:text-sm font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-none"
                   />
                 </div>
               </div>
 
               {/* ── 3. TOTAL PAYABLE & COLLECTOR ACCOUNT DETAILS ──────────── */}
-              <div className="p-4 rounded-2xl border-2 border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
+              <div className="p-4 rounded-2xl border-2 border-border bg-transparent space-y-3">
                 
                 {/* Total Calculated Banner */}
                 <div className="flex items-center justify-between">
@@ -499,9 +499,9 @@ export function PayEqubModal({
                     <Building2 className="w-3.5 h-3.5 text-blue-500" />
                     {t("collectorAccount")} (CBE / Commercial Bank):
                   </span>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-transparent border-2 border-border shadow-none">
                     <div>
-                      <p className="font-mono font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 select-all tracking-wider">
+                      <p className="font-mono font-black text-sm sm:text-base text-foreground select-all tracking-wider">
                         {COLLECTOR_CBE_ACCOUNT}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
@@ -514,7 +514,7 @@ export function PayEqubModal({
                       size="sm"
                       variant="outline"
                       onClick={handleCopyCollectorAccount}
-                      className="h-8 px-2.5 rounded-lg text-xs font-bold border-blue-500/30 hover:bg-blue-500/10 text-blue-500 gap-1"
+                      className="h-8 px-2.5 rounded-lg text-xs font-bold border-blue-500/30 hover:bg-blue-500/10 text-blue-500 gap-1 bg-transparent"
                     >
                       {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                       <span>{copiedAccount ? "Copied" : t("copyAccount")}</span>
@@ -540,7 +540,7 @@ export function PayEqubModal({
                 </div>
 
                 {/* Verification Method Switcher Tabs */}
-                <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-transparent border-2 border-border">
                   <button
                     type="button"
                     onClick={() => {
@@ -550,7 +550,7 @@ export function PayEqubModal({
                     className={`py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       paymentMethod === "sms"
                         ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                        : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-white/60 dark:hover:bg-slate-700/50"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
                     }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
@@ -566,7 +566,7 @@ export function PayEqubModal({
                     className={`py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       paymentMethod === "txn"
                         ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                        : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-white/60 dark:hover:bg-slate-700/50"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
                     }`}
                   >
                     <Receipt className="w-3.5 h-3.5" />
@@ -601,12 +601,12 @@ export function PayEqubModal({
                         setErrorMessage(null);
                       }}
                       placeholder={locale === "am" ? "የደረሰዎትን የባንክ መልእክት እዚህ ይለጥፉ (ለምሳሌ፦ Dear Customer, ... Txn ref: FT...)" : t("pasteSmsPlaceholder")}
-                      className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs font-mono font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm leading-relaxed"
+                      className="w-full rounded-2xl border-2 border-slate-400 dark:border-slate-500 bg-transparent p-3.5 text-xs sm:text-sm font-mono font-semibold text-foreground placeholder:text-muted-foreground caret-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-none leading-relaxed"
                     />
 
                     {/* Live Real-Time Parsed Badges */}
                     {smsText.trim().length > 5 && (
-                      <div className="p-3 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2 text-xs animate-fadeIn">
+                      <div className="p-3 rounded-xl border-2 border-border bg-transparent space-y-2 text-xs animate-fadeIn">
                         <div className="flex flex-wrap items-center gap-2">
                           
                           {/* Txn Ref Badge */}
@@ -659,7 +659,7 @@ export function PayEqubModal({
                             setErrorMessage(null);
                           }}
                           placeholder="e.g. FT2609028881 or MP26090212345"
-                          className="h-11 w-full rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm uppercase"
+                          className="h-11 w-full rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-transparent px-3.5 text-xs sm:text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground caret-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-none uppercase"
                         />
                       </div>
                     )}
@@ -679,7 +679,7 @@ export function PayEqubModal({
                           setErrorMessage(null);
                         }}
                         placeholder="e.g. FT2609028881 or MP26090212345"
-                        className="h-12 w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm uppercase"
+                        className="h-12 w-full rounded-2xl border-2 border-slate-400 dark:border-slate-500 bg-transparent px-4 text-sm sm:text-base font-mono font-bold text-foreground placeholder:text-muted-foreground caret-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-none uppercase"
                       />
                     </div>
 

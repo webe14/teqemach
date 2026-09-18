@@ -222,7 +222,7 @@ export function TransactionsModal({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by group or Txn ID..."
-                    className="w-full h-10 pl-9 pr-4 rounded-xl border border-border bg-card text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500 shadow-sm"
+                    className="w-full h-10 pl-9 pr-4 rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-transparent text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-none"
                   />
                 </div>
               )}
