@@ -7,14 +7,16 @@ interface PaymentActionBarProps {
   onPayEqub: () => void;
   onTransactions: () => void;
   hasActiveEqub?: boolean;
+  isPending?: boolean;
 }
 
 export function PaymentActionBar({
   onPayEqub,
   onTransactions,
   hasActiveEqub = true,
+  isPending = false,
 }: PaymentActionBarProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   return (
     <div className="w-full bg-card border border-border/80 rounded-3xl p-3.5 sm:p-4 shadow-lg">
@@ -24,21 +26,31 @@ export function PaymentActionBar({
         <button
           type="button"
           onClick={onPayEqub}
-          className="flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border-2 border-rose-500/20 bg-gradient-to-br from-rose-500/5 via-transparent to-rose-500/10 hover:border-rose-500/50 hover:bg-rose-500/10 active:scale-[0.98] transition-all duration-200 text-left group shadow-sm"
+          className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border-2 ${
+            isPending 
+              ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 hover:bg-amber-500/10" 
+              : "border-rose-500/20 bg-gradient-to-br from-rose-500/5 via-transparent to-rose-500/10 hover:border-rose-500/50 hover:bg-rose-500/10"
+          } active:scale-[0.98] transition-all duration-200 text-left group shadow-sm`}
         >
-          {/* Circular Arrow Badge (Red/Coral Up Arrow like CBE Transfer) */}
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-all shadow-sm">
+          {/* Circular Arrow Badge */}
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full ${
+            isPending
+              ? "bg-amber-500/15 border border-amber-500/30 text-amber-500 group-hover:bg-amber-500 group-hover:text-white"
+              : "bg-rose-500/15 border border-rose-500/30 text-rose-500 group-hover:bg-rose-500 group-hover:text-white"
+          } flex items-center justify-center shrink-0 transition-all shadow-sm`}>
             <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </div>
 
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-xs sm:text-sm text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
+              <h3 className={`font-extrabold text-xs sm:text-sm text-foreground ${
+                isPending ? "group-hover:text-amber-600 dark:group-hover:text-amber-400" : "group-hover:text-rose-600 dark:group-hover:text-rose-400"
+              } transition-colors truncate`}>
                 {t("payEqub")}
               </h3>
             </div>
             <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate mt-0.5 font-medium">
-              {t("payEqubSubtitle")}
+              {isPending ? (locale === "am" ? "በአድሚን ማረጋገጫ በመጠባበቅ ላይ" : "Pending Admin Approval") : t("payEqubSubtitle")}
             </p>
           </div>
         </button>

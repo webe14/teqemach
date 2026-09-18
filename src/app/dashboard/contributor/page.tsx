@@ -21,7 +21,7 @@ export default async function ContributorDashboardPage() {
     getPublicEqubGroups(),
   ]);
 
-  const stats = statsRes || { amountSaved: 0, daysRemaining: 0, paidCycles: 0, totalCycles: 0, group: null, groups: [] };
+  const stats = statsRes || { amountSaved: 0, daysRemaining: 0, paidCycles: 0, totalCycles: 0, group: null, groups: [], status: "active" };
 
   // Compute next cycle date (Ethiopian Calendar)
   const today = getCurrentEthiopianDate();
@@ -39,6 +39,7 @@ export default async function ContributorDashboardPage() {
       group={group} 
       userName={profile?.full_name || profile?.email?.split('@')[0] || "Webshet W."}
       userId={profile?.id}
+      status={currentProfile?.status || (stats as any).status || "active"}
       allGroups={groupsRes.data || []}
     />
   );

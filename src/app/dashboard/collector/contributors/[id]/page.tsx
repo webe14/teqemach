@@ -59,6 +59,7 @@ type GroupMeta = {
 type ProfileData = {
   full_name: string | null;
   phone_number: string | null;
+  status?: string | null;
 };
 
 /** Compute the expected date for a cycle given the group's start date and frequency */
@@ -157,7 +158,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
 
   // ── Single cycle mark ─────────────────────────────────────────────────────
   async function handleMarkPaid(cycle: Cycle) {
-    if (isPending) return;
+    if (isPending || contributorProfile?.status === "pending") return;
     if (bulkMode) {
       if (cycle.is_marked_paid) return; // Cannot bulk-select already paid cycles
       // In bulk mode: toggle selection
@@ -250,6 +251,30 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
           <div className="ethiopian-divider mt-3 w-24" />
         </div>
       </div>
+
+      {/* Pending Banner if contributor is not yet approved */}
+      {contributorProfile?.status === "pending" && (
+        <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-start gap-3 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">
+              {locale === "am" ? "ተጠቃሚው ማረጋገጫ በመጠባበቅ ላይ ነው (Pending Approval)" : "Contributor Pending Approval"}
+            </h4>
+            <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+              {locale === "am" 
+                ? "ይህ ተጠቃሚ በአድሚን አልተረጋገጠም። ክፍያዎችን ከመመዝገብዎ በፊት እባክዎ ከተጠቃሚዎች ገጽ ላይ ያረጋግጡት (Approve ያድርጉ)።" 
+                : "This contributor account has not been approved yet. Please approve them from the Contributors management page before recording contributions."}
+            </p>
+            <div className="mt-3">
+              <Link href="/dashboard/admin/contributors">
+                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs h-8 rounded-xl shadow-sm">
+                  {locale === "am" ? "ወደ ማረጋገጫ ገጽ ሂድ" : "Go to Approval Page"}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress & Total Payment */}
       <Card className="border-primary/20 gradient-card shadow-sm">
@@ -368,7 +393,7 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
                     <button
                       key={cycle.id}
                       onClick={() => handleMarkPaid(cycle)}
-                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending)}
+                      disabled={(cycle.is_marked_paid && bulkMode) || (!bulkMode && isPending) || contributorProfile?.status === "pending"}
                       className={`
                         relative flex flex-col items-center justify-center rounded-xl p-2 text-[11px] font-semibold
                         transition-all duration-150 aspect-square border-2

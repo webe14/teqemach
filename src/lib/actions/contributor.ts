@@ -6,7 +6,7 @@ export async function getContributorStats(contributorId: string) {
   try {
     const supabase = await createAdminClient();
 
-    const [membershipsRes, contributionsRes] = await Promise.all([
+    const [membershipsRes, contributionsRes, profileRes] = await Promise.all([
       supabase
         .from("group_memberships")
         .select(`
@@ -29,6 +29,11 @@ export async function getContributorStats(contributorId: string) {
         .from("contributions")
         .select("id, group_id, is_marked_paid, equb_groups:group_id(contribution_amount)")
         .eq("contributor_id", contributorId),
+      supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", contributorId)
+        .maybeSingle(),
     ]);
 
     const allContributions = contributionsRes?.data || [];
@@ -89,6 +94,7 @@ export async function getContributorStats(contributorId: string) {
       totalCycles: totalCount,
       group: primaryGroup,
       groups,
+      status: profileRes?.data?.status || "active",
     };
   } catch (e) {
     console.error("Failed to load contributor stats:", e);
@@ -99,6 +105,7 @@ export async function getContributorStats(contributorId: string) {
       totalCycles: 0,
       group: null,
       groups: [],
+      status: "active",
     };
   }
 }
@@ -395,7 +402,7 @@ export async function submitContributorPayment({
         .single(),
       supabase
         .from("profiles")
-        .select("id, full_name, phone_number, email, telegram_id")
+        .select("id, full_name, phone_number, email, telegram_id, status")
         .eq("id", contributorId)
         .single(),
     ]);
@@ -406,6 +413,14 @@ export async function submitContributorPayment({
 
     const group = groupRes.data as any;
     const contributor = contributorRes.data as any;
+
+    if (contributor?.status === "pending") {
+      return {
+        success: false,
+        error: "ይህ አካውንት በአድሚን ማረጋገጫ በመጠባበቅ ላይ ስለሆነ ክፍያ መፈጸም አይቻልም። እባክዎ አድሚኑ እስኪያረጋግጥልዎት ይጠብቁ። (Your account is pending admin approval. You cannot make payments until approved.)",
+      };
+    }
+
     const rate = Number(group.contribution_amount || 0);
 
     // 2. Fetch all existing contributions for this contributor in this group

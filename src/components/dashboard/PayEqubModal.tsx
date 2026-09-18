@@ -33,6 +33,7 @@ interface PayEqubModalProps {
   contributorName?: string;
   contributorPhone?: string;
   activeGroups: any[];
+  isPendingApproval?: boolean;
   onPaymentSuccess?: (receipt: any) => void;
   onOpenTransactions?: () => void;
 }
@@ -44,6 +45,7 @@ export function PayEqubModal({
   contributorName = "Contributor",
   contributorPhone = "",
   activeGroups = [],
+  isPendingApproval = false,
   onPaymentSuccess,
   onOpenTransactions,
 }: PayEqubModalProps) {
@@ -324,6 +326,23 @@ export function PayEqubModal({
             /* ═════════════════════════════════════════════════════════════ */
             <div className="space-y-5">
               
+              {/* Pending Approval Notice */}
+              {isPendingApproval && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-xs font-medium text-amber-900 dark:text-amber-200 shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                      {locale === "am" ? "ምዝገባዎ በመጠባበቅ ላይ ነው (Pending Approval)" : "Registration Pending Approval"}
+                    </h4>
+                    <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-1">
+                      {locale === "am" 
+                        ? "የእርስዎ መለያ በአስተዳዳሪው እስኪረጋገጥ ድረስ ክፍያ መፈጸም አይቻልም። አስተዳዳሪው እንዳረጋገጠልዎት ወዲያውኑ መክፈል ይችላሉ።" 
+                        : "Your account is pending admin approval. You cannot make contributions until an administrator approves your registration."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Error Notice */}
               {errorMessage && (
                 <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive animate-shake">
@@ -576,7 +595,7 @@ export function PayEqubModal({
               <Button
                 type="button"
                 onClick={handleSubmitPayment}
-                disabled={isPending || daysCount <= 0 || smsText.trim().length === 0}
+                disabled={isPending || isPendingApproval || daysCount <= 0 || smsText.trim().length === 0}
                 className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-base shadow-xl shadow-blue-600/25 transition-all active:scale-[0.98] cursor-pointer"
               >
                 {isPending ? (

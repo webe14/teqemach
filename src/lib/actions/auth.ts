@@ -485,7 +485,7 @@ export async function getProfileById(id: string) {
   const adminClient = await createAdminClient();
   const { data, error } = await adminClient
     .from("profiles")
-    .select("id, full_name, phone_number, role, email")
+    .select("id, full_name, phone_number, role, email, status")
     .eq("id", id)
     .single();
   if (error) return { error: error.message, data: null };

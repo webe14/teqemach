@@ -451,6 +451,22 @@ export async function getContributorCycles(
 ) {
   const supabase = await createAdminClient();
 
+  // Check if contributor is pending approval
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("status, full_name")
+    .eq("id", contributorId)
+    .maybeSingle();
+
+  if (profile?.status === "pending") {
+    return {
+      error: "ይህ ተጠቃሚ በአድሚን ማረጋገጫ በመጠባበቅ ላይ ነው። (Contributor is pending approval by admin.)",
+      data: [],
+      group: null,
+      isPending: true,
+    };
+  }
+
   let activeGroupId = groupId;
 
   // If no groupId provided, find the contributor's group membership
@@ -484,7 +500,7 @@ export async function getContributorCycles(
   }
 
   if (!activeGroupId) {
-    return { error: "No Equb group found", data: [], group: null };
+    return { error: "No Equb group found", data: [], group: null, isPending: false };
   }
 
   // Fetch group info & membership
@@ -503,7 +519,7 @@ export async function getContributorCycles(
   ]);
 
   if (groupRes.error || !groupRes.data) {
-    return { error: groupRes.error?.message || "Group not found", data: [], group: null };
+    return { error: groupRes.error?.message || "Group not found", data: [], group: null, isPending: false };
   }
 
   // Fetch cycles
@@ -543,6 +559,7 @@ export async function getContributorCycles(
     data: (cycles as any[]) ?? [],
     group,
     error: null,
+    isPending: false,
   };
 }
 
@@ -552,6 +569,26 @@ export async function markCyclePaid(
   cycleDateText?: string
 ) {
   const supabase = await createAdminClient();
+
+  // Verify contributor is not pending
+  const { data: contribRow } = await supabase
+    .from("contributions")
+    .select("contributor_id")
+    .eq("id", contributionId)
+    .maybeSingle();
+
+  if (contribRow?.contributor_id) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", contribRow.contributor_id)
+      .maybeSingle();
+
+    if (prof?.status === "pending") {
+      return { error: "ተጠቃሚው በአድሚን እስኪረጋገጥ ድረስ ክፍያ መመዝገብ አይቻልም። (Cannot record payment for a pending contributor. Please approve them first.)" };
+    }
+  }
+
   const now = new Date().toISOString();
   
   // Mark paid with transaction timestamp
@@ -669,6 +706,26 @@ export async function markCyclePaid(
 
 export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: string) {
   const supabase = await createAdminClient();
+
+  // Verify that none of the cycles belong to a pending contributor
+  const { data: cyclesData } = await supabase
+    .from("contributions")
+    .select("contributor_id")
+    .in("id", ids);
+
+  if (cyclesData && cyclesData.length > 0) {
+    const cIds = [...new Set(cyclesData.map(c => c.contributor_id))];
+    const { data: pendingProfs } = await supabase
+      .from("profiles")
+      .select("id")
+      .in("id", cIds)
+      .eq("status", "pending");
+
+    if (pendingProfs && pendingProfs.length > 0) {
+      return { error: "ተጠቃሚው በአድሚን እስኪረጋገጥ ድረስ ክፍያ መመዝገብ አይቻልም። (Cannot record payment for a pending contributor. Please approve them first.)" };
+    }
+  }
+
   const now = new Date().toISOString();
   
   const { error, data: updatedContributions } = await supabase

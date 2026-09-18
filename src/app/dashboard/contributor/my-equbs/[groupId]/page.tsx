@@ -74,6 +74,7 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
   const [groupMeta, setGroupMeta] = useState<GroupMeta>(null);
   const [visibleLimit, setVisibleLimit] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -86,7 +87,15 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
         const profile = await getCurrentProfile();
         if (!profile) return;
 
+        if (profile.status === "pending") {
+          setIsPendingApproval(true);
+        }
+
         const cyclesRes = await getContributorCycles(profile.id, gid);
+
+        if ((cyclesRes as any)?.isPending) {
+          setIsPendingApproval(true);
+        }
 
         setCycles((cyclesRes.data as Cycle[]) ?? []);
         setGroupMeta((cyclesRes as any).group ?? null);
@@ -148,6 +157,25 @@ export default function ContributorCycleGridPage({ params }: { params: Promise<{
           />
         </div>
       </div>
+
+      {/* Pending Approval Notice */}
+      {isPendingApproval && (
+        <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-start gap-3 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Loader2 className="w-4 h-4 animate-spin" />
+          </div>
+          <div>
+            <h4 className="font-bold text-sm text-amber-900 dark:text-amber-100">
+              {locale === "am" ? "ምዝገባዎ በአድሚን ማረጋገጫ በመጠባበቅ ላይ ነው" : "Registration Pending Admin Approval"}
+            </h4>
+            <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-1">
+              {locale === "am" 
+                ? "የእርስዎ የእቁብ ምዝገባ በአስተዳዳሪው እስኪረጋገጥ ድረስ ክፍያ መፈጸም አይቻልም።" 
+                : "Your Equb registration is pending admin approval. You cannot make payments until approved."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Progress & Total Payment */}
       <Card className="border-primary/20 gradient-card shadow-sm">
