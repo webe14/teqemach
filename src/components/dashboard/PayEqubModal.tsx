@@ -155,21 +155,11 @@ export function PayEqubModal({
     }
 
     if (paymentMethod === "sms" && smsText.trim()) {
-      if (parsedSms.amount && parsedSms.amount > totalPayable) {
-        const suggestedDays = rate > 0 ? Math.floor(parsedSms.amount / rate) : daysCount;
+      if (parsedSms.amount && Math.abs(parsedSms.amount - totalPayable) > 0.01) {
         setErrorMessage(
           locale === "am"
-            ? `የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል።`
-            : `Paid amount (ETB ${parsedSms.amount.toLocaleString()}) is greater than total payable for ${daysCount} days (ETB ${totalPayable.toLocaleString()}). Suggested days: ${suggestedDays}.`
-        );
-        return;
-      }
-
-      if (parsedSms.amount && parsedSms.amount < totalPayable) {
-        setErrorMessage(
-          locale === "am"
-            ? `የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ያንሳል!`
-            : `Paid amount (ETB ${parsedSms.amount.toLocaleString()}) is less than total payable (ETB ${totalPayable.toLocaleString()}).`
+            ? "እባክዎ ትክክለኛውን የክፍያ መጠን ያስገቡ ወይም የቀናትን ብዛት ያስተካክሉ!"
+            : "Please enter exact amount or adjust the number of selected days."
         );
         return;
       }
@@ -363,14 +353,6 @@ export function PayEqubModal({
                         : "Your account is pending admin approval. You cannot make contributions until an administrator approves your registration."}
                     </p>
                   </div>
-                </div>
-              )}
-
-              {/* Error Notice */}
-              {errorMessage && (
-                <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive animate-shake">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{errorMessage}</span>
                 </div>
               )}
 
@@ -688,6 +670,14 @@ export function PayEqubModal({
                         ? "ክፍያውን ሲፈጽሙ ከCBE ወይም ቴሌብር የደረስዎትን የትራንዛክሽን ቁጥር (FT... ወይም MP...) እዚህ ያስገቡ። የባንክ SMS መልእክት መለጠፍ ግዴታ አይደለም።" 
                         : "Enter the transaction reference code (FT... or MP...) from your bank confirmation. Pasting SMS is not required."}
                     </p>
+                  </div>
+                )}
+
+                {/* Error Notice directly below Txn ID / Paste SMS box */}
+                {errorMessage && (
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-destructive/10 border-2 border-destructive/25 text-xs font-semibold text-destructive animate-shake mt-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
+                    <span className="leading-snug">{errorMessage}</span>
                   </div>
                 )}
               </div>

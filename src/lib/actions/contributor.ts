@@ -447,19 +447,10 @@ export async function submitContributorPayment({
     }
 
     if (actualBankAmount > 0 && Math.abs(actualBankAmount - totalAmount) > 0.01) {
-      if (actualBankAmount < totalAmount) {
-        return {
-          success: false,
-          error: `በዳታቤዝ ውስጥ የተገኘው የባንክ ዝውውር መጠን (ETB ${actualBankAmount.toLocaleString()}) ከተመረጡት ${numberOfDays} ቀናት ጠቅላላ ክፍያ (ETB ${totalAmount.toLocaleString()}) ያንሳል! እባክዎ የቀናትን ብዛት ያስተካክሉ ወይም ትክክለኛውን የክፍያ ዝውውር ቁጥር ያስገቡ። (The bank record amount ETB ${actualBankAmount.toLocaleString()} is less than the selected payable amount ETB ${totalAmount.toLocaleString()}.)`,
-        };
-      } else {
-        const ratePerDay = totalAmount / numberOfDays;
-        const suggestedDays = ratePerDay > 0 ? Math.floor(actualBankAmount / ratePerDay) : numberOfDays;
-        return {
-          success: false,
-          error: `በዳታቤዝ ውስጥ የተገኘው የባንክ ዝውውር መጠን (ETB ${actualBankAmount.toLocaleString()}) ከተመረጡት ${numberOfDays} ቀናት ጠቅላላ ክፍያ (ETB ${totalAmount.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል። (The bank record amount ETB ${actualBankAmount.toLocaleString()} is greater than the selected payable amount ETB ${totalAmount.toLocaleString()}.)`,
-        };
-      }
+      return {
+        success: false,
+        error: "እባክዎ ትክክለኛውን የክፍያ መጠን ያስገቡ ወይም የቀናትን ብዛት ያስተካክሉ! (Please enter exact amount or adjust the number of selected days.)",
+      };
     }
 
     // 1. Fetch group details and verify membership
