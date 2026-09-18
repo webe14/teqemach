@@ -56,6 +56,7 @@ export function PayEqubModal({
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [daysCount, setDaysCount] = useState<number>(1);
   const [customDays, setCustomDays] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"sms" | "txn">("sms");
   const [smsText, setSmsText] = useState<string>("");
   const [manualTxnRef, setManualTxnRef] = useState<string>("");
   const [copiedAccount, setCopiedAccount] = useState<boolean>(false);
@@ -79,7 +80,9 @@ export function PayEqubModal({
   const parsedSms: ParsedSmsResult = parseEthiopianBankSms(smsText);
   const validation = validatePaymentWithSms(parsedSms, rate, daysCount);
 
-  const effectiveTxnRef = parsedSms.txnRef || manualTxnRef.trim();
+  const effectiveTxnRef = paymentMethod === "txn"
+    ? manualTxnRef.trim()
+    : (parsedSms.txnRef || manualTxnRef.trim());
 
   // Quick day options
   const dayOptions = [1, 2, 3, 5, 7, 10, 15, 30];
@@ -126,6 +129,7 @@ export function PayEqubModal({
     setErrorMessage(null);
     setDaysCount(1);
     setCustomDays("");
+    setPaymentMethod("sms");
   }
 
   function handleSubmitPayment() {
@@ -141,15 +145,34 @@ export function PayEqubModal({
       return;
     }
 
-    if (parsedSms.amount && parsedSms.amount > totalPayable) {
-      const suggestedDays = rate > 0 ? Math.floor(parsedSms.amount / rate) : daysCount;
-      setErrorMessage(`የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል። (Amount cannot be greater than total payable).`);
+    if (!effectiveTxnRef && (paymentMethod === "txn" || !smsText.trim())) {
+      setErrorMessage(
+        locale === "am"
+          ? "እባክዎ የትራንዛክሽን ቁጥር (Transaction ID) ያስገቡ ወይም የባንክ SMS ይለጥፉ።"
+          : "Please enter your Transaction ID or paste the bank confirmation SMS."
+      );
       return;
     }
 
-    if (parsedSms.amount && parsedSms.amount < totalPayable) {
-      setErrorMessage(`የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ያንሳል! (Amount is less than total payable: ETB ${parsedSms.amount.toLocaleString()} < ETB ${totalPayable.toLocaleString()}).`);
-      return;
+    if (paymentMethod === "sms" && smsText.trim()) {
+      if (parsedSms.amount && parsedSms.amount > totalPayable) {
+        const suggestedDays = rate > 0 ? Math.floor(parsedSms.amount / rate) : daysCount;
+        setErrorMessage(
+          locale === "am"
+            ? `የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ይበልጣል! የቀናትን ብዛት ወደ ${suggestedDays} ቢያስተካክሉ ይሸፍናል።`
+            : `Paid amount (ETB ${parsedSms.amount.toLocaleString()}) is greater than total payable for ${daysCount} days (ETB ${totalPayable.toLocaleString()}). Suggested days: ${suggestedDays}.`
+        );
+        return;
+      }
+
+      if (parsedSms.amount && parsedSms.amount < totalPayable) {
+        setErrorMessage(
+          locale === "am"
+            ? `የተከፈለው መጠን (ETB ${parsedSms.amount.toLocaleString()}) ከተመረጡት ${daysCount} ቀናት ጠቅላላ ክፍያ (ETB ${totalPayable.toLocaleString()}) ያንሳል!`
+            : `Paid amount (ETB ${parsedSms.amount.toLocaleString()}) is less than total payable (ETB ${totalPayable.toLocaleString()}).`
+        );
+        return;
+      }
     }
 
     const finalTxnRef = effectiveTxnRef || `TXN-${Date.now().toString(36).toUpperCase()}`;
@@ -161,8 +184,8 @@ export function PayEqubModal({
         numberOfDays: daysCount,
         totalAmount: totalPayable,
         txnRef: finalTxnRef,
-        rawSms: smsText,
-        bankType: parsedSms.bankType,
+        rawSms: paymentMethod === "sms" ? smsText : "",
+        bankType: parsedSms.bankType || "CBE",
       });
 
       if (!res.success) {
@@ -440,8 +463,8 @@ export function PayEqubModal({
 
                 {/* Custom Days Input */}
                 <div className="flex items-center gap-2 pt-1">
-                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                    Custom Days:
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    {locale === "am" ? "የተለየ የቀን ብዛት:" : "Custom Days:"}
                   </span>
                   <input
                     type="number"
@@ -449,18 +472,18 @@ export function PayEqubModal({
                     max="365"
                     value={customDays}
                     onChange={(e) => handleCustomDaysChange(e.target.value)}
-                    placeholder="Enter days..."
-                    className="h-9 flex-1 rounded-xl border border-border bg-card px-3 text-xs font-bold text-foreground focus:outline-none focus:border-blue-500 shadow-sm"
+                    placeholder={locale === "am" ? "የቀናት ብዛት ያስገቡ..." : "Enter days..."}
+                    className="h-10 flex-1 rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 shadow-sm"
                   />
                 </div>
               </div>
 
               {/* ── 3. TOTAL PAYABLE & COLLECTOR ACCOUNT DETAILS ──────────── */}
-              <div className="p-4 rounded-2xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/10 space-y-3">
+              <div className="p-4 rounded-2xl border-2 border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
                 
                 {/* Total Calculated Banner */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-muted-foreground">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
                     {t("totalPayable")} ({daysCount} × ETB {rate.toLocaleString()}):
                   </span>
                   <span className="text-xl font-black text-blue-600 dark:text-blue-400">
@@ -476,9 +499,9 @@ export function PayEqubModal({
                     <Building2 className="w-3.5 h-3.5 text-blue-500" />
                     {t("collectorAccount")} (CBE / Commercial Bank):
                   </span>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-border/80 shadow-sm">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
                     <div>
-                      <p className="font-mono font-black text-sm text-foreground select-all">
+                      <p className="font-mono font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 select-all tracking-wider">
                         {COLLECTOR_CBE_ACCOUNT}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
@@ -504,109 +527,195 @@ export function PayEqubModal({
                 </p>
               </div>
 
-              {/* ── 4. PASTE BANK SMS MESSAGE ─────────────────────────────── */}
-              <div className="space-y-2">
+              {/* ── 4. PAYMENT VERIFICATION (PASTE SMS OR ENTER TRANSACTION ID) ── */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-blue-500" />
-                    Paste Bank Confirmation SMS:
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                    {locale === "am" ? "የማረጋገጫ ዘዴ ይምረጡ:" : "Verification Method:"}
                   </label>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {locale === "am" ? "ከሁለት አንዱን ይምረጡ" : "Choose SMS or Txn ID"}
+                  </span>
+                </div>
+
+                {/* Verification Method Switcher Tabs */}
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("sms");
+                      setErrorMessage(null);
+                    }}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      paymentMethod === "sms"
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                        : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-white/60 dark:hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>{locale === "am" ? "የባንክ SMS ለጥፍ" : "Paste Bank SMS"}</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={handlePasteFromClipboard}
-                    className="text-[11px] font-bold text-blue-500 hover:underline flex items-center gap-1"
+                    onClick={() => {
+                      setPaymentMethod("txn");
+                      setErrorMessage(null);
+                    }}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      paymentMethod === "txn"
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                        : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-white/60 dark:hover:bg-slate-700/50"
+                    }`}
                   >
-                    <Copy className="w-3 h-3" />
-                    Paste SMS
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>{locale === "am" ? "የትራንዛክሽን ቁጥር" : "Transaction ID"}</span>
                   </button>
                 </div>
 
-                <textarea
-                  rows={3}
-                  value={smsText}
-                  onChange={(e) => {
-                    setSmsText(e.target.value);
-                    setErrorMessage(null);
-                  }}
-                  placeholder={t("pasteSmsPlaceholder")}
-                  className="w-full rounded-2xl border border-border bg-white dark:bg-slate-900 p-3 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm leading-relaxed"
-                />
+                {/* TAB 1: PASTE SMS */}
+                {paymentMethod === "sms" ? (
+                  <div className="space-y-2.5 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        {locale === "am" ? "የባንክ ማረጋገጫ መልእክት (SMS) ይለጥፉ:" : "Paste Bank Confirmation SMS:"}
+                      </label>
 
-                {/* Live Real-Time Parsed Badges */}
-                {smsText.trim().length > 5 && (
-                  <div className="p-3 rounded-xl border border-border/80 bg-muted/40 space-y-2 text-xs animate-fadeIn">
-                    <div className="flex flex-wrap items-center gap-2">
-                      
-                      {/* Txn Ref Badge */}
-                      <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border flex items-center gap-1 ${
-                        parsedSms.txnRef
-                          ? "bg-blue-500/15 text-blue-500 border-blue-500/30"
-                          : "bg-amber-500/15 text-amber-600 border-amber-500/30"
-                      }`}>
-                        Txn Ref: {parsedSms.txnRef || "Not detected"}
-                      </span>
-
-                      {/* Amount Detected Badge */}
-                      <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] border flex items-center gap-1 ${
-                        parsedSms.amount
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                          : "bg-muted text-muted-foreground border-border"
-                      }`}>
-                        Amount: {parsedSms.amount ? `ETB ${parsedSms.amount.toLocaleString()}` : "Not detected"}
-                      </span>
-
-                      {/* Bank Type */}
-                      <span className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                        {parsedSms.bankType}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={handlePasteFromClipboard}
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        {locale === "am" ? "ከቅንጥብ ሰሌዳ ለጥፍ" : "Paste SMS"}
+                      </button>
                     </div>
 
-                    {/* Match Validation Message */}
-                    <div className={`p-2 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
-                      validation.isMatch
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                    }`}>
-                      {validation.isMatch ? <Check className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
-                      <span>{validation.message}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Manual Txn Ref fallback if not detected in SMS */}
-                {!parsedSms.txnRef && (
-                  <div className="pt-1">
-                    <label className="text-[11px] font-bold text-muted-foreground block mb-1">
-                      Or manually enter Transaction ID (Txn Ref):
-                    </label>
-                    <input
-                      type="text"
-                      value={manualTxnRef}
-                      onChange={(e) => setManualTxnRef(e.target.value.toUpperCase())}
-                      placeholder="e.g. FT2609028881 or MP26090212345"
-                      className="h-10 w-full rounded-xl border border-border bg-white dark:bg-slate-900 px-3 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm uppercase"
+                    <textarea
+                      rows={3}
+                      value={smsText}
+                      onChange={(e) => {
+                        setSmsText(e.target.value);
+                        setErrorMessage(null);
+                      }}
+                      placeholder={locale === "am" ? "የደረሰዎትን የባንክ መልእክት እዚህ ይለጥፉ (ለምሳሌ፦ Dear Customer, ... Txn ref: FT...)" : t("pasteSmsPlaceholder")}
+                      className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs font-mono font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm leading-relaxed"
                     />
+
+                    {/* Live Real-Time Parsed Badges */}
+                    {smsText.trim().length > 5 && (
+                      <div className="p-3 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2 text-xs animate-fadeIn">
+                        <div className="flex flex-wrap items-center gap-2">
+                          
+                          {/* Txn Ref Badge */}
+                          <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border flex items-center gap-1 ${
+                            parsedSms.txnRef
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                          }`}>
+                            Txn Ref: {parsedSms.txnRef || "Not detected"}
+                          </span>
+
+                          {/* Amount Detected Badge */}
+                          <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] border flex items-center gap-1 ${
+                            parsedSms.amount
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-border"
+                          }`}>
+                            Amount: {parsedSms.amount ? `ETB ${parsedSms.amount.toLocaleString()}` : "Not detected"}
+                          </span>
+
+                          {/* Bank Type */}
+                          <span className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                            {parsedSms.bankType}
+                          </span>
+                        </div>
+
+                        {/* Match Validation Message */}
+                        <div className={`p-2 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
+                          validation.isMatch
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        }`}>
+                          {validation.isMatch ? <Check className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                          <span>{validation.message}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Manual Txn Ref fallback if not detected in SMS */}
+                    {smsText.trim().length > 5 && !parsedSms.txnRef && (
+                      <div className="pt-1">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          {locale === "am" ? "ወይም የትራንዛክሽን ቁጥር (Txn Ref) በእጅ ያስገቡ:" : "Or manually enter Transaction ID (Txn Ref):"}
+                        </label>
+                        <input
+                          type="text"
+                          value={manualTxnRef}
+                          onChange={(e) => {
+                            setManualTxnRef(e.target.value.toUpperCase());
+                            setErrorMessage(null);
+                          }}
+                          placeholder="e.g. FT2609028881 or MP26090212345"
+                          className="h-11 w-full rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm uppercase"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* TAB 2: ENTER TRANSACTION ID ONLY (SMS NOT MANDATORY) */
+                  <div className="space-y-2.5 animate-fadeIn">
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        {locale === "am" ? "የትራንዛክሽን ቁጥር (Transaction ID / Reference):" : "Transaction ID (Txn Reference):"}
+                      </label>
+                      <input
+                        type="text"
+                        value={manualTxnRef}
+                        onChange={(e) => {
+                          setManualTxnRef(e.target.value.toUpperCase());
+                          setErrorMessage(null);
+                        }}
+                        placeholder="e.g. FT2609028881 or MP26090212345"
+                        className="h-12 w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 caret-blue-600 dark:caret-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm uppercase"
+                      />
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {locale === "am" 
+                        ? "ክፍያውን ሲፈጽሙ ከCBE ወይም ቴሌብር የደረስዎትን የትራንዛክሽን ቁጥር (FT... ወይም MP...) እዚህ ያስገቡ። የባንክ SMS መልእክት መለጠፍ ግዴታ አይደለም።" 
+                        : "Enter the transaction reference code (FT... or MP...) from your bank confirmation. Pasting SMS is not required."}
+                    </p>
                   </div>
                 )}
               </div>
 
               {/* ── 5. CONFIRM & SUBMIT PAYMENT BUTTON ────────────────────── */}
-              <Button
-                type="button"
-                onClick={handleSubmitPayment}
-                disabled={isPending || isPendingApproval || daysCount <= 0 || smsText.trim().length === 0}
-                className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-base shadow-xl shadow-blue-600/25 transition-all active:scale-[0.98] cursor-pointer"
-              >
-                {isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <ShieldCheck className="w-5 h-5" />
-                    <span>{t("verifyAndConfirmPayment")} (ETB {totalPayable.toLocaleString()})</span>
-                  </div>
-                )}
-              </Button>
+              {(() => {
+                const hasValidPayment = paymentMethod === "sms"
+                  ? (smsText.trim().length > 0 || manualTxnRef.trim().length >= 4)
+                  : manualTxnRef.trim().length >= 4;
+
+                return (
+                  <Button
+                    type="button"
+                    onClick={handleSubmitPayment}
+                    disabled={isPending || isPendingApproval || daysCount <= 0 || !hasValidPayment}
+                    className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-base shadow-xl shadow-blue-600/25 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <ShieldCheck className="w-5 h-5" />
+                        <span>{t("verifyAndConfirmPayment")} (ETB {totalPayable.toLocaleString()})</span>
+                      </div>
+                    )}
+                  </Button>
+                );
+              })()}
 
             </div>
           )}
