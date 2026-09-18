@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { NotificationBell } from "@/components/ui/NotificationBell";
 import EqubBalanceCard from "@/components/dashboard/EqubBalanceCard";
 import { PaymentActionBar } from "@/components/dashboard/PaymentActionBar";
 import { PayEqubModal } from "@/components/dashboard/PayEqubModal";
@@ -159,14 +158,7 @@ export default function ContributorDashboardClient({
           </div>
 
           <div className="flex items-center gap-2">
-            {userId && (
-              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                <NotificationBell userId={userId} />
-              </div>
-            )}
-            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-              <LanguageToggle />
-            </div>
+            <LanguageToggle className="text-white hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 h-auto text-xs" />
           </div>
         </div>
 
