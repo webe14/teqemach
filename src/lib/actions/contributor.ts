@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { parseEthiopianBankSms } from "@/lib/sms-parser";
+import { TelegramNotifier } from "@/lib/telegram/notifier";
 
 export async function getContributorStats(contributorId: string) {
   try {
@@ -423,14 +424,16 @@ export async function submitContributorPayment({
           collector:profiles!collector_id (
             id,
             full_name,
-            phone_number
+            phone_number,
+            telegram_id,
+            telegram_chat_id
           )
         `)
         .eq("id", groupId)
         .single(),
       supabase
         .from("profiles")
-        .select("id, full_name, phone_number, email, telegram_id, status")
+        .select("id, full_name, phone_number, email, telegram_id, telegram_chat_id, status")
         .eq("id", contributorId)
         .single(),
     ]);
@@ -561,47 +564,106 @@ export async function submitContributorPayment({
       console.warn("Notification insert warning:", notifErr);
     }
 
-    // 6. Find contributor phone number (from profile, linked profiles, or telegram_users)
-    let contributorPhone = contributor?.phone_number;
-    if (!contributorPhone && contributor?.telegram_id) {
+    // 6. Resolve contributor phone and Telegram chat ID
+    let contributorPhone = contributor?.phone_number || null;
+    let contributorChatId: string | number | null = contributor?.telegram_chat_id || contributor?.telegram_id || null;
+
+    // A. If phone is missing but telegram_id is known, look up phone from telegram_users
+    if (!contributorPhone && contributorChatId) {
       try {
         const { data: tgUser } = await supabase
           .from("telegram_users")
           .select("phone_number")
-          .eq("telegram_id", contributor.telegram_id)
+          .eq("telegram_id", contributorChatId)
           .maybeSingle();
         if (tgUser?.phone_number) contributorPhone = tgUser.phone_number;
-      } catch {}
+      } catch (err) {
+        console.warn("Could not resolve phone from telegram_users:", err);
+      }
     }
 
-    if (!contributorPhone && contributor?.telegram_id) {
+    // B. If telegram chat ID is missing, resolve it from telegram_users by phone number suffix or user_id
+    if (!contributorChatId && contributorPhone) {
+      const digits = contributorPhone.replace(/\D/g, "");
+      const suffix = digits.slice(-9);
       try {
-        const { data: linkedProf } = await supabase
-          .from("profiles")
-          .select("phone_number")
-          .eq("telegram_id", contributor.telegram_id)
-          .not("phone_number", "is", null)
-          .limit(1)
-          .maybeSingle();
-        if (linkedProf?.phone_number) contributorPhone = linkedProf.phone_number;
-      } catch {}
+        const { data: tgUsers } = await supabase
+          .from("telegram_users")
+          .select("telegram_id, phone_number, user_id")
+          .or(`phone_number.ilike.%${suffix}%,user_id.eq.${contributorId}`)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
+          contributorChatId = tgUsers[0].telegram_id;
+          // Cache to profiles table so subsequent calls are immediate
+          await supabase
+            .from("profiles")
+            .update({
+              telegram_id: tgUsers[0].telegram_id,
+              telegram_chat_id: tgUsers[0].telegram_id,
+              telegram_verified: true,
+            })
+            .eq("id", contributorId);
+        }
+      } catch (err) {
+        console.warn("Could not resolve telegram_user by phone:", err);
+      }
     }
 
+    // C. Format Ethiopian dates and strings
+    const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
+    const { buildPaymentConfirmationSms } = await import("@/lib/sms-otp");
+    const ethDate = gregorianToEthiopianString(new Date(), "am");
+    
+    let datesStr = `${cyclesToPay.length} ቀናት`;
+    if (cyclesToPay.length === 1) {
+      datesStr = `ቀን ${cyclesToPay[0]}`;
+    } else if (cyclesToPay.length <= 4) {
+      datesStr = cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ");
+    } else {
+      datesStr = `ቀን ${cyclesToPay[0]} - ${cyclesToPay[cyclesToPay.length - 1]} (${cyclesToPay.length} ቀናት)`;
+    }
+
+    // 7. Instant Telegram Delivery to Contributor
+    if (contributorChatId) {
+      try {
+        console.log(`[submitContributorPayment] Sending Telegram confirmation to chat ${contributorChatId} for ${contributor?.full_name}`);
+        await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
+          contributorName: contributor?.full_name || "ውድ ደንበኛ",
+          amount: totalAmount.toLocaleString(),
+          groupName: group.name,
+          contributionDate: ethDate,
+          selectedDates: datesStr,
+          totalSelected: cyclesToPay.length,
+          collectorName: group.collector?.full_name || "ሰብሳቢዎ",
+        });
+        console.log(`[submitContributorPayment] Telegram message sent successfully to contributor.`);
+      } catch (tgErr) {
+        console.error("[submitContributorPayment] Error sending Telegram message to contributor:", tgErr);
+      }
+    }
+
+    // 8. Instant Telegram Delivery to Collector/Admin
+    const collectorChatId = group.collector?.telegram_chat_id || group.collector?.telegram_id;
+    if (collectorChatId) {
+      try {
+        await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
+          contributorName: contributor?.full_name || "ውድ ደንበኛ",
+          amount: totalAmount.toLocaleString(),
+          groupName: group.name,
+          contributionDate: ethDate,
+          selectedDates: datesStr,
+          totalSelected: cyclesToPay.length,
+        });
+      } catch (ce) {
+        console.error("[submitContributorPayment] Error sending collector confirmation:", ce);
+      }
+    }
+
+    // 9. SMS Delivery (Direct API & Job Queue)
     if (contributorPhone) {
       try {
-        const { gregorianToEthiopianString } = await import("@/lib/ethiopian-calendar");
-        const { buildPaymentConfirmationSms, formatEthiopianPhone } = await import("@/lib/sms-otp");
-        const ethDate = gregorianToEthiopianString(new Date(), "am");
-        
-        let datesStr = `${cyclesToPay.length} ቀናት`;
-        if (cyclesToPay.length === 1) {
-          datesStr = `ቀን ${cyclesToPay[0]}`;
-        } else if (cyclesToPay.length <= 4) {
-          datesStr = cyclesToPay.map((c: number) => `ቀን ${c}`).join(", ");
-        } else {
-          datesStr = `ቀን ${cyclesToPay[0]} - ${cyclesToPay[cyclesToPay.length - 1]} (${cyclesToPay.length} ቀናት)`;
-        }
-
         const smsMsg = buildPaymentConfirmationSms({
           contributorName: contributor?.full_name || "ውድ ደንበኛ",
           totalAmount: totalAmount,
@@ -610,7 +672,7 @@ export async function submitContributorPayment({
           ethiopianDateStr: ethDate,
           selectedDatesStr: datesStr,
           daysCount: cyclesToPay.length,
-          collectorName: group.collector?.full_name || "webshet worku",
+          collectorName: group.collector?.full_name || "ውብ ዲጂታል እቁብ",
         });
 
         const digits = contributorPhone.replace(/\D/g, "");
@@ -619,17 +681,55 @@ export async function submitContributorPayment({
           : digits.startsWith("0")
           ? `+251${digits.slice(1)}`
           : `+251${digits}`;
-        
+
+        // Direct SMS Dispatch via SMS Ethiopia API if key is present
+        const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
+        let directSent = false;
+        if (smsEthiopiaApiKey) {
+          try {
+            let cleanedMsisdn = digits;
+            if (cleanedMsisdn.startsWith("0")) {
+              cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
+            } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
+              cleanedMsisdn = "251" + cleanedMsisdn;
+            }
+
+            const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
+              method: "POST",
+              headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "KEY": smsEthiopiaApiKey,
+              },
+              body: JSON.stringify({
+                msisdn: cleanedMsisdn,
+                text: smsMsg,
+              }),
+            });
+
+            if (smsRes.ok) {
+              directSent = true;
+              console.log(`[submitContributorPayment] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
+            } else {
+              const resErr = await smsRes.json().catch(() => ({}));
+              console.warn("[submitContributorPayment] Direct SMS Ethiopia response:", resErr);
+            }
+          } catch (apiErr) {
+            console.error("[submitContributorPayment] Direct SMS Ethiopia fetch failed:", apiErr);
+          }
+        }
+
         await supabase.from("sms_jobs").insert({
           type: "payment_confirmation",
           recipient: formattedPhone,
           message: smsMsg,
-          status: "pending",
-          attempts: 0,
+          status: directSent ? "sent" : "pending",
+          sent_at: directSent ? new Date().toISOString() : null,
+          attempts: directSent ? 1 : 0,
           max_attempts: 3,
         });
       } catch (smsErr) {
-        console.warn("SMS queue warning:", smsErr);
+        console.warn("[submitContributorPayment] SMS dispatch warning:", smsErr);
       }
     }
 

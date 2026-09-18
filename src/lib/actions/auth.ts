@@ -42,13 +42,31 @@ export async function checkTelegramLinkedForPhoneAction(phone: string) {
     const phoneVariants = getPhoneVariants(phone);
     const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
 
-    const { data: tgUser } = await adminClient
+    let tgUser: any = null;
+    const { data: exactMatches } = await adminClient
       .from("telegram_users")
       .select("telegram_id, username, first_name, last_name, phone_number")
       .or(orConditions)
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+
+    if (exactMatches && exactMatches.length > 0) {
+      tgUser = exactMatches[0];
+    } else {
+      const digits = phone.replace(/\D/g, "");
+      const suffix = digits.slice(-9);
+      if (suffix && suffix.length >= 9) {
+        const { data: suffixMatches } = await adminClient
+          .from("telegram_users")
+          .select("telegram_id, username, first_name, last_name, phone_number")
+          .or(`phone_number.ilike.%${suffix}%`)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        if (suffixMatches && suffixMatches.length > 0) {
+          tgUser = suffixMatches[0];
+        }
+      }
+    }
 
     if (tgUser && tgUser.telegram_id) {
       return {
@@ -119,13 +137,32 @@ export async function registerWithPhoneOtpAction({
   // Check if phone was linked in telegram_users
   const phoneVariants = getPhoneVariants(phone);
   const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
-  const { data: tgUser } = await adminClient
+  let tgUser: any = null;
+
+  const { data: exactTgUsers } = await adminClient
     .from("telegram_users")
-    .select("telegram_id, username, first_name, last_name")
+    .select("telegram_id, username, first_name, last_name, phone_number")
     .or(orConditions)
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (exactTgUsers && exactTgUsers.length > 0) {
+    tgUser = exactTgUsers[0];
+  } else {
+    const digits = phone.replace(/\D/g, "");
+    const suffix = digits.slice(-9);
+    if (suffix && suffix.length >= 9) {
+      const { data: suffixTgUsers } = await adminClient
+        .from("telegram_users")
+        .select("telegram_id, username, first_name, last_name, phone_number")
+        .or(`phone_number.ilike.%${suffix}%`)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (suffixTgUsers && suffixTgUsers.length > 0) {
+        tgUser = suffixTgUsers[0];
+      }
+    }
+  }
 
   const telegramId = tgUser?.telegram_id || null;
   const telegramUsername = tgUser?.username || null;
@@ -178,12 +215,12 @@ function getPhoneVariants(rawInput: string): string[] {
       variants.add(`0${national}`);
       variants.add(national);
       variants.add(`+251${national}`);
-    } else if (digits.startsWith("09") && digits.length === 10) {
+    } else if (digits.startsWith("0") && digits.length === 10) {
       const national = digits.slice(1);
       variants.add(national);
       variants.add(`251${national}`);
       variants.add(`+251${national}`);
-    } else if (digits.startsWith("9") && digits.length === 9) {
+    } else if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
       variants.add(`0${digits}`);
       variants.add(`251${digits}`);
       variants.add(`+251${digits}`);

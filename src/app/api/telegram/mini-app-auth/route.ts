@@ -20,12 +20,12 @@ function getPhoneVariants(rawInput: string): string[] {
       variants.add(`0${national}`);
       variants.add(national);
       variants.add(`+251${national}`);
-    } else if (digits.startsWith("09") && digits.length === 10) {
+    } else if (digits.startsWith("0") && digits.length === 10) {
       const national = digits.slice(1);
       variants.add(national);
       variants.add(`251${national}`);
       variants.add(`+251${national}`);
-    } else if (digits.startsWith("9") && digits.length === 9) {
+    } else if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
       variants.add(`0${digits}`);
       variants.add(`251${digits}`);
       variants.add(`+251${digits}`);
@@ -82,10 +82,24 @@ export async function POST(req: Request) {
       if (profiles.length === 0 && tgUser?.phone_number) {
         const phoneVariants = getPhoneVariants(tgUser.phone_number);
         const orConditions = phoneVariants.map((v) => `phone_number.eq.${v}`).join(",");
-        const { data: matchedProfiles } = await adminClient
+        let { data: matchedProfiles } = await adminClient
           .from("profiles")
           .select("*")
           .or(orConditions);
+
+        if (!matchedProfiles || matchedProfiles.length === 0) {
+          const digits = tgUser.phone_number.replace(/\D/g, "");
+          const suffix = digits.slice(-9);
+          if (suffix && suffix.length >= 9) {
+            const { data: suffixProfiles } = await adminClient
+              .from("profiles")
+              .select("*")
+              .or(`phone_number.ilike.%${suffix}%`);
+            if (suffixProfiles && suffixProfiles.length > 0) {
+              matchedProfiles = suffixProfiles;
+            }
+          }
+        }
 
         if (matchedProfiles && matchedProfiles.length > 0) {
           const ids = matchedProfiles.map((p) => p.id);

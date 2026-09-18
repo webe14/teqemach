@@ -641,16 +641,51 @@ export async function markCyclePaid(
             ethiopianDateStr: contribDateTg,
             selectedDatesStr: selDates,
             daysCount: 1,
-            collectorName: collector.full_name || "ሰብሳቢዎ",
+            collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
           });
-          
+
+          // Direct SMS Dispatch via SMS Ethiopia API if key is present
+          const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
+          let directSent = false;
+          if (smsEthiopiaApiKey) {
+            try {
+              const digits = details.phone_number.replace(/\D/g, "");
+              let cleanedMsisdn = digits;
+              if (cleanedMsisdn.startsWith("0")) {
+                cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
+              } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
+                cleanedMsisdn = "251" + cleanedMsisdn;
+              }
+
+              const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
+                method: "POST",
+                headers: {
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+                  "KEY": smsEthiopiaApiKey,
+                },
+                body: JSON.stringify({
+                  msisdn: cleanedMsisdn,
+                  text: smsText,
+                }),
+              });
+              if (smsRes.ok) {
+                directSent = true;
+                console.log(`[markCyclePaid] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
+              }
+            } catch (apiErr) {
+              console.error("[markCyclePaid] Direct SMS fetch failed:", apiErr);
+            }
+          }
+
           try {
             await supabase.from("sms_jobs").insert({
               type: "payment_confirmation",
               recipient: formattedPhone,
               message: smsText,
-              status: "pending",
-              attempts: 0,
+              status: directSent ? "sent" : "pending",
+              sent_at: directSent ? new Date().toISOString() : null,
+              attempts: directSent ? 1 : 0,
               max_attempts: 3,
             });
             console.log(`[markCyclePaid] Queued payment SMS to SIM for ${formattedPhone}`);
@@ -663,25 +698,54 @@ export async function markCyclePaid(
         const prefs = Array.isArray(details?.telegram_notification_prefs) 
           ? details?.telegram_notification_prefs[0] 
           : details?.telegram_notification_prefs;
-        const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+        let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+
+        // If contributorChatId is missing, resolve it from telegram_users by phone or user_id
+        if (!contributorChatId && details?.phone_number) {
+          try {
+            const digits = details.phone_number.replace(/\D/g, "");
+            const suffix = digits.slice(-9);
+            const { data: tgUsers } = await supabase
+              .from("telegram_users")
+              .select("telegram_id, phone_number, user_id")
+              .or(`phone_number.ilike.%${suffix}%,user_id.eq.${updatedContribution.contributor_id}`)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+
+            if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
+              contributorChatId = tgUsers[0].telegram_id;
+              await supabase
+                .from("profiles")
+                .update({
+                  telegram_id: tgUsers[0].telegram_id,
+                  telegram_chat_id: tgUsers[0].telegram_id,
+                  telegram_verified: true,
+                })
+                .eq("id", updatedContribution.contributor_id);
+            }
+          } catch (resErr) {
+            console.warn("[markCyclePaid] Could not resolve telegram user:", resErr);
+          }
+        }
+
         if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
           const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-          console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
+          console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details?.full_name}`);
           const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
-            contributorName: details.full_name || "Contributor",
+            contributorName: details?.full_name || "ውድ ደንበኛ",
             amount: group.contribution_amount,
             groupName: group.name,
             contributionDate: contribDateTg,
             selectedDates: selDates,
             totalSelected: 1,
-            collectorName: collector.full_name || "Your Collector"
+            collectorName: collector.full_name || "ሰብሳቢዎ"
           });
           console.log("[markCyclePaid] Notification sent result:", tgResult);
 
           if (collectorChatId) {
             try {
               await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
-                contributorName: details.full_name || "Contributor",
+                contributorName: details?.full_name || "ውድ ደንበኛ",
                 amount: group.contribution_amount,
                 groupName: group.name,
                 contributionDate: contribDateTg,
@@ -780,16 +844,51 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               ethiopianDateStr: contribDateTg,
               selectedDatesStr: selDates,
               daysCount: contributorContributions.length,
-              collectorName: collector.full_name || "ሰብሳቢዎ",
+              collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
             });
-            
+
+            // Direct SMS Dispatch via SMS Ethiopia API if key is present
+            const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
+            let directSent = false;
+            if (smsEthiopiaApiKey) {
+              try {
+                const digits = details.phone_number.replace(/\D/g, "");
+                let cleanedMsisdn = digits;
+                if (cleanedMsisdn.startsWith("0")) {
+                  cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
+                } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
+                  cleanedMsisdn = "251" + cleanedMsisdn;
+                }
+
+                const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
+                  method: "POST",
+                  headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "KEY": smsEthiopiaApiKey,
+                  },
+                  body: JSON.stringify({
+                    msisdn: cleanedMsisdn,
+                    text: smsText,
+                  }),
+                });
+                if (smsRes.ok) {
+                  directSent = true;
+                  console.log(`[markMultipleCyclesPaid] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
+                }
+              } catch (apiErr) {
+                console.error("[markMultipleCyclesPaid] Direct SMS fetch failed:", apiErr);
+              }
+            }
+
             try {
               await supabase.from("sms_jobs").insert({
                 type: "payment_confirmation",
                 recipient: formattedPhone,
                 message: smsText,
-                status: "pending",
-                attempts: 0,
+                status: directSent ? "sent" : "pending",
+                sent_at: directSent ? new Date().toISOString() : null,
+                attempts: directSent ? 1 : 0,
                 max_attempts: 3,
               });
               console.log(`[markMultipleCyclesPaid] Queued payment SMS to SIM for ${formattedPhone}`);
@@ -802,25 +901,54 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
           const prefs = Array.isArray(details?.telegram_notification_prefs) 
             ? details?.telegram_notification_prefs[0] 
             : details?.telegram_notification_prefs;
-          const contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+          let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+
+          // If contributorChatId is missing, resolve it from telegram_users by phone or user_id
+          if (!contributorChatId && details?.phone_number) {
+            try {
+              const digits = details.phone_number.replace(/\D/g, "");
+              const suffix = digits.slice(-9);
+              const { data: tgUsers } = await supabase
+                .from("telegram_users")
+                .select("telegram_id, phone_number, user_id")
+                .or(`phone_number.ilike.%${suffix}%,user_id.eq.${contributorId}`)
+                .order("updated_at", { ascending: false })
+                .limit(1);
+
+              if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
+                contributorChatId = tgUsers[0].telegram_id;
+                await supabase
+                  .from("profiles")
+                  .update({
+                    telegram_id: tgUsers[0].telegram_id,
+                    telegram_chat_id: tgUsers[0].telegram_id,
+                    telegram_verified: true,
+                  })
+                  .eq("id", contributorId);
+              }
+            } catch (resErr) {
+              console.warn("[markMultipleCyclesPaid] Could not resolve telegram user:", resErr);
+            }
+          }
+
           if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
             const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-            console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details.full_name}`);
+            console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details?.full_name}`);
             const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
-              contributorName: details.full_name || "Contributor",
+              contributorName: details?.full_name || "ውድ ደንበኛ",
               amount: totalAmount,
               groupName: group.name,
               contributionDate: contribDateTg,
               selectedDates: selDates,
               totalSelected: contributorContributions.length,
-              collectorName: collector.full_name || "Your Collector"
+              collectorName: collector.full_name || "ሰብሳቢዎ"
             });
             console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
 
             if (collectorChatId) {
               try {
                 await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
-                  contributorName: details.full_name || "Contributor",
+                  contributorName: details?.full_name || "ውድ ደንበኛ",
                   amount: totalAmount,
                   groupName: group.name,
                   contributionDate: contribDateTg,
