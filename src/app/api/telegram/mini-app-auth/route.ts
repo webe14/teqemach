@@ -275,7 +275,16 @@ export async function POST(req: Request) {
         );
       }
 
-      const passwordMatch = await bcrypt.compare(password, existingProfile.password);
+      let passwordMatch = false;
+      if (existingProfile.password === password) {
+        passwordMatch = true;
+      } else {
+        try {
+          passwordMatch = await bcrypt.compare(password, existingProfile.password);
+        } catch {
+          passwordMatch = false;
+        }
+      }
       if (!passwordMatch) {
         return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
       }

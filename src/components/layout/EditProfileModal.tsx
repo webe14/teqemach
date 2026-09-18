@@ -253,50 +253,6 @@ export function EditProfileModal({ userName, role, collapsed, isMobile, classNam
                     </div>
                   </div>
 
-                  {/* Notifications Card */}
-                  <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 space-y-3">
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Telegram Notifications</h3>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium cursor-pointer" htmlFor="pref-contribution">Contribution Confirmations</Label>
-                        <input 
-                          type="checkbox"
-                          id="pref-contribution" 
-                          checked={prefs.contribution_confirmations} 
-                          onChange={(e) => handleTogglePref("contribution_confirmations", e.target.checked)} 
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
-                        />
-                      </div>
-                      
-                      {role === "admin" && (
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium cursor-pointer" htmlFor="pref-broadcast">Receive Broadcasts</Label>
-                          <input 
-                            type="checkbox"
-                            id="pref-broadcast" 
-                            checked={prefs.broadcast_announcements} 
-                            onChange={(e) => handleTogglePref("broadcast_announcements", e.target.checked)} 
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
-                          />
-                        </div>
-                      )}
-                      
-                      {role === "contributor" && (
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium cursor-pointer" htmlFor="pref-reminders">Payment Reminders</Label>
-                          <input 
-                            type="checkbox"
-                            id="pref-reminders" 
-                            checked={prefs.payment_reminders} 
-                            onChange={(e) => handleTogglePref("payment_reminders", e.target.checked)} 
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                   {error && (
                     <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                       <AlertCircle className="h-4 w-4 shrink-0" />

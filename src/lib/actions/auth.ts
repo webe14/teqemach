@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createCustomSession, clearCustomSession, getCustomSession } from "@/lib/session";
 import { syncTelegramUserActiveProfile } from "@/lib/telegram-bot";
 import bcrypt from "bcryptjs";
@@ -511,26 +512,50 @@ export async function updateProfile(data: {
     updates.full_name = data.fullName.trim();
   }
 
-  // Update password (requires current password for non-admin)
+  // Update password
   if (data.newPassword) {
-    if (profile.role !== "admin") {
-      // Verify current password for contributor
-      if (!data.currentPassword) {
-        return { error: "Current password is required" };
+    if (profile.role !== "admin" || data.currentPassword) {
+      // If current password is set on profile, verify it
+      if (profile.password) {
+        if (!data.currentPassword) {
+          return { error: "Current password is required" };
+        }
+        let match = false;
+        if (profile.password === data.currentPassword) {
+          match = true;
+        } else {
+          try {
+            match = await bcrypt.compare(data.currentPassword, profile.password);
+          } catch {
+            match = false;
+          }
+        }
+        if (!match) {
+          return { error: "Current password is incorrect" };
+        }
       }
-      const match = await bcrypt.compare(data.currentPassword, profile.password ?? "");
-      if (!match) {
-        return { error: "Current password is incorrect" };
-      }
-      const hashed = await bcrypt.hash(data.newPassword, 10);
-      updates.password = hashed;
-    } else {
-      // For admin: update via Supabase Auth
-      const supabase = await createClient();
-      const { error: authErr } = await supabase.auth.updateUser({
+    }
+
+    const hashed = await bcrypt.hash(data.newPassword, 10);
+    updates.password = hashed;
+
+    // Update Supabase Auth if auth user exists with this ID
+    try {
+      await adminClient.auth.admin.updateUserById(profile.id, {
         password: data.newPassword,
       });
-      if (authErr) return { error: authErr.message };
+    } catch {
+      // Ignore if no Supabase Auth user matches this ID
+    }
+
+    // Also update via client session if user is currently signed in via Supabase Auth
+    try {
+      const supabase = await createClient();
+      await supabase.auth.updateUser({
+        password: data.newPassword,
+      });
+    } catch {
+      // Ignore
     }
   }
 
@@ -544,6 +569,8 @@ export async function updateProfile(data: {
     .eq("id", profile.id);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
   return { success: true };
 }
 
