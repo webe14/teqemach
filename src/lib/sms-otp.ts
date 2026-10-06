@@ -1,113 +1,15 @@
+export {
+  formatEthiopianPhone,
+  toLocalEthiopianPhone,
+  normalizeEthiopianMsisdn,
+  cleanSmsText,
+  buildPaymentConfirmationSms,
+  queueAndDispatchSms,
+} from "./sms-service";
+export type { PaymentSmsDetails, DispatchSmsOptions, DispatchSmsResult } from "./sms-service";
+
+import { formatEthiopianPhone, queueAndDispatchSms } from "./sms-service";
 import { createAdminClient } from "@/lib/supabase/server";
-
-export function formatEthiopianPhone(rawInput: string): string | null {
-  if (!rawInput) return null;
-  const digits = rawInput.replace(/\D/g, "");
-  
-  if (digits.startsWith("251") && (digits.length === 12)) {
-    const prefix = digits.charAt(3);
-    if (prefix === "9" || prefix === "7") {
-      return `+${digits}`;
-    }
-  } else if (digits.startsWith("0") && digits.length === 10) {
-    const prefix = digits.charAt(1);
-    if (prefix === "9" || prefix === "7") {
-      return `+251${digits.slice(1)}`;
-    }
-  } else if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
-    return `+251${digits}`;
-  }
-  
-  return null;
-}
-
-export function toLocalEthiopianPhone(rawInput: string): string {
-  if (!rawInput) return "";
-  const digits = rawInput.replace(/\D/g, "");
-  
-  if (digits.startsWith("251") && digits.length === 12) {
-    return `0${digits.slice(3)}`;
-  } else if (digits.startsWith("0") && digits.length === 10) {
-    return digits;
-  } else if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
-    return `0${digits}`;
-  }
-  
-  return rawInput;
-}
-
-export interface PaymentSmsDetails {
-  contributorName: string;
-  totalAmount: number;
-  ratePerCycle?: number;
-  groupName?: string;
-  ethiopianDateStr: string;
-  selectedDatesStr?: string;
-  daysCount: number;
-  paidDays?: number | string;
-  remainingDays?: number | string;
-  collectorName?: string;
-}
-
-export function buildPaymentConfirmationSms({
-  contributorName,
-  totalAmount,
-  ratePerCycle,
-  groupName,
-  ethiopianDateStr,
-  selectedDatesStr,
-  daysCount,
-  paidDays,
-  remainingDays,
-}: PaymentSmsDetails): string {
-  const typeText = ratePerCycle ? `Bale ${ratePerCycle}` : (cleanSmsText(groupName) || "Equb");
-  const cleanDates = selectedDatesStr ? cleanSmsText(selectedDatesStr) : "";
-  const datesText = cleanDates ? ` (${cleanDates})` : "";
-  const cleanDate = cleanSmsText(ethiopianDateStr);
-  const cleanName = cleanSmsText(contributorName || "");
-  const nameDisplay = cleanName.length > 0 ? ` ${cleanName}` : "";
-  const cleanPaid = paidDays !== undefined && paidDays !== null ? cleanSmsText(String(paidDays)) : "";
-  const cleanRemaining = remainingDays !== undefined && remainingDays !== null ? cleanSmsText(String(remainingDays)) : "";
-  const statusText = cleanPaid ? `, Total Paid: ${cleanPaid}` : cleanRemaining ? `, Remaining: ${cleanRemaining}` : "";
-
-  return `Wub Digital Equb: Selam${nameDisplay}, your payment of ETB ${totalAmount.toLocaleString()} for ${typeText} (${daysCount} days${datesText})${statusText} on ${cleanDate} is confirmed. Thank you!`;
-}
-
-export function cleanSmsText(text?: string | null): string {
-  if (!text) return "";
-  const amharicReplacements: [RegExp, string][] = [
-    [/መስከረም|መስ/g, "Mes"],
-    [/ጥቅምት|ጥቅ/g, "Tik"],
-    [/ህዳር|ህዳ/g, "Hid"],
-    [/ታህሳስ|ታህ/g, "Tah"],
-    [/ጥር/g, "Tir"],
-    [/የካቲት|የካ/g, "Yek"],
-    [/መጋቢት|መጋ/g, "Meg"],
-    [/ሚያዚያ|ሚያ/g, "Mia"],
-    [/ግንቦት|ግን/g, "Gin"],
-    [/ሰኔ/g, "Sene"],
-    [/ሐምሌ|ሀምሌ|ሐም/g, "Ham"],
-    [/ነሐሴ|ነሀሴ|ነሐ|ነሀ/g, "Neh"],
-    [/ጳጉሜ|ጳጉ/g, "Pagu"],
-    [/ቀን\s*/g, "Day "],
-    [/ባለ\s*/g, "Bale "],
-    [/ብር/g, "ETB"],
-    [/ዕቁብ|እቁብ/g, "Equb"],
-    [/ተቀማጭ/g, "Wub Digital Equb"],
-    [/ውብ ዲጂታል እቁብ/g, "Wub Digital Equb"],
-  ];
-
-  let result = text;
-  for (const [pattern, replacement] of amharicReplacements) {
-    result = result.replace(pattern, replacement);
-  }
-
-  // Remove any remaining non-ASCII characters to guarantee single-part 7-bit GSM delivery
-  result = result.replace(/[^\x20-\x7E]/g, "");
-  result = result.replace(/\s+/g, " ").trim();
-
-  return result;
-}
 
 export async function findProfileByPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
@@ -198,19 +100,15 @@ export async function sendRegistrationOtp({
       is_verified: false,
     });
 
-    // Queue SMS job in sms_jobs for the phone gateway
-    const { error: smsError } = await adminClient.from("sms_jobs").insert({
-      type: "otp",
-      recipient: formattedPhone,
+    // Queue & dispatch SMS for testing application and/or direct SMS API
+    const dispatchRes = await queueAndDispatchSms({
+      phone: formattedPhone,
       message: `Your Wub Digital Equb verification code is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
-      status: "pending",
-      attempts: 0,
-      max_attempts: 3,
+      type: "otp",
     });
 
-    if (smsError) {
-      console.error("Error queuing SMS job:", smsError);
-      return { success: false, error: "Failed to dispatch verification SMS. Please try again." };
+    if (!dispatchRes.success) {
+      return { success: false, error: dispatchRes.error || "Failed to dispatch verification SMS. Please try again." };
     }
 
     return { success: true, formattedPhone };

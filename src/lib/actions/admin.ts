@@ -369,3 +369,4 @@ export async function deleteEqubGroup(groupId: string) {
     return { error: err.message, success: false };
   }
 }
+

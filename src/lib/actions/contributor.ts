@@ -719,6 +719,7 @@ export async function submitContributorPayment({
     // 9. SMS Delivery (Direct API & Job Queue)
     if (contributorPhone) {
       try {
+        const { queueAndDispatchSms, buildPaymentConfirmationSms } = await import("@/lib/sms-service");
         const smsMsg = buildPaymentConfirmationSms({
           contributorName: contributor?.full_name || "ውድ ደንበኛ",
           totalAmount: totalAmount,
@@ -731,58 +732,10 @@ export async function submitContributorPayment({
           collectorName: group.collector?.full_name || "ውብ ዲጂታል እቁብ",
         });
 
-        const digits = contributorPhone.replace(/\D/g, "");
-        const formattedPhone = digits.startsWith("251")
-          ? `+${digits}`
-          : digits.startsWith("0")
-          ? `+251${digits.slice(1)}`
-          : `+251${digits}`;
-
-        // Direct SMS Dispatch via SMS Ethiopia API if key is present
-        const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
-        let directSent = false;
-        if (smsEthiopiaApiKey) {
-          try {
-            let cleanedMsisdn = digits;
-            if (cleanedMsisdn.startsWith("0")) {
-              cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
-            } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
-              cleanedMsisdn = "251" + cleanedMsisdn;
-            }
-
-            const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
-              method: "POST",
-              headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "KEY": smsEthiopiaApiKey,
-              },
-              body: JSON.stringify({
-                msisdn: cleanedMsisdn,
-                text: smsMsg,
-              }),
-            });
-
-            if (smsRes.ok) {
-              directSent = true;
-              console.log(`[submitContributorPayment] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
-            } else {
-              const resErr = await smsRes.json().catch(() => ({}));
-              console.warn("[submitContributorPayment] Direct SMS Ethiopia response:", resErr);
-            }
-          } catch (apiErr) {
-            console.error("[submitContributorPayment] Direct SMS Ethiopia fetch failed:", apiErr);
-          }
-        }
-
-        await supabase.from("sms_jobs").insert({
-          type: "payment_confirmation",
-          recipient: formattedPhone,
+        await queueAndDispatchSms({
+          phone: contributorPhone,
           message: smsMsg,
-          status: directSent ? "sent" : "pending",
-          sent_at: directSent ? new Date().toISOString() : null,
-          attempts: directSent ? 1 : 0,
-          max_attempts: 3,
+          type: "payment_confirmation",
         });
       } catch (smsErr) {
         console.warn("[submitContributorPayment] SMS dispatch warning:", smsErr);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { queueAndDispatchSms, formatEthiopianPhone } from "@/lib/sms-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: true })
-      .limit(10);
+      .limit(50);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -85,69 +86,24 @@ export async function POST(request: Request) {
     console.log(`Message: "${message}"`);
     console.log("-----------------------------------------");
 
-    // SMS Ethiopia integration if configured
-    const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
+    const result = await queueAndDispatchSms({
+      phone,
+      message,
+      type: type || "general",
+    });
 
-    if (smsEthiopiaApiKey) {
-      try {
-        // Format phone to 251... standard for SMS Ethiopia (digits only, no + prefix)
-        let cleanedPhone = phone.replace(/[\s\-\(\)\+]/g, "");
-        if (cleanedPhone.startsWith("0")) {
-          cleanedPhone = "251" + cleanedPhone.slice(1);
-        } else if (cleanedPhone.length === 9 && (cleanedPhone.startsWith("9") || cleanedPhone.startsWith("7"))) {
-          cleanedPhone = "251" + cleanedPhone;
-        }
-
-        console.log(`Sending SMS Ethiopia to ${cleanedPhone}`);
-
-        const response = await fetch("https://smsethiopia.et/api/sms/send", {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "KEY": smsEthiopiaApiKey,
-          },
-          body: JSON.stringify({
-            msisdn: cleanedPhone,
-            text: message,
-          }),
-        });
-
-        const resData = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          console.error("SMS Ethiopia failed:", resData);
-          return NextResponse.json(
-            { 
-              success: false, 
-              error: resData.detail || resData.message || "SMS Ethiopia failed to send", 
-              details: resData 
-            },
-            { status: response.status }
-          );
-        } else {
-          console.log("SMS Ethiopia sent successfully:", resData);
-          return NextResponse.json({
-            success: true,
-            provider: "smsethiopia",
-            recipient: cleanedPhone,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      } catch (smsError: any) {
-        console.error("Failed to send via SMS Ethiopia:", smsError);
-        return NextResponse.json(
-          { success: false, error: smsError.message || "Failed to communicate with SMS Ethiopia API" },
-          { status: 500 }
-        );
-      }
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || "Failed to dispatch SMS" },
+        { status: 400 }
+      );
     }
 
-    // Return success to the client regardless of real network outcome (fallback to mock simulation)
     return NextResponse.json({
       success: true,
-      provider: "simulator",
-      messageId: `msg_${Math.random().toString(36).substring(2, 11)}`,
-      recipient: phone,
+      jobId: result.jobId,
+      provider: result.provider,
+      recipient: result.formattedPhone || phone,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -158,3 +114,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

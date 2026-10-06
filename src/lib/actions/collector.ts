@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { TelegramNotifier } from "@/lib/telegram/notifier";
 import { gregorianToEthiopianString, formatCycleDatesSummary } from "@/lib/ethiopian-calendar";
-import { formatEthiopianPhone, toLocalEthiopianPhone, cleanSmsText, buildPaymentConfirmationSms } from "@/lib/sms-otp";
+import { formatEthiopianPhone, toLocalEthiopianPhone, cleanSmsText, buildPaymentConfirmationSms, queueAndDispatchSms } from "@/lib/sms-otp";
 
 export async function inviteContributor(formData: {
   fullName: string;
@@ -306,6 +306,49 @@ export async function addContributor(formData: {
   return { success: true };
 }
 
+export async function getAvailableContributors(collectorId?: string) {
+  try {
+    const supabase = await createAdminClient();
+
+    // Fetch all active/registered contributors
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone_number, email, telegram_username, status, created_at, collector_id")
+      .eq("role", "contributor")
+      .order("full_name", { ascending: true });
+
+    if (error || !profiles) {
+      return { data: [], error: error?.message || "Failed to load contributors" };
+    }
+
+    // Also fetch current group memberships to display what groups they are currently enrolled in
+    const { data: memberships } = await supabase
+      .from("group_memberships")
+      .select("contributor_id, group_id, group:equb_groups(id, name, contribution_amount, total_days, frequency)");
+
+    const memberMap: Record<string, any[]> = {};
+    if (memberships) {
+      for (const m of memberships) {
+        if (!memberMap[m.contributor_id]) {
+          memberMap[m.contributor_id] = [];
+        }
+        if (m.group) {
+          memberMap[m.contributor_id].push(m.group);
+        }
+      }
+    }
+
+    const result = profiles.map((p) => ({
+      ...p,
+      joinedGroups: memberMap[p.id] || [],
+    }));
+
+    return { data: result, error: null };
+  } catch (err: any) {
+    return { data: [], error: err.message || "Failed to fetch contributors" };
+  }
+}
+
 export async function updateContributor(data: {
   contributorId: string;
   membershipId: string;
@@ -313,10 +356,11 @@ export async function updateContributor(data: {
   phoneNumber: string;
   email: string;
   startDate?: string;
+  groupId?: string;
 }) {
   const supabase = await createAdminClient();
 
-  // Update profile info
+  // 1. Update profile info
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
@@ -328,17 +372,92 @@ export async function updateContributor(data: {
 
   if (profileError) return { error: profileError.message };
 
-  // Update membership start date if provided
-  if (data.startDate) {
-    const { error: membershipError } = await supabase
-      .from("group_memberships")
-      .update({ created_at: data.startDate })
-      .eq("id", data.membershipId);
+  // 2. Update membership (group and/or start date)
+  if (data.membershipId && data.membershipId !== data.contributorId) {
+    const membershipUpdate: Record<string, any> = {};
+    if (data.startDate) {
+      membershipUpdate.created_at = data.startDate;
+    }
 
-    if (membershipError) return { error: membershipError.message };
+    if (data.groupId) {
+      // Check current membership to see if group changed
+      const { data: currentMem } = await supabase
+        .from("group_memberships")
+        .select("group_id, collector_id")
+        .eq("id", data.membershipId)
+        .maybeSingle();
+
+      const oldGroupId = currentMem?.group_id;
+
+      if (oldGroupId !== data.groupId) {
+        // Fetch new group info
+        const { data: newGroup } = await supabase
+          .from("equb_groups")
+          .select("id, collector_id, total_days")
+          .eq("id", data.groupId)
+          .maybeSingle();
+
+        if (newGroup) {
+          membershipUpdate.group_id = data.groupId;
+          if (newGroup.collector_id) {
+            membershipUpdate.collector_id = newGroup.collector_id;
+          }
+
+          // Update unpaid contributions to point to new group_id
+          if (oldGroupId) {
+            await supabase
+              .from("contributions")
+              .update({ group_id: data.groupId })
+              .eq("contributor_id", data.contributorId)
+              .eq("group_id", oldGroupId)
+              .eq("is_marked_paid", false);
+          }
+
+          // Ensure cycles are created for new group
+          await createContributionCycles(
+            data.contributorId,
+            newGroup.collector_id || currentMem?.collector_id || data.contributorId,
+            data.groupId,
+            newGroup.total_days
+          );
+        }
+      }
+    }
+
+    if (Object.keys(membershipUpdate).length > 0) {
+      const { error: membershipError } = await supabase
+        .from("group_memberships")
+        .update(membershipUpdate)
+        .eq("id", data.membershipId);
+
+      if (membershipError) return { error: membershipError.message };
+    }
+  } else if (data.groupId) {
+    // If membership didn't exist yet, check or create it
+    const { data: newGroup } = await supabase
+      .from("equb_groups")
+      .select("id, collector_id, total_days")
+      .eq("id", data.groupId)
+      .maybeSingle();
+
+    if (newGroup) {
+      await addContributor({
+        contributorId: data.contributorId,
+        groupId: data.groupId,
+        collectorId: newGroup.collector_id || data.contributorId,
+        startDate: data.startDate,
+      });
+      await createContributionCycles(
+        data.contributorId,
+        newGroup.collector_id || data.contributorId,
+        data.groupId,
+        newGroup.total_days
+      );
+    }
   }
 
   revalidatePath("/dashboard/collector/contributors");
+  revalidatePath("/dashboard/admin/contributors");
   return { success: true };
 }
 
@@ -603,28 +722,27 @@ export async function markCyclePaid(
     .single();
 
   if (error) return { error: error.message };
-  // 2. Telegram Notification
-  if (updatedContribution) {
-    try {
-      // Fetch related data
-      const { data: details, error: detailsError } = await supabase
-        .from("profiles")
-        .select(`
-          full_name,
-          phone_number,
-          telegram_chat_id,
-          telegram_id,
-          telegram_notification_prefs (contribution_confirmations)
-        `)
-        .eq("id", updatedContribution.contributor_id)
-        .single();
-        
-      if (detailsError) {
-        console.error("[markCyclePaid] Error fetching details:", detailsError);
-      }
-        
-      const { data: group } = await supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single();
-      const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", updatedContribution.collector_id).single();
+
+  try {
+    // 2. Telegram & SMS Notification
+    // Fetch related data safely
+    const [{ data: details }, { data: group }, { data: collector }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, phone_number, telegram_chat_id, telegram_id")
+          .eq("id", updatedContribution.contributor_id)
+          .maybeSingle(),
+        supabase
+          .from("equb_groups")
+          .select("id, name, contribution_amount, total_days, frequency, created_at")
+          .eq("id", groupId)
+          .single(),
+        supabase
+          .from("profiles")
+          .select("full_name, phone_number, telegram_chat_id, telegram_id")
+          .eq("id", updatedContribution.collector_id)
+          .single(),
+      ]);
       
       if (group && collector) {
         const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
@@ -655,11 +773,21 @@ export async function markCyclePaid(
           totalPaidCyclesCount: paidCount,
         });
 
-        // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
-        if (details?.phone_number) {
-          const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
+        // 1. Queue and dispatch SMS text message to contributor phone SIM card
+        let targetPhone = details?.phone_number;
+        if (!targetPhone) {
+          // Check telegram_users fallback
+          const { data: tgUser } = await supabase
+            .from("telegram_users")
+            .select("phone_number")
+            .eq("user_id", updatedContribution.contributor_id)
+            .maybeSingle();
+          if (tgUser?.phone_number) targetPhone = tgUser.phone_number;
+        }
+
+        if (targetPhone) {
           const smsText = buildPaymentConfirmationSms({
-            contributorName: details.full_name || "ውድ ደንበኛ",
+            contributorName: details?.full_name || "ውድ ደንበኛ",
             totalAmount: group.contribution_amount,
             ratePerCycle: group.contribution_amount,
             groupName: group.name,
@@ -670,60 +798,22 @@ export async function markCyclePaid(
             collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
           });
 
-          // Direct SMS Dispatch via SMS Ethiopia API if key is present
-          const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
-          let directSent = false;
-          if (smsEthiopiaApiKey) {
-            try {
-              const digits = details.phone_number.replace(/\D/g, "");
-              let cleanedMsisdn = digits;
-              if (cleanedMsisdn.startsWith("0")) {
-                cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
-              } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
-                cleanedMsisdn = "251" + cleanedMsisdn;
-              }
-
-              const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
-                method: "POST",
-                headers: {
-                  "Accept": "application/json",
-                  "Content-Type": "application/json",
-                  "KEY": smsEthiopiaApiKey,
-                },
-                body: JSON.stringify({
-                  msisdn: cleanedMsisdn,
-                  text: smsText,
-                }),
-              });
-              if (smsRes.ok) {
-                directSent = true;
-                console.log(`[markCyclePaid] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
-              }
-            } catch (apiErr) {
-              console.error("[markCyclePaid] Direct SMS fetch failed:", apiErr);
-            }
-          }
-
-          try {
-            await supabase.from("sms_jobs").insert({
-              type: "payment_confirmation",
-              recipient: formattedPhone,
-              message: smsText,
-              status: directSent ? "sent" : "pending",
-              sent_at: directSent ? new Date().toISOString() : null,
-              attempts: directSent ? 1 : 0,
-              max_attempts: 3,
-            });
-            console.log(`[markCyclePaid] Queued payment SMS to SIM for ${formattedPhone}`);
-          } catch (smsErr) {
-            console.error("[markCyclePaid] Failed to queue SMS job:", smsErr);
-          }
+          await queueAndDispatchSms({
+            phone: targetPhone,
+            message: smsText,
+            type: "payment_confirmation",
+          });
+          console.log(`[markCyclePaid] Queued & dispatched payment SMS to ${targetPhone}`);
         }
 
         // 2. Telegram Notification
-        const prefs = Array.isArray(details?.telegram_notification_prefs) 
-          ? details?.telegram_notification_prefs[0] 
-          : details?.telegram_notification_prefs;
+        const { data: notifPref } = await supabase
+          .from("telegram_notification_prefs")
+          .select("contribution_confirmations")
+          .eq("user_id", updatedContribution.contributor_id)
+          .maybeSingle();
+
+        const prefs = notifPref;
         let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
 
         // If contributorChatId is missing, resolve it from telegram_users by phone or user_id
@@ -790,11 +880,10 @@ export async function markCyclePaid(
     } catch (e) {
       console.error("[markCyclePaid] Failed to send notification:", e);
     }
-  }
 
-  revalidatePath(`/dashboard/collector/contributors`);
-  return { success: true };
-}
+    revalidatePath(`/dashboard/collector/contributors`);
+    return { success: true };
+  }
 
 export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: string) {
   const supabase = await createAdminClient();
@@ -834,27 +923,19 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
       const contributorIds = [...new Set(updatedContributions.map(c => c.contributor_id))];
       
       for (const contributorId of contributorIds) {
-        const { data: details, error: detailsError } = await supabase
-          .from("profiles")
-          .select(`
-            full_name,
-            phone_number,
-            telegram_chat_id,
-            telegram_id,
-            telegram_notification_prefs (contribution_confirmations)
-          `)
-          .eq("id", contributorId)
-          .single();
-          
-        if (detailsError) {
-          console.error("[markMultipleCyclesPaid] Error fetching details for", contributorId, detailsError);
-        }
-          
         const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
-        const groupId = contributorContributions[0].group_id; // Assume all cycles are for the same group (UI groups them)
-        
-        const { data: group } = await supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single();
-        const { data: collector } = await supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single();
+        if (contributorContributions.length === 0) continue;
+        const groupId = contributorContributions[0].group_id;
+
+        const [{ data: details }, { data: group }, { data: collector }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, full_name, phone_number, telegram_chat_id, telegram_id")
+            .eq("id", contributorId)
+            .maybeSingle(),
+          supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single(),
+          supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single(),
+        ]);
         
         if (group && collector) {
           const totalAmount = group.contribution_amount * contributorContributions.length;
@@ -887,11 +968,20 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
             totalPaidCyclesCount: paidCount,
           });
 
-          // 1. Queue SMS text message to contributor phone SIM card (Amharic confirmation template)
-          if (details?.phone_number) {
-            const formattedPhone = formatEthiopianPhone(details.phone_number) || (details.phone_number.startsWith("+") ? details.phone_number : `+${details.phone_number}`);
+          // 1. Queue and dispatch SMS text message to contributor phone SIM card
+          let targetPhone = details?.phone_number;
+          if (!targetPhone) {
+            const { data: tgUser } = await supabase
+              .from("telegram_users")
+              .select("phone_number")
+              .eq("user_id", contributorId)
+              .maybeSingle();
+            if (tgUser?.phone_number) targetPhone = tgUser.phone_number;
+          }
+
+          if (targetPhone) {
             const smsText = buildPaymentConfirmationSms({
-              contributorName: details.full_name || "ውድ ደንበኛ",
+              contributorName: details?.full_name || "ውድ ደንበኛ",
               totalAmount: totalAmount,
               ratePerCycle: group.contribution_amount,
               groupName: group.name,
@@ -902,60 +992,22 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
               collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
             });
 
-            // Direct SMS Dispatch via SMS Ethiopia API if key is present
-            const smsEthiopiaApiKey = process.env.SMSETHIOPIA_API_KEY;
-            let directSent = false;
-            if (smsEthiopiaApiKey) {
-              try {
-                const digits = details.phone_number.replace(/\D/g, "");
-                let cleanedMsisdn = digits;
-                if (cleanedMsisdn.startsWith("0")) {
-                  cleanedMsisdn = "251" + cleanedMsisdn.slice(1);
-                } else if (cleanedMsisdn.length === 9 && (cleanedMsisdn.startsWith("9") || cleanedMsisdn.startsWith("7"))) {
-                  cleanedMsisdn = "251" + cleanedMsisdn;
-                }
-
-                const smsRes = await fetch("https://smsethiopia.et/api/sms/send", {
-                  method: "POST",
-                  headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "KEY": smsEthiopiaApiKey,
-                  },
-                  body: JSON.stringify({
-                    msisdn: cleanedMsisdn,
-                    text: smsText,
-                  }),
-                });
-                if (smsRes.ok) {
-                  directSent = true;
-                  console.log(`[markMultipleCyclesPaid] Direct SMS sent via SMS Ethiopia to ${cleanedMsisdn}`);
-                }
-              } catch (apiErr) {
-                console.error("[markMultipleCyclesPaid] Direct SMS fetch failed:", apiErr);
-              }
-            }
-
-            try {
-              await supabase.from("sms_jobs").insert({
-                type: "payment_confirmation",
-                recipient: formattedPhone,
-                message: smsText,
-                status: directSent ? "sent" : "pending",
-                sent_at: directSent ? new Date().toISOString() : null,
-                attempts: directSent ? 1 : 0,
-                max_attempts: 3,
-              });
-              console.log(`[markMultipleCyclesPaid] Queued payment SMS to SIM for ${formattedPhone}`);
-            } catch (smsErr) {
-              console.error("[markMultipleCyclesPaid] Failed to queue SMS job:", smsErr);
-            }
+            await queueAndDispatchSms({
+              phone: targetPhone,
+              message: smsText,
+              type: "payment_confirmation",
+            });
+            console.log(`[markMultipleCyclesPaid] Queued & dispatched payment SMS to ${targetPhone}`);
           }
 
           // 2. Telegram Notification
-          const prefs = Array.isArray(details?.telegram_notification_prefs) 
-            ? details?.telegram_notification_prefs[0] 
-            : details?.telegram_notification_prefs;
+          const { data: notifPref } = await supabase
+            .from("telegram_notification_prefs")
+            .select("contribution_confirmations")
+            .eq("user_id", contributorId)
+            .maybeSingle();
+
+          const prefs = notifPref;
           let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
 
           // If contributorChatId is missing, resolve it from telegram_users by phone or user_id

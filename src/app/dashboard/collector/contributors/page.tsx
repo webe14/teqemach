@@ -13,6 +13,7 @@ import {
   deleteContributor,
   inviteContributor,
   getPendingContributors,
+  getAvailableContributors,
 } from "@/lib/actions/collector";
 import {
   getCurrentEthiopianDate,
@@ -101,6 +102,7 @@ export default function ManageContributorsPage() {
     Array<{ id: string; name: string; total_days: number }>
   >([]);
   const [pendingContributors, setPendingContributors] = useState<PendingContributor[]>([]);
+  const [availableContributors, setAvailableContributors] = useState<any[]>([]);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   // Default starting date to today in Ethiopian calendar
@@ -109,6 +111,9 @@ export default function ManageContributorsPage() {
 
   // ── Add dialog state ──────────────────────────────────────────────────────
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"new" | "existing">("new");
+  const [selectedExistingId, setSelectedExistingId] = useState<string>("");
+  const [existingSearch, setExistingSearch] = useState("");
   const [addForm, setAddForm] = useState({
     fullName: "",
     phoneNumber: "",
@@ -129,6 +134,7 @@ export default function ManageContributorsPage() {
     fullName: "",
     phoneNumber: "",
     email: "",
+    groupId: "",
     startDate: "",
   });
   const [editError, setEditError] = useState<string | null>(null);
@@ -148,10 +154,11 @@ export default function ManageContributorsPage() {
       const profile = await getCurrentProfile();
       if (!profile) return;
       setUserId(profile.id);
-      const [contRes, groupRes, pendingRes] = await Promise.all([
+      const [contRes, groupRes, pendingRes, availRes] = await Promise.all([
         getCollectorContributors(profile.id),
         getCollectorGroups(profile.id),
         getPendingContributors(profile.id),
+        getAvailableContributors(profile.id),
       ]);
       setContributors((contRes.data as Contributor[]) ?? []);
       setGroups(
@@ -159,17 +166,20 @@ export default function ManageContributorsPage() {
           []
       );
       setPendingContributors((pendingRes.data as PendingContributor[]) ?? []);
+      setAvailableContributors((availRes.data as any[]) ?? []);
     })();
   }, []);
 
   async function refreshContributors() {
     if (!userId) return;
-    const [res, pendingRes] = await Promise.all([
+    const [res, pendingRes, availRes] = await Promise.all([
       getCollectorContributors(userId),
       getPendingContributors(userId),
+      getAvailableContributors(userId),
     ]);
     setContributors((res.data as Contributor[]) ?? []);
     setPendingContributors((pendingRes.data as PendingContributor[]) ?? []);
+    setAvailableContributors((availRes.data as any[]) ?? []);
   }
 
   const filtered = contributors.filter((c) => {
@@ -196,8 +206,66 @@ export default function ManageContributorsPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    if (!userId) return;
+
+    if (addMode === "existing") {
+      if (!selectedExistingId) {
+        setAddError(t("selectExistingContributor") || "Please select an existing contributor");
+        return;
+      }
+      if (!addForm.groupId) {
+        setAddError(t("selectEqubGroup") || "Please choose an Equb group");
+        return;
+      }
+
+      setAddError(null);
+      startTransition(async () => {
+        let startDateISO: string | undefined = undefined;
+        if (addForm.startDate) {
+          const parsed = parseEthiopianDate(addForm.startDate);
+          if (!parsed) {
+            setAddError(t("invalidDateFormat"));
+            return;
+          }
+          startDateISO = toGregorian(parsed).toISOString();
+        }
+
+        const selectedGroup = groups.find((g) => g.id === addForm.groupId);
+        const result = await addContributor({
+          contributorId: selectedExistingId,
+          groupId: addForm.groupId,
+          collectorId: userId,
+          startDate: startDateISO,
+        });
+
+        if (result.error) {
+          setAddError(result.error);
+          return;
+        }
+
+        if (selectedGroup) {
+          await createContributionCycles(
+            selectedExistingId,
+            userId,
+            addForm.groupId,
+            selectedGroup.total_days
+          );
+        }
+
+        setAddSuccess(true);
+        await refreshContributors();
+        setTimeout(() => {
+          setAddDialogOpen(false);
+          setAddSuccess(false);
+          setSelectedExistingId("");
+          setExistingSearch("");
+        }, 1200);
+      });
+      return;
+    }
+
+    // Mode: New Contributor
     if (
-      !userId ||
       !addForm.fullName.trim() ||
       !addForm.phoneNumber.trim() ||
       !addForm.telegramUsername.trim() ||
@@ -268,7 +336,6 @@ export default function ManageContributorsPage() {
       setAddSuccess(true);
       setAddGeneratedLink(`https://t.me/TeqemachBot?start=link_${contributorId}`);
       await refreshContributors();
-      // Do not auto-close the dialog so the collector can copy the link
     });
   }
 
@@ -285,6 +352,7 @@ export default function ManageContributorsPage() {
       fullName: c.contributor?.full_name ?? "",
       phoneNumber: c.contributor?.phone_number ?? "",
       email: c.contributor?.email ?? "",
+      groupId: c.group_id || c.group?.id || (groups.length > 0 ? groups[0].id : ""),
       startDate: ecStr,
     });
     setEditError(null);
@@ -327,6 +395,7 @@ export default function ManageContributorsPage() {
         fullName: editForm.fullName.trim(),
         phoneNumber: editForm.phoneNumber.trim(),
         email: editForm.email.trim(),
+        groupId: editForm.groupId || undefined,
         startDate: startDateISO,
       });
 
@@ -593,9 +662,44 @@ export default function ManageContributorsPage() {
               {t("addContributor")}
             </DialogTitle>
             <DialogDescription>
-              {t("registerNewContributor")}
+              {addMode === "existing"
+                ? (t("selectExistingContributor") || "Select an existing contributor to add them to an Equb group")
+                : (t("registerNewContributor") || "Register a new contributor")}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/60 border border-border">
+            <button
+              type="button"
+              onClick={() => {
+                setAddMode("new");
+                setAddError(null);
+              }}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                addMode === "new"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("newContributor") || "New Contributor"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddMode("existing");
+                setAddError(null);
+              }}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                addMode === "existing"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("previousContributor") || "From Previous / Existing"}
+            </button>
+          </div>
+
           <form onSubmit={handleAdd} className="space-y-5">
             {addError && (
               <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
@@ -632,148 +736,261 @@ export default function ManageContributorsPage() {
               </div>
             )}
 
-            {/* ── Personal Info Section ── */}
-            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5" />
-                {t("personalInfo")}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5 col-span-2">
-                  <Label htmlFor="add-name" className="text-xs">
-                    {t("fullName")}
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="add-name"
-                      value={addForm.fullName}
-                      onChange={(e) => updateAdd("fullName", e.target.value)}
-                      placeholder="Abebe Kebede"
-                      className="pl-10 h-9"
-                      required
-                    />
-                  </div>
-                </div>
+            {/* ── MODE 1: FROM PREVIOUS / EXISTING CONTRIBUTORS ── */}
+            {addMode === "existing" && (
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="add-phone" className="text-xs">
-                    {t("phone")}
+                  <Label className="text-xs font-semibold">
+                    {t("selectExistingContributor") || "Select Existing Contributor"} <span className="text-destructive">*</span>
                   </Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      id="add-phone"
-                      value={addForm.phoneNumber}
-                      onChange={(e) => updateAdd("phoneNumber", e.target.value)}
-                      placeholder="+251911234567"
-                      className="pl-10 h-9"
-                      required
+                      placeholder={t("searchContributors") || "Search by name or phone..."}
+                      value={existingSearch}
+                      onChange={(e) => setExistingSearch(e.target.value)}
+                      className="pl-9 h-8 text-xs"
                     />
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="add-tg-user" className="text-xs">
-                    Telegram Username
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="add-tg-user"
-                      value={addForm.telegramUsername}
-                      onChange={(e) => updateAdd("telegramUsername", e.target.value)}
-                      placeholder="@username"
-                      className="pl-10 h-9"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 border border-border rounded-xl p-2 bg-muted/20">
+                    {(() => {
+                      const filteredExisting = availableContributors.filter((p) => {
+                        const name = (p.full_name || "").toLowerCase();
+                        const phone = (p.phone_number || "").toLowerCase();
+                        const q = existingSearch.toLowerCase();
+                        return name.includes(q) || phone.includes(q);
+                      });
 
-            {/* ── Account Section ── */}
-            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5" />
-                {t("accountCredentials")}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="add-email" className="text-xs">
-                    {t("email")} (Optional)
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="add-email"
-                      type="email"
-                      value={addForm.email}
-                      onChange={(e) => updateAdd("email", e.target.value)}
-                      placeholder="user@example.com"
-                      className="pl-10 h-9"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="add-password" className="text-xs">
-                    {t("password")} (Optional)
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="add-password"
-                      type="password"
-                      value={addForm.password}
-                      onChange={(e) => updateAdd("password", e.target.value)}
-                      placeholder={t("minSixChars")}
-                      className="pl-10 h-9"
-                      minLength={6}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+                      if (filteredExisting.length === 0) {
+                        return (
+                          <div className="p-3 text-center text-xs text-muted-foreground">
+                            {t("noResultsFound") || "No contributors found"}
+                          </div>
+                        );
+                      }
 
-            {/* ── Group & Schedule Section ── */}
-            <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {t("groupAndSchedule")}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">{t("selectEqubGroup")}</Label>
-                  <Select
-                    value={addForm.groupId}
-                    onValueChange={(v) => updateAdd("groupId", v)}
-                  >
-                    <SelectTrigger id="select-group" className="h-9">
-                      <SelectValue placeholder="Choose a group..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          {t("noEqubGroups")}
-                        </div>
-                      ) : (
-                        groups.map((g) => (
-                          <SelectItem key={g.id} value={g.id}>
-                            {g.name} ({g.total_days} {t("days")})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                      return filteredExisting.map((p) => {
+                        const isSelected = selectedExistingId === p.id;
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => setSelectedExistingId(p.id)}
+                            className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? "border-primary bg-primary/10 shadow-sm"
+                                : "border-border/60 hover:bg-muted/50"
+                            }`}
+                          >
+                            <div>
+                              <p className="font-bold text-foreground">{p.full_name || "Unknown"}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {p.phone_number || "No phone"} {p.telegram_username ? `· @${p.telegram_username}` : ""}
+                              </p>
+                              {p.joinedGroups && p.joinedGroups.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {p.joinedGroups.map((jg: any) => (
+                                    <span key={jg.id} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                      {jg.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <EthiopianDatePicker
-                    label={t("startDate")}
-                    value={addForm.startDate}
-                    onChange={(val) => updateAdd("startDate", val)}
-                    locale={locale}
-                  />
+
+                {/* Group & Date for Existing */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t("selectEqubGroup")} <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={addForm.groupId}
+                      onValueChange={(v) => updateAdd("groupId", v)}
+                    >
+                      <SelectTrigger id="select-existing-group" className="h-9">
+                        <SelectValue placeholder="Choose group..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            {t("noEqubGroups")}
+                          </div>
+                        ) : (
+                          groups.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>
+                              {g.name} ({g.total_days} {t("days")})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <EthiopianDatePicker
+                      label={t("startDate")}
+                      value={addForm.startDate}
+                      onChange={(val) => updateAdd("startDate", val)}
+                      locale={locale}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* ── MODE 2: REGISTER NEW CONTRIBUTOR ── */}
+            {addMode === "new" && (
+              <>
+                {/* ── Personal Info Section ── */}
+                <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    {t("personalInfo")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5 col-span-2">
+                      <Label htmlFor="add-name" className="text-xs">
+                        {t("fullName")}
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="add-name"
+                          value={addForm.fullName}
+                          onChange={(e) => updateAdd("fullName", e.target.value)}
+                          placeholder="Abebe Kebede"
+                          className="pl-10 h-9"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="add-phone" className="text-xs">
+                        {t("phone")}
+                      </Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="add-phone"
+                          value={addForm.phoneNumber}
+                          onChange={(e) => updateAdd("phoneNumber", e.target.value)}
+                          placeholder="+251911234567"
+                          className="pl-10 h-9"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="add-tg-user" className="text-xs">
+                        Telegram Username
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="add-tg-user"
+                          value={addForm.telegramUsername}
+                          onChange={(e) => updateAdd("telegramUsername", e.target.value)}
+                          placeholder="@username"
+                          className="pl-10 h-9"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Account Section ── */}
+                <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5" />
+                    {t("accountCredentials")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="add-email" className="text-xs">
+                        {t("email")} (Optional)
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="add-email"
+                          type="email"
+                          value={addForm.email}
+                          onChange={(e) => updateAdd("email", e.target.value)}
+                          placeholder="user@example.com"
+                          className="pl-10 h-9"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="add-password" className="text-xs">
+                        {t("password")} (Optional)
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="add-password"
+                          type="password"
+                          value={addForm.password}
+                          onChange={(e) => updateAdd("password", e.target.value)}
+                          placeholder={t("minSixChars")}
+                          className="pl-10 h-9"
+                          minLength={6}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Group & Schedule Section ── */}
+                <div className={`space-y-3 ${addGeneratedLink ? "hidden" : ""}`}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {t("groupAndSchedule")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("selectEqubGroup")}</Label>
+                      <Select
+                        value={addForm.groupId}
+                        onValueChange={(v) => updateAdd("groupId", v)}
+                      >
+                        <SelectTrigger id="select-group" className="h-9">
+                          <SelectValue placeholder="Choose a group..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groups.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              {t("noEqubGroups")}
+                            </div>
+                          ) : (
+                            groups.map((g) => (
+                              <SelectItem key={g.id} value={g.id}>
+                                {g.name} ({g.total_days} {t("days")})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <EthiopianDatePicker
+                        label={t("startDate")}
+                        value={addForm.startDate}
+                        onChange={(val) => updateAdd("startDate", val)}
+                        locale={locale}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             <DialogFooter className="gap-2 pt-2">
               <Button
@@ -782,6 +999,8 @@ export default function ManageContributorsPage() {
                 onClick={() => {
                   setAddDialogOpen(false);
                   setAddGeneratedLink(null);
+                  setSelectedExistingId("");
+                  setExistingSearch("");
                   setAddForm({
                     fullName: "",
                     phoneNumber: "",
@@ -801,7 +1020,11 @@ export default function ManageContributorsPage() {
                   disabled={isPending}
                   id="confirm-add-contributor"
                 >
-                  {isPending ? "Adding..." : t("addContributor")}
+                  {isPending
+                    ? "Adding..."
+                    : addMode === "existing"
+                    ? (t("addToEqubGroup") || "Add to Equb Group")
+                    : t("addContributor")}
                 </Button>
               )}
             </DialogFooter>
@@ -885,25 +1108,40 @@ export default function ManageContributorsPage() {
               </div>
             </div>
 
+            {/* ── Editable Equb Group Selection ── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-group" className="text-xs">
+                {t("changeEqubGroup") || "Equb Group"} <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={editForm.groupId}
+                onValueChange={(v) => updateEdit("groupId", v)}
+              >
+                <SelectTrigger id="edit-group" className="h-9">
+                  <SelectValue placeholder="Choose Equb Group..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {t("noEqubGroups")}
+                    </div>
+                  ) : (
+                    groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name} ({g.total_days} {t("days")}) · ETB {((g as any).contribution_amount ?? 0).toLocaleString()}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
             <EthiopianDatePicker
               label={t("startDate")}
               value={editForm.startDate}
               onChange={(val) => updateEdit("startDate", val)}
               locale={locale}
             />
-
-            {editTarget?.group && (
-              <div className="rounded-xl bg-muted/50 border border-border p-3 flex items-center gap-3">
-                <Badge variant="info" className="shrink-0">
-                  {editTarget.group.name}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  ETB {editTarget.group.contribution_amount.toLocaleString()} ·{" "}
-                  {editTarget.group.total_days} {t("days")} ·{" "}
-                  {t(editTarget.group.frequency as any) || editTarget.group.frequency}
-                </span>
-              </div>
-            )}
 
             <DialogFooter className="gap-2 pt-2">
               <Button
