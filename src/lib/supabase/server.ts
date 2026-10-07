@@ -26,19 +26,24 @@ export async function createClient() {
   );
 }
 
+let cachedAdminClient: ReturnType<typeof createServerClient> | null = null;
+
 export async function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return []; // Ignore user cookies so the service role key is actually used
+  if (!cachedAdminClient) {
+    cachedAdminClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return []; // Ignore user cookies so the service role key is actually used
+          },
+          setAll(cookiesToSet) {
+            // Do nothing
+          },
         },
-        setAll(cookiesToSet) {
-          // Do nothing
-        },
-      },
-    }
-  );
+      }
+    );
+  }
+  return cachedAdminClient;
 }

@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     const adminClient = await createAdminClient();
 
     // Get ALL profiles for this telegram user
-    let profiles = await getProfilesByTelegramId(telegramId);
+    let profiles: any[] = (await getProfilesByTelegramId(telegramId)) || [];
 
     // ─── LOGIN ──────────────────────────────────────────────────────────
     if (action === "login") {
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         }
 
         if (matchedProfiles && matchedProfiles.length > 0) {
-          const ids = matchedProfiles.map((p) => p.id);
+          const ids = (matchedProfiles as any[]).map((p: any) => p.id);
           await adminClient
             .from("profiles")
             .update({
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
             })
             .in("id", ids);
 
-          profiles = matchedProfiles;
+          profiles = matchedProfiles as any[];
         }
       }
 
@@ -133,11 +133,11 @@ export async function POST(req: Request) {
       // 2. Admin profile (if exists)
       // 3. First profile
       let targetProfile = tgUser?.user_id
-        ? profiles.find((p) => p.id === tgUser.user_id)
+        ? profiles.find((p: any) => p.id === tgUser.user_id)
         : null;
 
       if (!targetProfile) {
-        targetProfile = profiles.find((p) => p.role === "admin") || profiles[0];
+        targetProfile = profiles.find((p: any) => p.role === "admin") || profiles[0];
       }
 
       // Create persistent 30-day session
@@ -162,7 +162,7 @@ export async function POST(req: Request) {
       }
 
       // Verify the profile belongs to this telegram user
-      const profile = profiles.find((p) => p.id === profileId);
+      const profile = profiles.find((p: any) => p.id === profileId);
       if (!profile) {
         return NextResponse.json({ error: "Profile not found for this Telegram account" }, { status: 404 });
       }
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
     // ─── REGISTER CONTRIBUTOR (without requiring group selection) ───────────
     if (action === "register_contributor") {
       // Check if user already has a contributor profile
-      const existingContributor = profiles.find((p) => p.role === "contributor");
+      const existingContributor = profiles.find((p: any) => p.role === "contributor");
       if (existingContributor) {
         return NextResponse.json(
           { error: "You already have a contributor account." },

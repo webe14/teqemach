@@ -95,12 +95,13 @@ export async function inviteContributor(formData: {
   return { success: true, id: data.id };
 }
 
-export async function getCollectorContributors(collectorId: string) {
-  const supabase = await createAdminClient();
+import { cache } from "react";
 
-  // Find all related collector/admin profile IDs for this user
+const resolveCollectorContext = cache(async (collectorId: string) => {
+  const supabase = await createAdminClient();
   let collectorIds = [collectorId];
   let isAdmin = false;
+
   try {
     const { data: currentProf } = await supabase
       .from("profiles")
@@ -128,10 +129,17 @@ export async function getCollectorContributors(collectorId: string) {
       }
     }
   } catch (err) {
-    console.warn("getCollectorContributors profile resolution note:", err);
+    console.warn("resolveCollectorContext note:", err);
   }
 
-  // 1. Fetch active contributor profiles
+  return { collectorIds, isAdmin };
+});
+
+export async function getCollectorContributors(collectorId: string) {
+  const supabase = await createAdminClient();
+  const { collectorIds, isAdmin } = await resolveCollectorContext(collectorId);
+
+  // 1. Fetch active contributor profiles & memberships IN PARALLEL
   let profQuery = supabase
     .from("profiles")
     .select("id, full_name, phone_number, email, status, created_at, collector_id")
@@ -139,16 +147,6 @@ export async function getCollectorContributors(collectorId: string) {
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
-  if (!isAdmin) {
-    profQuery = profQuery.in("collector_id", collectorIds);
-  }
-
-  const { data: profiles, error: profError } = await profQuery;
-  if (profError || !profiles) {
-    return { error: profError?.message || "Failed to fetch contributors", data: [] };
-  }
-
-  // 2. Fetch memberships
   let membQuery = supabase
     .from("group_memberships")
     .select(`
@@ -161,11 +159,18 @@ export async function getCollectorContributors(collectorId: string) {
     `);
 
   if (!isAdmin) {
+    profQuery = profQuery.in("collector_id", collectorIds);
     membQuery = membQuery.in("collector_id", collectorIds);
   }
 
-  const { data: memberships } = await membQuery;
+  const [profilesRes, membershipsRes] = await Promise.all([profQuery, membQuery]);
 
+  const profiles = profilesRes.data;
+  if (profilesRes.error || !profiles) {
+    return { error: profilesRes.error?.message || "Failed to fetch contributors", data: [] };
+  }
+
+  const memberships = membershipsRes.data;
   const membershipsByContributor: Record<string, any[]> = {};
   if (memberships) {
     for (const m of memberships) {
@@ -222,42 +227,20 @@ export async function getCollectorContributors(collectorId: string) {
 
 export async function getPendingContributors(collectorId: string) {
   const supabase = await createAdminClient();
+  const { collectorIds, isAdmin } = await resolveCollectorContext(collectorId);
 
-  let collectorIds = [collectorId];
-  try {
-    const { data: currentProf } = await supabase
-      .from("profiles")
-      .select("phone_number, telegram_id, email")
-      .eq("id", collectorId)
-      .single();
-
-    if (currentProf) {
-      const orCond: string[] = [];
-      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
-      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
-      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
-
-      if (orCond.length > 0) {
-        const { data: matched } = await supabase
-          .from("profiles")
-          .select("id")
-          .or(orCond.join(","));
-        if (matched && matched.length > 0) {
-          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("getPendingContributors profile resolution note:", err);
-  }
-
-  const { data, error } = await supabase
+  let query = supabase
     .from("profiles")
     .select("id, full_name, phone_number, telegram_username, created_at")
-    .in("collector_id", collectorIds)
     .eq("status", "pending")
     .eq("role", "contributor")
     .order("created_at", { ascending: false });
+
+  if (!isAdmin) {
+    query = query.in("collector_id", collectorIds);
+  }
+
+  const { data, error } = await query;
 
   if (error) return { error: error.message, data: [] };
   return { data: (data as any[]) ?? [], error: null };
@@ -310,22 +293,24 @@ export async function getAvailableContributors(collectorId?: string) {
   try {
     const supabase = await createAdminClient();
 
-    // Fetch all active/registered contributors
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, phone_number, email, telegram_username, status, created_at, collector_id")
-      .eq("role", "contributor")
-      .order("full_name", { ascending: true });
+    // Fetch all active/registered contributors & memberships in PARALLEL
+    const [profilesRes, membershipsRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone_number, email, telegram_username, status, created_at, collector_id")
+        .eq("role", "contributor")
+        .order("full_name", { ascending: true }),
+      supabase
+        .from("group_memberships")
+        .select("contributor_id, group_id, group:equb_groups(id, name, contribution_amount, total_days, frequency)"),
+    ]);
 
-    if (error || !profiles) {
-      return { data: [], error: error?.message || "Failed to load contributors" };
+    const profiles = profilesRes.data;
+    if (profilesRes.error || !profiles) {
+      return { data: [], error: profilesRes.error?.message || "Failed to load contributors" };
     }
 
-    // Also fetch current group memberships to display what groups they are currently enrolled in
-    const { data: memberships } = await supabase
-      .from("group_memberships")
-      .select("contributor_id, group_id, group:equb_groups(id, name, contribution_amount, total_days, frequency)");
-
+    const memberships = membershipsRes.data;
     const memberMap: Record<string, any[]> = {};
     if (memberships) {
       for (const m of memberships) {
@@ -338,7 +323,7 @@ export async function getAvailableContributors(collectorId?: string) {
       }
     }
 
-    const result = profiles.map((p) => ({
+    const result = (profiles as any[]).map((p: any) => ({
       ...p,
       joinedGroups: memberMap[p.id] || [],
     }));
@@ -723,167 +708,179 @@ export async function markCyclePaid(
 
   if (error) return { error: error.message };
 
+  // Dispatch background notification without blocking response
+  dispatchPaymentNotificationsBackground({
+    contributorId: updatedContribution.contributor_id,
+    collectorId: updatedContribution.collector_id,
+    groupId,
+    cycleNumbers: [updatedContribution.cycle_number],
+    nowIso: now,
+  }).catch((err) => console.error("[markCyclePaid] Notification error:", err));
+
+  revalidatePath(`/dashboard/collector/contributors`);
+  return { success: true };
+}
+
+async function dispatchPaymentNotificationsBackground(params: {
+  contributorId: string;
+  collectorId: string;
+  groupId: string;
+  cycleNumbers: number[];
+  nowIso: string;
+}) {
   try {
-    // 2. Telegram & SMS Notification
-    // Fetch related data safely
+    const supabase = await createAdminClient();
     const [{ data: details }, { data: group }, { data: collector }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, full_name, phone_number, telegram_chat_id, telegram_id")
-          .eq("id", updatedContribution.contributor_id)
-          .maybeSingle(),
-        supabase
-          .from("equb_groups")
-          .select("id, name, contribution_amount, total_days, frequency, created_at")
-          .eq("id", groupId)
-          .single(),
-        supabase
-          .from("profiles")
-          .select("full_name, phone_number, telegram_chat_id, telegram_id")
-          .eq("id", updatedContribution.collector_id)
-          .single(),
-      ]);
-      
-      if (group && collector) {
-        const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-        
-        const [{ data: membershipRecord }, { data: allContribs }] = await Promise.all([
-          supabase
-            .from("group_memberships")
-            .select("created_at")
-            .eq("group_id", groupId)
-            .eq("contributor_id", updatedContribution.contributor_id)
-            .maybeSingle(),
-          supabase
-            .from("contributions")
-            .select("cycle_number")
-            .eq("group_id", groupId)
-            .eq("contributor_id", updatedContribution.contributor_id)
-            .eq("is_marked_paid", true),
-        ]);
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone_number, telegram_chat_id, telegram_id")
+        .eq("id", params.contributorId)
+        .maybeSingle(),
+      supabase
+        .from("equb_groups")
+        .select("id, name, contribution_amount, total_days, frequency, created_at")
+        .eq("id", params.groupId)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("full_name, phone_number, telegram_chat_id, telegram_id")
+        .eq("id", params.collectorId)
+        .single(),
+    ]);
 
-        const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
-        const paidCount = allContribs?.length || 1;
+    if (!group || !collector) return;
 
-        const datesSummary = formatCycleDatesSummary({
-          cycleNumbers: [updatedContribution.cycle_number],
-          startDate: memberStartDate,
-          frequency: group.frequency || "daily",
-          totalDays: group.total_days || 365,
-          totalPaidCyclesCount: paidCount,
-        });
+    const contribDateTg = gregorianToEthiopianString(new Date(params.nowIso), "am");
 
-        // 1. Queue and dispatch SMS text message to contributor phone SIM card
-        let targetPhone = details?.phone_number;
-        if (!targetPhone) {
-          // Check telegram_users fallback
-          const { data: tgUser } = await supabase
-            .from("telegram_users")
-            .select("phone_number")
-            .eq("user_id", updatedContribution.contributor_id)
-            .maybeSingle();
-          if (tgUser?.phone_number) targetPhone = tgUser.phone_number;
+    const [{ data: membershipRecord }, { data: allContribs }] = await Promise.all([
+      supabase
+        .from("group_memberships")
+        .select("created_at")
+        .eq("group_id", params.groupId)
+        .eq("contributor_id", params.contributorId)
+        .maybeSingle(),
+      supabase
+        .from("contributions")
+        .select("cycle_number")
+        .eq("group_id", params.groupId)
+        .eq("contributor_id", params.contributorId)
+        .eq("is_marked_paid", true),
+    ]);
+
+    const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
+    const paidCount = allContribs?.length || params.cycleNumbers.length;
+
+    const datesSummary = formatCycleDatesSummary({
+      cycleNumbers: params.cycleNumbers,
+      startDate: memberStartDate,
+      frequency: group.frequency || "daily",
+      totalDays: group.total_days || 365,
+      totalPaidCyclesCount: paidCount,
+    });
+
+    const totalAmount = group.contribution_amount * params.cycleNumbers.length;
+
+    // 1. Queue and dispatch SMS text message
+    let targetPhone = details?.phone_number;
+    if (!targetPhone) {
+      const { data: tgUser } = await supabase
+        .from("telegram_users")
+        .select("phone_number")
+        .eq("user_id", params.contributorId)
+        .maybeSingle();
+      if (tgUser?.phone_number) targetPhone = tgUser.phone_number;
+    }
+
+    if (targetPhone) {
+      const smsText = buildPaymentConfirmationSms({
+        contributorName: details?.full_name || "ውድ ደንበኛ",
+        totalAmount,
+        ratePerCycle: group.contribution_amount,
+        groupName: group.name,
+        ethiopianDateStr: contribDateTg,
+        selectedDatesStr: datesSummary.smsSelectedDates,
+        daysCount: params.cycleNumbers.length,
+        paidDays: datesSummary.smsPaidText,
+        collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
+      });
+
+      await queueAndDispatchSms({
+        phone: targetPhone,
+        message: smsText,
+        type: "payment_confirmation",
+      });
+    }
+
+    // 2. Telegram Notification
+    const { data: notifPref } = await supabase
+      .from("telegram_notification_prefs")
+      .select("contribution_confirmations")
+      .eq("user_id", params.contributorId)
+      .maybeSingle();
+
+    const prefs = notifPref;
+    let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
+
+    if (!contributorChatId && details?.phone_number) {
+      try {
+        const digits = details.phone_number.replace(/\D/g, "");
+        const suffix = digits.slice(-9);
+        const { data: tgUsers } = await supabase
+          .from("telegram_users")
+          .select("telegram_id, phone_number, user_id")
+          .or(`phone_number.ilike.%${suffix}%,user_id.eq.${params.contributorId}`)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
+          contributorChatId = tgUsers[0].telegram_id;
+          await supabase
+            .from("profiles")
+            .update({
+              telegram_id: tgUsers[0].telegram_id,
+              telegram_chat_id: tgUsers[0].telegram_id,
+              telegram_verified: true,
+            })
+            .eq("id", params.contributorId);
         }
+      } catch (resErr) {
+        console.warn("[dispatchPaymentNotificationsBackground] resolve error:", resErr);
+      }
+    }
 
-        if (targetPhone) {
-          const smsText = buildPaymentConfirmationSms({
+    if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
+      const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
+      await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
+        contributorName: details?.full_name || "ውድ ደንበኛ",
+        amount: totalAmount,
+        groupName: group.name,
+        contributionDate: contribDateTg,
+        selectedDates: datesSummary.botSelectedDates,
+        totalSelected: params.cycleNumbers.length,
+        paidDays: datesSummary.botPaidText,
+        collectorName: collector.full_name || "ሰብሳቢዎ",
+      });
+
+      if (collectorChatId) {
+        try {
+          await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
             contributorName: details?.full_name || "ውድ ደንበኛ",
-            totalAmount: group.contribution_amount,
-            ratePerCycle: group.contribution_amount,
-            groupName: group.name,
-            ethiopianDateStr: contribDateTg,
-            selectedDatesStr: datesSummary.smsSelectedDates,
-            daysCount: 1,
-            paidDays: datesSummary.smsPaidText,
-            collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
-          });
-
-          await queueAndDispatchSms({
-            phone: targetPhone,
-            message: smsText,
-            type: "payment_confirmation",
-          });
-          console.log(`[markCyclePaid] Queued & dispatched payment SMS to ${targetPhone}`);
-        }
-
-        // 2. Telegram Notification
-        const { data: notifPref } = await supabase
-          .from("telegram_notification_prefs")
-          .select("contribution_confirmations")
-          .eq("user_id", updatedContribution.contributor_id)
-          .maybeSingle();
-
-        const prefs = notifPref;
-        let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
-
-        // If contributorChatId is missing, resolve it from telegram_users by phone or user_id
-        if (!contributorChatId && details?.phone_number) {
-          try {
-            const digits = details.phone_number.replace(/\D/g, "");
-            const suffix = digits.slice(-9);
-            const { data: tgUsers } = await supabase
-              .from("telegram_users")
-              .select("telegram_id, phone_number, user_id")
-              .or(`phone_number.ilike.%${suffix}%,user_id.eq.${updatedContribution.contributor_id}`)
-              .order("updated_at", { ascending: false })
-              .limit(1);
-
-            if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
-              contributorChatId = tgUsers[0].telegram_id;
-              await supabase
-                .from("profiles")
-                .update({
-                  telegram_id: tgUsers[0].telegram_id,
-                  telegram_chat_id: tgUsers[0].telegram_id,
-                  telegram_verified: true,
-                })
-                .eq("id", updatedContribution.contributor_id);
-            }
-          } catch (resErr) {
-            console.warn("[markCyclePaid] Could not resolve telegram user:", resErr);
-          }
-        }
-
-        if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
-          const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-          console.log(`[markCyclePaid] Sending telegram to ${contributorChatId} for ${details?.full_name}`);
-          const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
-            contributorName: details?.full_name || "ውድ ደንበኛ",
-            amount: group.contribution_amount,
+            amount: totalAmount,
             groupName: group.name,
             contributionDate: contribDateTg,
             selectedDates: datesSummary.botSelectedDates,
-            totalSelected: 1,
+            totalSelected: params.cycleNumbers.length,
             paidDays: datesSummary.botPaidText,
-            collectorName: collector.full_name || "ሰብሳቢዎ"
           });
-          console.log("[markCyclePaid] Notification sent result:", tgResult);
-
-          if (collectorChatId) {
-            try {
-              await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
-                contributorName: details?.full_name || "ውድ ደንበኛ",
-                amount: group.contribution_amount,
-                groupName: group.name,
-                contributionDate: contribDateTg,
-                selectedDates: datesSummary.botSelectedDates,
-                totalSelected: 1,
-                paidDays: datesSummary.botPaidText,
-              });
-              console.log("[markCyclePaid] Collector notification sent");
-            } catch (ce) {
-              console.error("[markCyclePaid] Failed to send collector notification:", ce);
-            }
-          }
+        } catch (ce) {
+          console.error("[dispatchPaymentNotificationsBackground] collector notification error:", ce);
         }
       }
-    } catch (e) {
-      console.error("[markCyclePaid] Failed to send notification:", e);
     }
-
-    revalidatePath(`/dashboard/collector/contributors`);
-    return { success: true };
+  } catch (err) {
+    console.error("[dispatchPaymentNotificationsBackground] Failed:", err);
   }
+}
 
 export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: string) {
   const supabase = await createAdminClient();
@@ -895,7 +892,7 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
     .in("id", ids);
 
   if (cyclesData && cyclesData.length > 0) {
-    const cIds = [...new Set(cyclesData.map(c => c.contributor_id))];
+    const cIds = [...new Set((cyclesData as any[]).map((c: any) => c.contributor_id))];
     const { data: pendingProfs } = await supabase
       .from("profiles")
       .select("id")
@@ -919,161 +916,23 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
   
   // Group by contributor to avoid spamming multiple messages if they paid multiple cycles
   if (updatedContributions && updatedContributions.length > 0) {
-    try {
-      const contributorIds = [...new Set(updatedContributions.map(c => c.contributor_id))];
-      
-      for (const contributorId of contributorIds) {
-        const contributorContributions = updatedContributions.filter(c => c.contributor_id === contributorId);
-        if (contributorContributions.length === 0) continue;
-        const groupId = contributorContributions[0].group_id;
+    const contributorIds = [...new Set((updatedContributions as any[]).map((c: any) => c.contributor_id))];
+    
+    for (const contributorId of contributorIds) {
+      const contributorContributions = (updatedContributions as any[]).filter((c: any) => c.contributor_id === contributorId);
+      if (contributorContributions.length === 0) continue;
+      const groupId = contributorContributions[0].group_id;
+      const collectorId = contributorContributions[0].collector_id;
+      const cycleNumbers = contributorContributions.map((c: any) => c.cycle_number);
 
-        const [{ data: details }, { data: group }, { data: collector }] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("id, full_name, phone_number, telegram_chat_id, telegram_id")
-            .eq("id", contributorId)
-            .maybeSingle(),
-          supabase.from("equb_groups").select("id, name, contribution_amount, total_days, frequency, created_at").eq("id", groupId).single(),
-          supabase.from("profiles").select("full_name, phone_number, telegram_chat_id, telegram_id").eq("id", contributorContributions[0].collector_id).single(),
-        ]);
-        
-        if (group && collector) {
-          const totalAmount = group.contribution_amount * contributorContributions.length;
-          const contribDateTg = gregorianToEthiopianString(new Date(now), "am");
-
-          const [{ data: membershipRecord }, { data: allContribs }] = await Promise.all([
-            supabase
-              .from("group_memberships")
-              .select("created_at")
-              .eq("group_id", groupId)
-              .eq("contributor_id", contributorId)
-              .maybeSingle(),
-            supabase
-              .from("contributions")
-              .select("cycle_number")
-              .eq("group_id", groupId)
-              .eq("contributor_id", contributorId)
-              .eq("is_marked_paid", true),
-          ]);
-
-          const memberStartDate = membershipRecord?.created_at || group.created_at || new Date().toISOString();
-          const paidCount = allContribs?.length || contributorContributions.length;
-          const cycleNumbers = contributorContributions.map((c) => c.cycle_number);
-
-          const datesSummary = formatCycleDatesSummary({
-            cycleNumbers,
-            startDate: memberStartDate,
-            frequency: group.frequency || "daily",
-            totalDays: group.total_days || 365,
-            totalPaidCyclesCount: paidCount,
-          });
-
-          // 1. Queue and dispatch SMS text message to contributor phone SIM card
-          let targetPhone = details?.phone_number;
-          if (!targetPhone) {
-            const { data: tgUser } = await supabase
-              .from("telegram_users")
-              .select("phone_number")
-              .eq("user_id", contributorId)
-              .maybeSingle();
-            if (tgUser?.phone_number) targetPhone = tgUser.phone_number;
-          }
-
-          if (targetPhone) {
-            const smsText = buildPaymentConfirmationSms({
-              contributorName: details?.full_name || "ውድ ደንበኛ",
-              totalAmount: totalAmount,
-              ratePerCycle: group.contribution_amount,
-              groupName: group.name,
-              ethiopianDateStr: contribDateTg,
-              selectedDatesStr: datesSummary.smsSelectedDates,
-              daysCount: contributorContributions.length,
-              paidDays: datesSummary.smsPaidText,
-              collectorName: collector.full_name || "ውብ ዲጂታል እቁብ",
-            });
-
-            await queueAndDispatchSms({
-              phone: targetPhone,
-              message: smsText,
-              type: "payment_confirmation",
-            });
-            console.log(`[markMultipleCyclesPaid] Queued & dispatched payment SMS to ${targetPhone}`);
-          }
-
-          // 2. Telegram Notification
-          const { data: notifPref } = await supabase
-            .from("telegram_notification_prefs")
-            .select("contribution_confirmations")
-            .eq("user_id", contributorId)
-            .maybeSingle();
-
-          const prefs = notifPref;
-          let contributorChatId = details?.telegram_chat_id || details?.telegram_id;
-
-          // If contributorChatId is missing, resolve it from telegram_users by phone or user_id
-          if (!contributorChatId && details?.phone_number) {
-            try {
-              const digits = details.phone_number.replace(/\D/g, "");
-              const suffix = digits.slice(-9);
-              const { data: tgUsers } = await supabase
-                .from("telegram_users")
-                .select("telegram_id, phone_number, user_id")
-                .or(`phone_number.ilike.%${suffix}%,user_id.eq.${contributorId}`)
-                .order("updated_at", { ascending: false })
-                .limit(1);
-
-              if (tgUsers && tgUsers.length > 0 && tgUsers[0].telegram_id) {
-                contributorChatId = tgUsers[0].telegram_id;
-                await supabase
-                  .from("profiles")
-                  .update({
-                    telegram_id: tgUsers[0].telegram_id,
-                    telegram_chat_id: tgUsers[0].telegram_id,
-                    telegram_verified: true,
-                  })
-                  .eq("id", contributorId);
-              }
-            } catch (resErr) {
-              console.warn("[markMultipleCyclesPaid] Could not resolve telegram user:", resErr);
-            }
-          }
-
-          if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
-            const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
-            console.log(`[markMultipleCyclesPaid] Sending telegram to ${contributorChatId} for ${details?.full_name}`);
-            const tgResult = await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
-              contributorName: details?.full_name || "ውድ ደንበኛ",
-              amount: totalAmount,
-              groupName: group.name,
-              contributionDate: contribDateTg,
-              selectedDates: datesSummary.botSelectedDates,
-              totalSelected: contributorContributions.length,
-              paidDays: datesSummary.botPaidText,
-              collectorName: collector.full_name || "ሰብሳቢዎ"
-            });
-            console.log("[markMultipleCyclesPaid] Notification sent result:", tgResult);
-
-            if (collectorChatId) {
-              try {
-                await TelegramNotifier.sendCollectorConfirmation(collectorChatId, {
-                  contributorName: details?.full_name || "ውድ ደንበኛ",
-                  amount: totalAmount,
-                  groupName: group.name,
-                  contributionDate: contribDateTg,
-                  selectedDates: datesSummary.botSelectedDates,
-                  totalSelected: contributorContributions.length,
-                  paidDays: datesSummary.botPaidText,
-                });
-                console.log("[markMultipleCyclesPaid] Collector notification sent");
-              } catch (ce) {
-                console.error("[markMultipleCyclesPaid] Failed to send collector notification:", ce);
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error("[markMultipleCyclesPaid] Failed to send notifications for multiple cycles:", e);
+      // Trigger background notification without blocking response
+      dispatchPaymentNotificationsBackground({
+        contributorId,
+        groupId,
+        collectorId,
+        cycleNumbers,
+        nowIso: now,
+      }).catch((e) => console.error("[markMultipleCyclesPaid] Background dispatch error:", e));
     }
   }
 
@@ -1096,7 +955,7 @@ export async function createContributionCycles(
     .eq("contributor_id", contributorId)
     .eq("group_id", groupId);
 
-  const existingCycleNumbers = new Set((existingCycles || []).map((c) => c.cycle_number));
+  const existingCycleNumbers = new Set(((existingCycles || []) as any[]).map((c: any) => c.cycle_number));
 
   const newCycles = Array.from({ length: totalDays }, (_, i) => i + 1)
     .filter((cycleNum) => !existingCycleNumbers.has(cycleNum))
@@ -1172,34 +1031,7 @@ export async function getCollectorReports(
   toDate?: string
 ) {
   const supabase = await createAdminClient();
-
-  let collectorIds = [collectorId];
-  try {
-    const { data: currentProf } = await supabase
-      .from("profiles")
-      .select("phone_number, telegram_id, email")
-      .eq("id", collectorId)
-      .single();
-
-    if (currentProf) {
-      const orCond: string[] = [];
-      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
-      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
-      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
-
-      if (orCond.length > 0) {
-        const { data: matched } = await supabase
-          .from("profiles")
-          .select("id")
-          .or(orCond.join(","));
-        if (matched && matched.length > 0) {
-          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("getCollectorReports profile resolution note:", err);
-  }
+  const { collectorIds } = await resolveCollectorContext(collectorId);
 
   let query = supabase
     .from("contributions")
@@ -1227,38 +1059,7 @@ export async function getCollectorReports(
 
 export async function getCollectorGroups(collectorId: string) {
   const supabase = await createAdminClient();
-
-  let collectorIds = [collectorId];
-  let isAdmin = false;
-  try {
-    const { data: currentProf } = await supabase
-      .from("profiles")
-      .select("phone_number, telegram_id, email, role")
-      .eq("id", collectorId)
-      .single();
-
-    if (currentProf) {
-      if (currentProf.role === "admin") {
-        isAdmin = true;
-      }
-      const orCond: string[] = [];
-      if (currentProf.phone_number) orCond.push(`phone_number.eq.${currentProf.phone_number}`);
-      if (currentProf.telegram_id) orCond.push(`telegram_id.eq.${currentProf.telegram_id}`);
-      if (currentProf.email) orCond.push(`email.eq.${currentProf.email}`);
-
-      if (orCond.length > 0) {
-        const { data: matched } = await supabase
-          .from("profiles")
-          .select("id")
-          .or(orCond.join(","));
-        if (matched && matched.length > 0) {
-          collectorIds = Array.from(new Set([...collectorIds, ...matched.map((m: any) => m.id)]));
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("getCollectorGroups profile resolution note:", err);
-  }
+  const { collectorIds, isAdmin } = await resolveCollectorContext(collectorId);
 
   let query = supabase
     .from("equb_groups")

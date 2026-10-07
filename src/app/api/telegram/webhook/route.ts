@@ -361,7 +361,7 @@ Telegram connected: Yes`;
         .eq("status", "completed")
         .gte("created_at", startOfDay.toISOString());
         
-      const todaysTotal = (payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const todaysTotal = (payments || []).reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
 
       const statsText = `📊 **Platform Stats**
 - Admins: ${adminCount || 0}

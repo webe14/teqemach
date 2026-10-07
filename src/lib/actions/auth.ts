@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -458,9 +459,13 @@ export async function getCollectorsWithGroups() {
 
   // Attach groups to each admin
   const primaryCollectorId = collectors?.[0]?.id;
-  const collectorsWithGroups = (collectors ?? []).map((collector) => ({
+  const collectorsWithGroups = ((collectors ?? []) as any[]).map((collector: any) => ({
     ...collector,
-    groups: (groups ?? []).filter((g) => g.collector_id === collector.id || (!g.collector_id && collector.id === primaryCollectorId)),
+    groups: ((groups ?? []) as any[]).filter(
+      (g: any) =>
+        g.collector_id === collector.id ||
+        (!g.collector_id && collector.id === primaryCollectorId)
+    ),
   }));
 
   return { data: collectorsWithGroups, error: null };
@@ -485,8 +490,9 @@ export async function getSession() {
  * Returns the current user's profile regardless of auth method.
  *  - Supabase Auth users (admin, new users, Google OAuth)
  *  - Custom JWT cookie users (legacy collector/contributor)
+ * Deduplicated per request with React cache.
  */
-export async function getCurrentProfile() {
+export const getCurrentProfile = cache(async () => {
   try {
     const supabase = await createClient();
     let profile: any = null;
@@ -535,27 +541,33 @@ export async function getCurrentProfile() {
 
     if (!profile) return null;
 
-    // Check if this profile or any related profile (by telegram_id, email, or phone_number) has admin role
+    // If role is admin, no need to query again
+    if (profile.role === "admin") {
+      return {
+        ...profile,
+        isAdmin: true,
+      };
+    }
+
+    // Check if any linked profile (by telegram_id, email, or phone_number) has admin role
     const adminClient = await createAdminClient();
-    let hasAdminRights = profile.role === "admin";
+    let hasAdminRights = false;
 
-    if (!hasAdminRights) {
-      const conditions: string[] = [];
-      if (profile.telegram_id) conditions.push(`telegram_id.eq.${profile.telegram_id}`);
-      if (profile.email) conditions.push(`email.eq.${profile.email}`);
-      if (profile.phone_number) conditions.push(`phone_number.eq.${profile.phone_number}`);
+    const conditions: string[] = [];
+    if (profile.telegram_id) conditions.push(`telegram_id.eq.${profile.telegram_id}`);
+    if (profile.email) conditions.push(`email.eq.${profile.email}`);
+    if (profile.phone_number) conditions.push(`phone_number.eq.${profile.phone_number}`);
 
-      if (conditions.length > 0) {
-        const { data: adminMatches } = await adminClient
-          .from("profiles")
-          .select("id, role")
-          .eq("role", "admin")
-          .or(conditions.join(","))
-          .limit(1);
+    if (conditions.length > 0) {
+      const { data: adminMatches } = await adminClient
+        .from("profiles")
+        .select("id, role")
+        .eq("role", "admin")
+        .or(conditions.join(","))
+        .limit(1);
 
-        if (adminMatches && adminMatches.length > 0) {
-          hasAdminRights = true;
-        }
+      if (adminMatches && adminMatches.length > 0) {
+        hasAdminRights = true;
       }
     }
 
@@ -570,9 +582,9 @@ export async function getCurrentProfile() {
     console.error("getCurrentProfile error:", err);
     return null;
   }
-}
+});
 
-export async function getProfileById(id: string) {
+export const getProfileById = cache(async (id: string) => {
   const adminClient = await createAdminClient();
   const { data, error } = await adminClient
     .from("profiles")
@@ -581,7 +593,7 @@ export async function getProfileById(id: string) {
     .single();
   if (error) return { error: error.message, data: null };
   return { data, error: null };
-}
+});
 
 /**
  * Update the current user's full_name and/or password.

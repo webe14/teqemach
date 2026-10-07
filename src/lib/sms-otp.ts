@@ -41,7 +41,7 @@ export async function findProfileByPhone(phone: string) {
     .not("phone_number", "is", null);
 
   if (allProfiles) {
-    const matched = allProfiles.find((p) => {
+    const matched = (allProfiles as any[]).find((p: any) => {
       const pDigits = (p.phone_number || "").replace(/\D/g, "");
       return pDigits.endsWith(suffix) || (pDigits.length >= 9 && suffix.endsWith(pDigits));
     });

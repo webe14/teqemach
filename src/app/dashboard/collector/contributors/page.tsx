@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { getCurrentProfile } from "@/lib/actions/auth";
@@ -182,12 +182,15 @@ export default function ManageContributorsPage() {
     setAvailableContributors((availRes.data as any[]) ?? []);
   }
 
-  const filtered = contributors.filter((c) => {
-    const name = (c.contributor?.full_name ?? "").toLowerCase();
-    const phone = (c.contributor?.phone_number ?? "").toLowerCase();
-    const q = search.toLowerCase();
-    return name.includes(q) || phone.includes(q);
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return contributors;
+    return contributors.filter((c) => {
+      const name = (c.contributor?.full_name ?? "").toLowerCase();
+      const phone = (c.contributor?.phone_number ?? "").toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    });
+  }, [contributors, search]);
 
   function handleRowClick(c: Contributor) {
     const url = c.group_id

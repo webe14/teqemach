@@ -70,23 +70,19 @@ export async function registerUser(formData: {
 export async function getAdminStats() {
   const supabase = await createAdminClient();
 
-  const [collectorsRes, equbsRes, contributionsRes] = await Promise.all([
+  const [collectorsRes, equbsRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id", { count: "exact" })
+      .select("id", { count: "exact", head: true })
       .eq("role", "admin"),
     supabase.from("equb_groups").select("id, contribution_amount", { count: "exact" }),
-    supabase
-      .from("contributions")
-      .select("id")
-      .eq("is_marked_paid", true),
   ]);
 
   const totalCollectors = collectorsRes.count ?? 0;
   const activeEqubs = equbsRes.count ?? 0;
   const equbs = equbsRes.data ?? [];
-  const totalCapital = equbs.reduce(
-    (sum, g) => sum + (g.contribution_amount ?? 0),
+  const totalCapital = (equbs as any[]).reduce(
+    (sum: number, g: any) => sum + (g.contribution_amount ?? 0),
     0
   );
 
@@ -143,38 +139,39 @@ export async function getFinancialReport(fromDate?: string, toDate?: string) {
 export async function getAllContributors() {
   const supabase = await createAdminClient();
 
-  // 1. Fetch all active contributor profiles
-  const { data: profiles, error: profError } = await supabase
-    .from("profiles")
-    .select("id, full_name, phone_number, email, status, created_at, collector_id")
-    .eq("role", "contributor")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+  // 1. Fetch all active contributor profiles and group memberships in parallel
+  const [profRes, memRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, phone_number, email, status, created_at, collector_id")
+      .eq("role", "contributor")
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("group_memberships")
+      .select(`
+        id,
+        group_id,
+        contributor_id,
+        created_at,
+        collector_id,
+        group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
+      `),
+  ]);
 
-  if (profError || !profiles) {
-    return { error: profError?.message || "Failed to fetch contributors", data: [] };
+  if (profRes.error || !profRes.data) {
+    return { error: profRes.error?.message || "Failed to fetch contributors", data: [] };
   }
 
-  // 2. Fetch all group memberships with group details
-  const { data: memberships } = await supabase
-    .from("group_memberships")
-    .select(`
-      id,
-      group_id,
-      contributor_id,
-      created_at,
-      collector_id,
-      group:equb_groups!group_memberships_group_id_fkey(id, name, contribution_amount, total_days, frequency)
-    `);
+  const profiles = profRes.data;
+  const memberships = memRes.data || [];
 
   const membershipsByContributor: Record<string, any[]> = {};
-  if (memberships) {
-    for (const m of memberships) {
-      if (!membershipsByContributor[m.contributor_id]) {
-        membershipsByContributor[m.contributor_id] = [];
-      }
-      membershipsByContributor[m.contributor_id].push(m);
+  for (const m of memberships) {
+    if (!membershipsByContributor[m.contributor_id]) {
+      membershipsByContributor[m.contributor_id] = [];
     }
+    membershipsByContributor[m.contributor_id].push(m);
   }
 
   const result: any[] = [];
@@ -233,7 +230,7 @@ export async function getAllPendingContributors() {
   if (error || !profiles) return { error: error?.message, data: [] };
 
   // Fetch pending group memberships separately to avoid PostgREST relationship ambiguity
-  const profileIds = profiles.map((p) => p.id);
+  const profileIds = (profiles as any[]).map((p: any) => p.id);
   let membershipsMap: Record<string, any> = {};
 
   if (profileIds.length > 0) {
@@ -249,7 +246,7 @@ export async function getAllPendingContributors() {
     }
   }
 
-  const formatted = profiles.map((profile) => {
+  const formatted = (profiles as any[]).map((profile: any) => {
     const m = membershipsMap[profile.id];
     const group = m?.equb_groups;
     return {

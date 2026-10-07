@@ -134,21 +134,19 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       const profile = await getCurrentProfile();
       if (!profile) return;
 
-      const [cyclesRes, collectorRes, contributorRes] = await Promise.all([
+      const [cyclesRes, contributorRes] = await Promise.all([
         getContributorCycles(cid, gid),
-        getProfileById(profile.id),
         getProfileById(cid),
       ]);
 
       setCycles((cyclesRes.data as Cycle[]) ?? []);
       setGroupMeta((cyclesRes as any).group ?? null);
-      setCollectorProfile(collectorRes.data as any);
+      setCollectorProfile(profile as any);
       setContributorProfile(contributorRes.data as any);
     })();
   }, [params, searchParams]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
 
   async function refreshCycles(cid: string, gid: string) {
     const res = await getContributorCycles(cid, gid);
@@ -170,17 +168,44 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       return;
     }
     
-    // Toggle paid/unpaid if not in bulk mode
+    // Toggle paid/unpaid if not in bulk mode with instant optimistic update
     setMarkingId(cycle.id);
+    const wasPaid = cycle.is_marked_paid;
+    setCycles((prev) =>
+      prev.map((c) =>
+        c.id === cycle.id
+          ? {
+              ...c,
+              is_marked_paid: !wasPaid,
+              contribution_date: !wasPaid ? new Date().toISOString() : null,
+            }
+          : c
+      )
+    );
+
     startTransition(async () => {
-      if (cycle.is_marked_paid) {
+      if (wasPaid) {
         const result = await unmarkCyclePaid(cycle.id, groupId);
-        if (!result.error) await refreshCycles(contributorId, groupId);
+        if (result?.error) {
+          // Revert optimistic update on error
+          setCycles((prev) =>
+            prev.map((c) => (c.id === cycle.id ? { ...c, is_marked_paid: true } : c))
+          );
+        }
       } else {
         const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
         const dateText = cycleDate ? formatShortEC(cycleDate, locale) : `#${cycle.cycle_number}`;
         const result = await markCyclePaid(cycle.id, groupId, dateText);
-        if (!result.error) await refreshCycles(contributorId, groupId);
+        if (result?.error) {
+          // Revert optimistic update on error
+          setCycles((prev) =>
+            prev.map((c) =>
+              c.id === cycle.id
+                ? { ...c, is_marked_paid: false, contribution_date: null }
+                : c
+            )
+          );
+        }
       }
       setMarkingId(null);
     });
@@ -189,7 +214,21 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
   // ── Bulk mark ─────────────────────────────────────────────────────────────
   function handleBulkConfirm() {
     if (selected.size === 0) return;
-    const selectedCycles = cycles.filter((c) => selected.has(c.id));
+    const selectedIds = new Set(selected);
+    const selectedCycles = cycles.filter((c) => selectedIds.has(c.id));
+    const nowIso = new Date().toISOString();
+
+    // Optimistically mark all selected cycles as paid immediately
+    setCycles((prev) =>
+      prev.map((c) =>
+        selectedIds.has(c.id)
+          ? { ...c, is_marked_paid: true, contribution_date: nowIso }
+          : c
+      )
+    );
+    setSelected(new Set());
+    setBulkMode(false);
+
     startTransition(async () => {
       const dateLabels = selectedCycles.map((cycle) => {
         const cycleDate = getCycleDate(cycle.cycle_number, groupMeta);
@@ -197,12 +236,10 @@ export default function CycleGridPage({ params }: { params: Promise<{ id: string
       });
       const dateText = dateLabels.join(", ");
 
-      const result = await markMultipleCyclesPaid(Array.from(selected), dateText);
-      if (!result.error) {
+      const result = await markMultipleCyclesPaid(Array.from(selectedIds), dateText);
+      if (result?.error) {
         await refreshCycles(contributorId, groupId);
       }
-      setSelected(new Set());
-      setBulkMode(false);
     });
   }
 

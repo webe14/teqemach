@@ -29,7 +29,7 @@ export async function getContributorStats(contributorId: string) {
         .eq("contributor_id", contributorId),
       supabase
         .from("contributions")
-        .select("id, group_id, is_marked_paid, equb_groups:group_id(contribution_amount)")
+        .select("id, group_id, is_marked_paid")
         .eq("contributor_id", contributorId),
       supabase
         .from("profiles")
@@ -37,6 +37,17 @@ export async function getContributorStats(contributorId: string) {
         .eq("id", contributorId)
         .maybeSingle(),
     ]);
+
+    const rawGroups: any[] = (membershipsRes?.data as any[])
+      ?.map((m) => m.equb_groups || m.group)
+      .filter(Boolean) ?? [];
+
+    const groupAmountMap: Record<string, number> = {};
+    for (const g of rawGroups) {
+      if (g?.id) {
+        groupAmountMap[g.id] = Number(g.contribution_amount || 0);
+      }
+    }
 
     const allContributions = contributionsRes?.data || [];
     const totalCount = allContributions.length;
@@ -56,7 +67,7 @@ export async function getContributorStats(contributorId: string) {
       }
       if (item.is_marked_paid) {
         totalPaidGlobal++;
-        const amt = Number(item.equb_groups?.contribution_amount || 0);
+        const amt = groupAmountMap[gid] || 0;
         totalAmountSavedGlobal += amt;
         if (gid) {
           paidByGroup[gid] = (paidByGroup[gid] || 0) + 1;
@@ -64,10 +75,6 @@ export async function getContributorStats(contributorId: string) {
         }
       }
     }
-
-    const rawGroups: any[] = (membershipsRes?.data as any[])
-      ?.map((m) => m.equb_groups || m.group)
-      .filter(Boolean) ?? [];
 
     const groups = rawGroups.map((g) => {
       const gPaid = paidByGroup[g.id] ?? 0;
