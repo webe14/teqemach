@@ -91,12 +91,16 @@ export async function registerWithPhoneOtpAction({
   password,
   email,
   role = "contributor",
+  telegramId,
+  telegramUsername,
 }: {
   phone: string;
   fullName: string;
   password: string;
   email?: string;
   role?: "contributor";
+  telegramId?: number | string | null;
+  telegramUsername?: string | null;
 }) {
   const formattedPhone = formatEthiopianPhone(phone);
   if (!formattedPhone) {
@@ -165,8 +169,8 @@ export async function registerWithPhoneOtpAction({
     }
   }
 
-  const telegramId = tgUser?.telegram_id || null;
-  const telegramUsername = tgUser?.username || null;
+  const finalTelegramId = telegramId ? Number(telegramId) : (tgUser?.telegram_id ? Number(tgUser.telegram_id) : null);
+  const finalTelegramUsername = telegramUsername || tgUser?.username || null;
 
   // Create profile with status pending and linked telegram info
   const { data: newProfile, error: insertError } = await adminClient
@@ -178,12 +182,12 @@ export async function registerWithPhoneOtpAction({
       password: hashedPassword,
       role: role,
       status: "pending",
-      telegram_id: telegramId,
-      telegram_chat_id: telegramId,
-      telegram_username: telegramUsername,
-      telegram_verified: !!telegramId,
-      telegram_linked_at: telegramId ? new Date().toISOString() : null,
-      telegram_last_seen: telegramId ? new Date().toISOString() : null,
+      telegram_id: finalTelegramId,
+      telegram_chat_id: finalTelegramId,
+      telegram_username: finalTelegramUsername,
+      telegram_verified: !!finalTelegramId,
+      telegram_linked_at: finalTelegramId ? new Date().toISOString() : null,
+      telegram_last_seen: finalTelegramId ? new Date().toISOString() : null,
     })
     .select("*")
     .single();
@@ -192,11 +196,17 @@ export async function registerWithPhoneOtpAction({
     return { error: insertError.message };
   }
 
-  if (telegramId) {
+  if (finalTelegramId) {
     await adminClient
       .from("telegram_users")
-      .update({ user_id: newProfile.id })
-      .eq("telegram_id", telegramId);
+      .upsert({
+        telegram_id: finalTelegramId,
+        user_id: newProfile.id,
+        phone_number: formattedPhone,
+        role: role,
+        username: finalTelegramUsername,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "telegram_id" });
   }
 
   return { success: true, profile: newProfile };

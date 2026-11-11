@@ -118,12 +118,35 @@ export async function POST(req: Request) {
         }
       }
 
+      // If still no profiles linked by telegram_id, check if user currently has an active custom session
       if (profiles.length === 0) {
-        // Telegram user has no profile yet -> start registration flow
-        const hasPhone = !!(tgUser?.phone_number);
-        if (!hasPhone) {
-          return NextResponse.json({ linked: false, needsPhone: true, telegramUser: initDataObj });
+        const customSession = await getCustomSession();
+        if (customSession?.userId) {
+          const { data: sessionProfile } = await adminClient
+            .from("profiles")
+            .select("*")
+            .eq("id", customSession.userId)
+            .maybeSingle();
+
+          if (sessionProfile) {
+            await adminClient
+              .from("profiles")
+              .update({
+                telegram_id: telegramId,
+                telegram_chat_id: telegramId,
+                telegram_username: initDataObj.username || null,
+                telegram_verified: true,
+                telegram_last_seen: new Date().toISOString(),
+              })
+              .eq("id", sessionProfile.id);
+
+            profiles = [sessionProfile];
+          }
         }
+      }
+
+      if (profiles.length === 0) {
+        // Telegram user has no profile yet -> allow them to proceed directly without mandatory phone gate
         return NextResponse.json({ linked: false, telegramUser: initDataObj });
       }
 
@@ -200,7 +223,7 @@ export async function POST(req: Request) {
         .from("telegram_users")
         .select("phone_number")
         .eq("telegram_id", telegramId)
-        .single();
+        .maybeSingle();
       const contributorPhone = tgUserForContrib?.phone_number || "";
 
       const { data: newProfile, error: insertError } = await adminClient
@@ -343,7 +366,7 @@ export async function POST(req: Request) {
         .from("telegram_users")
         .select("phone_number")
         .eq("telegram_id", telegramId)
-        .single();
+        .maybeSingle();
 
       return NextResponse.json({
         hasPhone: !!(tgUserCheck?.phone_number),

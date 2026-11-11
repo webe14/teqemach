@@ -69,7 +69,6 @@ type RoleInfo = {
 type Step =
   | "init"
   | "loading"
-  | "needs_phone"
   | "contributor_login"
   | "options"
   | "new_user"
@@ -131,8 +130,6 @@ export default function LoginPage() {
   const [selectedCollector, setSelectedCollector] = useState<Collector | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<EqubGroup | null>(null);
   const [collectorsLoading, setCollectorsLoading] = useState(false);
-  const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
-  const [hasSharedPhone, setHasSharedPhone] = useState(false);
 
   const isLoggingInRef = useRef(false);
 
@@ -266,17 +263,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Track if phone is verified
-      if (!result.needsPhone) {
-        setHasSharedPhone(true);
-      }
-
-      if (result.needsPhone) {
-        setStep("needs_phone");
-      } else {
-        // Unlinked new user — show Contributor Login page
-        setStep("contributor_login");
-      }
+      // Unlinked user — show Contributor Login page
+      setStep("contributor_login");
     } catch (err: any) {
       isLoggingInRef.current = false;
       // Gracefully show login page with the message
@@ -454,12 +442,17 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
+      const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : null;
+      const tgUser = tg?.initDataUnsafe?.user;
+
       const res = await registerWithPhoneOtpAction({
         phone: regPhone,
         fullName: regFullName.trim(),
         email: regEmail.trim() || undefined,
         password: regPassword,
         role: "contributor",
+        telegramId: tgUser?.id || undefined,
+        telegramUsername: tgUser?.username || undefined,
       });
 
       if (res?.error) {
@@ -660,30 +653,6 @@ export default function LoginPage() {
     "contributor_confirm",
   ].includes(step);
 
-  // Check if phone number has been shared via bot
-  async function checkPhoneStatus() {
-    if (!initData) return;
-    setPhoneCheckLoading(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch("/api/telegram/mini-app-auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, action: "check_phone" }),
-      });
-      const result = await res.json();
-      if (result.hasPhone) {
-        setHasSharedPhone(true);
-        startContributorRegistration();
-      } else {
-        setErrorMsg("Phone number not received yet. Please share your number with the bot first.");
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setPhoneCheckLoading(false);
-    }
-  }
 
   // Back handler for contributor flow
   function handleContributorBack() {
@@ -1240,69 +1209,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ─── NEEDS PHONE ─────────────────────────────────────────── */}
-        {step === "needs_phone" && (
-          <div className="text-center py-4">
-            <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Smartphone className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold mb-2 text-foreground">Phone Number Required</h2>
-            <p className="text-muted-foreground mb-6">
-              To continue, we need your verified phone number from Telegram. Tap the button below to share it with our bot.
-            </p>
-
-            {errorMsg && (
-              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive mb-4 text-left">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <Button
-                className="w-full h-12 text-md font-bold bg-primary hover:bg-brand-700 text-white"
-                onClick={() => {
-                  const tg = window.Telegram?.WebApp;
-                  if (tg && tg.requestContact) {
-                    tg.requestContact((shared: boolean) => {
-                      if (shared) {
-                        // User accepted native prompt; webhook will receive the contact.
-                        // Give it a moment to process, then auto-check.
-                        setTimeout(checkPhoneStatus, 1500);
-                      }
-                    });
-                  } else {
-                    window.open("https://t.me/TeqemachBot?start=share_phone", "_blank");
-                  }
-                }}
-              >
-                <Smartphone className="h-5 w-5 mr-2" />
-                Share Phone Number
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full h-12 text-md"
-                onClick={checkPhoneStatus}
-                disabled={phoneCheckLoading}
-              >
-                {phoneCheckLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Checking...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    I&apos;ve Shared My Number
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* ─── OPTIONS (new user, not linked) ─────────────────────── */}
         {step === "options" && (
