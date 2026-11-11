@@ -708,14 +708,18 @@ export async function markCyclePaid(
 
   if (error) return { error: error.message };
 
-  // Dispatch background notification without blocking response
-  dispatchPaymentNotificationsBackground({
-    contributorId: updatedContribution.contributor_id,
-    collectorId: updatedContribution.collector_id,
-    groupId,
-    cycleNumbers: [updatedContribution.cycle_number],
-    nowIso: now,
-  }).catch((err) => console.error("[markCyclePaid] Notification error:", err));
+  // Dispatch payment notifications (awaited so Vercel serverless functions do not freeze before completion)
+  try {
+    await dispatchPaymentNotificationsBackground({
+      contributorId: updatedContribution.contributor_id,
+      collectorId: updatedContribution.collector_id,
+      groupId,
+      cycleNumbers: [updatedContribution.cycle_number],
+      nowIso: now,
+    });
+  } catch (err) {
+    console.error("[markCyclePaid] Notification error:", err);
+  }
 
   revalidatePath(`/dashboard/collector/contributors`);
   return { success: true };
@@ -745,10 +749,10 @@ async function dispatchPaymentNotificationsBackground(params: {
         .from("profiles")
         .select("full_name, phone_number, telegram_chat_id, telegram_id")
         .eq("id", params.collectorId)
-        .single(),
+        .maybeSingle(),
     ]);
 
-    if (!group || !collector) return;
+    if (!group) return;
 
     const contribDateTg = gregorianToEthiopianString(new Date(params.nowIso), "am");
 
@@ -849,7 +853,7 @@ async function dispatchPaymentNotificationsBackground(params: {
     }
 
     if (contributorChatId && (prefs?.contribution_confirmations ?? true)) {
-      const collectorChatId = collector.telegram_chat_id || collector.telegram_id;
+      const collectorChatId = collector?.telegram_chat_id || collector?.telegram_id;
       await TelegramNotifier.sendContributionConfirmation(contributorChatId, {
         contributorName: details?.full_name || "ውድ ደንበኛ",
         amount: totalAmount,
@@ -858,7 +862,7 @@ async function dispatchPaymentNotificationsBackground(params: {
         selectedDates: datesSummary.botSelectedDates,
         totalSelected: params.cycleNumbers.length,
         paidDays: datesSummary.botPaidText,
-        collectorName: collector.full_name || "ሰብሳቢዎ",
+        collectorName: collector?.full_name || "ሰብሳቢዎ",
       });
 
       if (collectorChatId) {
@@ -925,14 +929,18 @@ export async function markMultipleCyclesPaid(ids: string[], cycleDateText?: stri
       const collectorId = contributorContributions[0].collector_id;
       const cycleNumbers = contributorContributions.map((c: any) => c.cycle_number);
 
-      // Trigger background notification without blocking response
-      dispatchPaymentNotificationsBackground({
-        contributorId,
-        groupId,
-        collectorId,
-        cycleNumbers,
-        nowIso: now,
-      }).catch((e) => console.error("[markMultipleCyclesPaid] Background dispatch error:", e));
+      // Dispatch payment notifications (awaited so Vercel serverless functions do not freeze before completion)
+      try {
+        await dispatchPaymentNotificationsBackground({
+          contributorId,
+          groupId,
+          collectorId,
+          cycleNumbers,
+          nowIso: now,
+        });
+      } catch (e) {
+        console.error("[markMultipleCyclesPaid] Background dispatch error:", e);
+      }
     }
   }
 
